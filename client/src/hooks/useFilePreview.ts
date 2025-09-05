@@ -28,7 +28,7 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
         `/api/sharepoint-advanced/files/${id}`
       );
       
-      console.log('📄 useFilePreview: File response:', fileResponse.data);
+      console.log('📄 useFilePreview: File response:', JSON.stringify(fileResponse.data, null, 2));
 
       if (fileResponse.data.success && fileResponse.data.data) {
         const fileData = fileResponse.data.data;
@@ -121,7 +121,7 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
           // For Office docs, we'll get the raw content and display it
           setContent(contentResponse.data || 'Document content available - please use AI features to analyze this file.');
         } catch (officeError) {
-          console.log('📄 useFilePreview: Office content error:', officeError);
+          console.log('📄 useFilePreview: Office content error:', JSON.stringify(officeError, null, 2));
           // If we can't get text content, show a helpful message
           setContent(`This ${fileData.extension.toUpperCase()} document is available for AI processing. Click on AI features to analyze, summarize, or edit this document.`);
         }
