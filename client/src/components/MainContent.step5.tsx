@@ -65,7 +65,7 @@ export const MainContent: React.FC<MainContentProps> = ({
   onNavigate,
   onPreviewToggle,
 }) => {
-  console.log('MainContent.step5 rendering...', { currentPath, selectedFiles: selectedFiles.length });
+  console.log('MainContent.step5 rendering...', JSON.stringify({ currentPath, selectedFiles: selectedFiles.length }, null, 2));
 
   const [viewMode, setViewMode] = useState<ViewMode>({
     type: 'grid',
