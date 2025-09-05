@@ -1,0 +1,247 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:16-alpine
+    container_name: sharepoint-ai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-sharepoint_ai_dashboard}
+      POSTGRES_USER: ${DB_USER:-sharepointai}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-sharepointai} -d ${DB_NAME:-sharepoint_ai_dashboard}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: sharepoint-ai-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: production
+    container_name: sharepoint-ai-backend
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3001
+      
+      # Database
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-sharepoint_ai_dashboard}
+      DB_USER: ${DB_USER:-sharepointai}
+      DB_PASSWORD: ${DB_PASSWORD}
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE: ${JWT_EXPIRE:-7d}
+      
+      # SharePoint
+      SHAREPOINT_CLIENT_ID: ${SHAREPOINT_CLIENT_ID}
+      SHAREPOINT_CLIENT_SECRET: ${SHAREPOINT_CLIENT_SECRET}
+      SHAREPOINT_TENANT_ID: ${SHAREPOINT_TENANT_ID}
+      
+      # Azure AD (required by backend)
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID}
+      
+      # AI Services
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      
+      # Security
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      
+      # Monitoring
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ENABLE_METRICS: ${ENABLE_METRICS:-true}
+      
+      # Feature Flags
+      ENABLE_REAL_SHAREPOINT: ${ENABLE_REAL_SHAREPOINT:-false}
+      
+    volumes:
+      - ./server/logs:/app/logs
+      - ./server/uploads:/app/uploads
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      target: production
+      args:
+        REACT_APP_API_BASE_URL: ${REACT_APP_API_BASE_URL:-http://localhost}
+        REACT_APP_SHAREPOINT_CLIENT_ID: ${SHAREPOINT_CLIENT_ID}
+        REACT_APP_SHAREPOINT_TENANT_ID: ${SHAREPOINT_TENANT_ID}
+        REACT_APP_AI_API_ENDPOINT: ${REACT_APP_AI_API_ENDPOINT:-http://localhost/api/ai}
+        REACT_APP_ENVIRONMENT: ${NODE_ENV:-production}
+    container_name: sharepoint-ai-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      # Runtime environment variables (injected by entrypoint script)
+      REACT_APP_API_BASE_URL: http://localhost
+      REACT_APP_SHAREPOINT_CLIENT_ID: ${SHAREPOINT_CLIENT_ID}
+      REACT_APP_SHAREPOINT_TENANT_ID: ${SHAREPOINT_TENANT_ID}
+      REACT_APP_AI_API_ENDPOINT: http://localhost/api/ai
+      REACT_APP_ENVIRONMENT: ${NODE_ENV:-production}
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sharepoint-ai-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - app-network
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sharepoint-ai-grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin123}
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+    networks:
+      - app-network
+
+  # Log Management - ELK Stack (Elasticsearch, Logstash, Kibana)
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: sharepoint-ai-elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      xpack.security.enabled: false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    networks:
+      - app-network
+
+  logstash:
+    image: logstash:8.11.0
+    container_name: sharepoint-ai-logstash
+    restart: unless-stopped
+    volumes:
+      - ./logging/logstash:/usr/share/logstash/pipeline
+      - ./server/logs:/var/log/app
+    depends_on:
+      - elasticsearch
+    networks:
+      - app-network
+
+  kibana:
+    image: kibana:8.11.0
+    container_name: sharepoint-ai-kibana
+    restart: unless-stopped
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

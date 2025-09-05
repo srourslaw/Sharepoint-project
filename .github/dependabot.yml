@@ -1,0 +1,112 @@
+version: 2
+
+updates:
+  # Frontend dependencies
+  - package-ecosystem: "npm"
+    directory: "/client"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "team-frontend"
+    assignees:
+      - "team-lead"
+    commit-message:
+      prefix: "frontend"
+      include: "scope"
+    groups:
+      react-ecosystem:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      testing-libraries:
+        patterns:
+          - "@testing-library/*"
+          - "jest*"
+          - "@types/jest*"
+      build-tools:
+        patterns:
+          - "webpack*"
+          - "@babel/*"
+          - "typescript"
+          - "eslint*"
+          - "prettier*"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+        
+  # Backend dependencies  
+  - package-ecosystem: "npm"
+    directory: "/server"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "team-backend"
+    assignees:
+      - "team-lead"
+    commit-message:
+      prefix: "backend"
+      include: "scope"
+    groups:
+      express-ecosystem:
+        patterns:
+          - "express*"
+          - "@types/express*"
+      database:
+        patterns:
+          - "pg*"
+          - "redis*"
+          - "prisma*"
+      security:
+        patterns:
+          - "helmet*"
+          - "cors*"
+          - "bcrypt*"
+          - "jsonwebtoken*"
+      microsoft-auth:
+        patterns:
+          - "@azure/msal*"
+          - "microsoft-graph*"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+        
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/client"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+      
+  - package-ecosystem: "docker"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+      
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    commit-message:
+      prefix: "ci"
+      include: "scope"

@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # Test PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: sharepoint-ai-test-db
+    environment:
+      POSTGRES_DB: sharepoint_ai_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d sharepoint_ai_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Test Redis
+  redis:
+    image: redis:7-alpine
+    container_name: sharepoint-ai-test-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - test_redis_data:/data
+    ports:
+      - "6380:6379"
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  test_postgres_data:
+    driver: local
+  test_redis_data:
+    driver: local
+
+networks:
+  test-network:
+    driver: bridge

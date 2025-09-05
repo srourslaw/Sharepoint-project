@@ -1,0 +1,19 @@
+{
+  "name": "sharepoint-dashboard",
+  "version": "1.0.0",
+  "description": "Full-stack SharePoint dashboard",
+  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=client & npm run dev --workspace=server",
+    "build": "npm run build --workspaces",
+    "start": "npm start --workspace=server"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

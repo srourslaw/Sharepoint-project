@@ -1,0 +1,452 @@
+name: SharePoint AI Dashboard CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
+
+jobs:
+  # Frontend Tests and Build
+  frontend-test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: client/package-lock.json
+        
+    - name: Install frontend dependencies
+      run: |
+        cd client
+        npm ci
+        
+    - name: Run frontend linting
+      run: |
+        cd client
+        npm run lint
+        
+    - name: Run frontend type checking
+      run: |
+        cd client
+        npm run type-check
+        
+    - name: Run frontend tests
+      run: |
+        cd client
+        npm run test:coverage
+        
+    - name: Upload frontend coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ./client/coverage
+        flags: frontend
+        
+    - name: Build frontend
+      run: |
+        cd client
+        npm run build
+        
+    - name: Upload frontend build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build-${{ matrix.node-version }}
+        path: client/build/
+
+  # Backend Tests and Build
+  backend-test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: sharepoint_ai_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: server/package-lock.json
+        
+    - name: Install backend dependencies
+      run: |
+        cd server
+        npm ci
+        
+    - name: Run backend linting
+      run: |
+        cd server
+        npm run lint
+        
+    - name: Run backend type checking
+      run: |
+        cd server
+        npm run type-check
+        
+    - name: Run database migrations
+      run: |
+        cd server
+        npm run migrate:test
+      env:
+        NODE_ENV: test
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: sharepoint_ai_test
+        DB_USER: test_user
+        DB_PASSWORD: test_password
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        JWT_SECRET: test_jwt_secret
+        
+    - name: Run backend tests
+      run: |
+        cd server
+        npm run test:coverage
+      env:
+        NODE_ENV: test
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: sharepoint_ai_test
+        DB_USER: test_user
+        DB_PASSWORD: test_password
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        JWT_SECRET: test_jwt_secret
+        
+    - name: Upload backend coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ./server/coverage
+        flags: backend
+        
+    - name: Build backend
+      run: |
+        cd server
+        npm run build
+        
+    - name: Upload backend build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-build-${{ matrix.node-version }}
+        path: server/dist/
+
+  # Security Scanning
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+        
+    - name: Audit npm dependencies (Frontend)
+      run: |
+        cd client
+        npm audit --audit-level=high
+        
+    - name: Audit npm dependencies (Backend)
+      run: |
+        cd server
+        npm audit --audit-level=high
+
+  # Build and Push Docker Images
+  build-images:
+    needs: [frontend-test, backend-test, security-scan]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Extract metadata for frontend
+      id: meta-frontend
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: Extract metadata for backend
+      id: meta-backend
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: Build and push frontend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./client
+        file: ./client/Dockerfile
+        target: production
+        push: true
+        tags: ${{ steps.meta-frontend.outputs.tags }}
+        labels: ${{ steps.meta-frontend.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_API_BASE_URL || 'http://localhost:3001' }}
+          REACT_APP_ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+          
+    - name: Build and push backend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./server
+        file: ./server/Dockerfile
+        target: production
+        push: true
+        tags: ${{ steps.meta-backend.outputs.tags }}
+        labels: ${{ steps.meta-backend.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Deploy to Staging
+  deploy-staging:
+    needs: [build-images]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 --decode > ~/.kube/config
+        
+    - name: Deploy to staging
+      run: |
+        # Update deployment with new image tags
+        kubectl set image deployment/sharepoint-ai-frontend \
+          sharepoint-ai-frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:develop \
+          -n sharepoint-staging
+          
+        kubectl set image deployment/sharepoint-ai-backend \
+          sharepoint-ai-backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:develop \
+          -n sharepoint-staging
+          
+        # Wait for rollout to complete
+        kubectl rollout status deployment/sharepoint-ai-frontend -n sharepoint-staging --timeout=300s
+        kubectl rollout status deployment/sharepoint-ai-backend -n sharepoint-staging --timeout=300s
+        
+    - name: Run smoke tests
+      run: |
+        # Wait for services to be ready
+        kubectl wait --for=condition=available --timeout=300s deployment/sharepoint-ai-frontend -n sharepoint-staging
+        kubectl wait --for=condition=available --timeout=300s deployment/sharepoint-ai-backend -n sharepoint-staging
+        
+        # Get service URLs
+        FRONTEND_URL=$(kubectl get service sharepoint-ai-frontend -n sharepoint-staging -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        BACKEND_URL=$(kubectl get service sharepoint-ai-backend -n sharepoint-staging -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        
+        # Run basic health checks
+        curl -f "$BACKEND_URL/health" || exit 1
+        curl -f "$FRONTEND_URL/health" || exit 1
+
+  # Deploy to Production
+  deploy-production:
+    needs: [build-images]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 --decode > ~/.kube/config
+        
+    - name: Deploy to production
+      run: |
+        # Update deployment with new image tags
+        kubectl set image deployment/sharepoint-ai-frontend \
+          sharepoint-ai-frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest \
+          -n sharepoint-production
+          
+        kubectl set image deployment/sharepoint-ai-backend \
+          sharepoint-ai-backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest \
+          -n sharepoint-production
+          
+        # Wait for rollout to complete
+        kubectl rollout status deployment/sharepoint-ai-frontend -n sharepoint-production --timeout=600s
+        kubectl rollout status deployment/sharepoint-ai-backend -n sharepoint-production --timeout=600s
+        
+    - name: Run production smoke tests
+      run: |
+        # Wait for services to be ready
+        kubectl wait --for=condition=available --timeout=600s deployment/sharepoint-ai-frontend -n sharepoint-production
+        kubectl wait --for=condition=available --timeout=600s deployment/sharepoint-ai-backend -n sharepoint-production
+        
+        # Get service URLs
+        FRONTEND_URL=$(kubectl get service sharepoint-ai-frontend -n sharepoint-production -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        BACKEND_URL=$(kubectl get service sharepoint-ai-backend -n sharepoint-production -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        
+        # Run comprehensive health checks
+        curl -f "$BACKEND_URL/health" || exit 1
+        curl -f "$FRONTEND_URL/health" || exit 1
+        
+        # Test critical endpoints
+        curl -f "$BACKEND_URL/api/auth/status" || exit 1
+        curl -f "$BACKEND_URL/api/sharepoint/health" || exit 1
+        
+    - name: Notify deployment success
+      if: success()
+      run: |
+        echo "🚀 Production deployment completed successfully!"
+        
+    - name: Notify deployment failure
+      if: failure()
+      run: |
+        echo "❌ Production deployment failed!"
+        exit 1
+
+  # Performance Testing
+  performance-test:
+    needs: [deploy-staging]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        
+    - name: Install k6
+      run: |
+        sudo gpg -k
+        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+        
+    - name: Run performance tests
+      run: |
+        # Create performance test script
+        cat > performance-test.js << 'EOF'
+        import http from 'k6/http';
+        import { check, sleep } from 'k6';
+        
+        export let options = {
+          stages: [
+            { duration: '2m', target: 20 },
+            { duration: '5m', target: 20 },
+            { duration: '2m', target: 40 },
+            { duration: '5m', target: 40 },
+            { duration: '2m', target: 0 }
+          ],
+          thresholds: {
+            http_req_duration: ['p(99)<2000'],
+            http_req_failed: ['rate<0.1']
+          }
+        };
+        
+        export default function() {
+          let response = http.get(`${__ENV.STAGING_URL}/health`);
+          check(response, {
+            'status is 200': (r) => r.status === 200,
+            'response time < 500ms': (r) => r.timings.duration < 500,
+          });
+          sleep(1);
+        }
+        EOF
+        
+        # Run the test
+        STAGING_URL=$(kubectl get service sharepoint-ai-backend -n sharepoint-staging -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        k6 run --env STAGING_URL="$STAGING_URL" performance-test.js

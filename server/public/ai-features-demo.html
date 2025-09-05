@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Features Demo - SharePoint Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .feature-card {
+            transition: transform 0.2s ease-in-out;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .feature-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .result-container {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            min-height: 100px;
+        }
+        .loading {
+            display: none;
+        }
+        .demo-section {
+            margin: 2rem 0;
+        }
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#"><i class="fas fa-brain me-2"></i>AI Features Demo</a>
+            <span class="navbar-text">SharePoint Dashboard - AI Powered Document Analysis</span>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <!-- Header Section -->
+        <div class="row mb-5">
+            <div class="col-12 text-center">
+                <h1 class="display-4 mb-3">AI-Powered Document Features</h1>
+                <p class="lead text-muted">Experience advanced document processing with Google Gemini AI integration</p>
+            </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="row g-4 mb-5">
+            <!-- Summarization -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card h-100" onclick="showFeature('summarization')">
+                    <div class="card-body text-center">
+                        <i class="fas fa-compress-alt feature-icon text-primary"></i>
+                        <h5 class="card-title">Document Summarization</h5>
+                        <p class="card-text">Generate intelligent summaries in multiple formats and lengths</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Interface -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card h-100" onclick="showFeature('chat')">
+                    <div class="card-body text-center">
+                        <i class="fas fa-comments feature-icon text-success"></i>
+                        <h5 class="card-title">Document Q&A Chat</h5>
+                        <p class="card-text">Interactive chat interface for document questions and analysis</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Extraction -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card h-100" onclick="showFeature('extraction')">
+                    <div class="card-body text-center">
+                        <i class="fas fa-search feature-icon text-info"></i>
+                        <h5 class="card-title">Content Extraction</h5>
+                        <p class="card-text">Extract keywords, entities, dates, and structured data</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Translation -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card h-100" onclick="showFeature('translation')">
+                    <div class="card-body text-center">
+                        <i class="fas fa-language feature-icon text-warning"></i>
+                        <h5 class="card-title">Language Translation</h5>
+                        <p class="card-text">Translate documents to 20+ languages with quality assessment</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card h-100" onclick="showFeature('comparison')">
+                    <div class="card-body text-center">
+                        <i class="fas fa-balance-scale feature-icon text-danger"></i>
+                        <h5 class="card-title">Document Comparison</h5>
+                        <p class="card-text">Compare documents for similarities, differences, and plagiarism</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sentiment Analysis -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card h-100" onclick="showFeature('sentiment')">
+                    <div class="card-body text-center">
+                        <i class="fas fa-heart feature-icon text-purple"></i>
+                        <h5 class="card-title">Sentiment Analysis</h5>
+                        <p class="card-text">Analyze emotions, sentiment, and psychological insights</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo Sections (Initially Hidden) -->
+        
+        <!-- Summarization Demo -->
+        <div id="summarization-demo" class="demo-section" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-compress-alt me-2"></i>Document Summarization Demo</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="summarizationText" class="form-label">Enter Document Text:</label>
+                            <textarea id="summarizationText" class="form-control" rows="8" placeholder="Paste your document content here..."></textarea>
+                            
+                            <div class="mt-3">
+                                <label class="form-label">Summary Type:</label>
+                                <select id="summaryType" class="form-select">
+                                    <option value="abstractive">Abstractive</option>
+                                    <option value="extractive">Extractive</option>
+                                    <option value="bullet_points">Bullet Points</option>
+                                    <option value="executive">Executive Summary</option>
+                                    <option value="technical">Technical</option>
+                                    <option value="creative">Creative</option>
+                                </select>
+                            </div>
+
+                            <div class="mt-3">
+                                <label class="form-label">Length:</label>
+                                <select id="summaryLength" class="form-select">
+                                    <option value="short">Short</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="long">Long</option>
+                                </select>
+                            </div>
+
+                            <button class="btn btn-primary mt-3" onclick="summarizeText()">
+                                <span class="loading"><i class="fas fa-spinner fa-spin me-2"></i></span>
+                                Generate Summary
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Summary Result:</label>
+                            <div id="summarizationResult" class="result-container p-3 rounded">
+                                Results will appear here...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Demo -->
+        <div id="chat-demo" class="demo-section" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-comments me-2"></i>Document Q&A Chat Demo</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="chatDocumentText" class="form-label">Document Content:</label>
+                            <textarea id="chatDocumentText" class="form-control" rows="6" placeholder="Enter document content for chat context..."></textarea>
+                            
+                            <div class="mt-3">
+                                <label for="chatQuestion" class="form-label">Ask a Question:</label>
+                                <input type="text" id="chatQuestion" class="form-control" placeholder="What would you like to know about this document?">
+                            </div>
+
+                            <button class="btn btn-success mt-3" onclick="askQuestion()">
+                                <span class="loading"><i class="fas fa-spinner fa-spin me-2"></i></span>
+                                Ask Question
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Chat Response:</label>
+                            <div id="chatResult" class="result-container p-3 rounded">
+                                Ask a question to get started...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Extraction Demo -->
+        <div id="extraction-demo" class="demo-section" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-search me-2"></i>Content Extraction Demo</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="extractionText" class="form-label">Document Text:</label>
+                            <textarea id="extractionText" class="form-control" rows="8" placeholder="Enter text to extract content from..."></textarea>
+                            
+                            <div class="mt-3">
+                                <label class="form-label">Extraction Types:</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="keywords" id="extractKeywords" checked>
+                                    <label class="form-check-label" for="extractKeywords">Keywords</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="entities" id="extractEntities" checked>
+                                    <label class="form-check-label" for="extractEntities">Named Entities</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="dates" id="extractDates">
+                                    <label class="form-check-label" for="extractDates">Dates</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="numbers" id="extractNumbers">
+                                    <label class="form-check-label" for="extractNumbers">Numbers</label>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-info mt-3" onclick="extractContent()">
+                                <span class="loading"><i class="fas fa-spinner fa-spin me-2"></i></span>
+                                Extract Content
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Extraction Results:</label>
+                            <div id="extractionResult" class="result-container p-3 rounded">
+                                Results will appear here...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sentiment Analysis Demo -->
+        <div id="sentiment-demo" class="demo-section" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-heart me-2"></i>Sentiment Analysis Demo</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="sentimentText" class="form-label">Text to Analyze:</label>
+                            <textarea id="sentimentText" class="form-control" rows="8" placeholder="Enter text for sentiment analysis..."></textarea>
+                            
+                            <div class="mt-3">
+                                <label class="form-label">Analysis Types:</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="overall_sentiment" id="overallSentiment" checked>
+                                    <label class="form-check-label" for="overallSentiment">Overall Sentiment</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="emotion_detection" id="emotionDetection" checked>
+                                    <label class="form-check-label" for="emotionDetection">Emotion Detection</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="sentence_level" id="sentenceLevel">
+                                    <label class="form-check-label" for="sentenceLevel">Sentence-Level Analysis</label>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-purple mt-3" onclick="analyzeSentiment()">
+                                <span class="loading"><i class="fas fa-spinner fa-spin me-2"></i></span>
+                                Analyze Sentiment
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Sentiment Results:</label>
+                            <div id="sentimentResult" class="result-container p-3 rounded">
+                                Results will appear here...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Status -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-heartbeat me-2"></i>AI Services Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="apiStatus">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                <span>Checking AI services status...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // API Base URL (adjust based on your setup)
+        const API_BASE = '/api/ai';
+
+        // Show selected feature demo
+        function showFeature(feature) {
+            // Hide all demo sections
+            const demos = document.querySelectorAll('.demo-section');
+            demos.forEach(demo => demo.style.display = 'none');
+
+            // Show selected demo
+            const selectedDemo = document.getElementById(feature + '-demo');
+            if (selectedDemo) {
+                selectedDemo.style.display = 'block';
+                selectedDemo.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Document Summarization
+        async function summarizeText() {
+            const text = document.getElementById('summarizationText').value.trim();
+            const summaryType = document.getElementById('summaryType').value;
+            const length = document.getElementById('summaryLength').value;
+            
+            if (!text) {
+                alert('Please enter some text to summarize');
+                return;
+            }
+
+            const button = event.target;
+            const loading = button.querySelector('.loading');
+            const resultDiv = document.getElementById('summarizationResult');
+
+            // Show loading state
+            loading.style.display = 'inline';
+            button.disabled = true;
+            resultDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Generating summary...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/summarize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: text,
+                        summaryType: summaryType,
+                        length: length,
+                        includeKeywords: true,
+                        includeMetrics: true
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    resultDiv.innerHTML = `
+                        <div class="mb-3">
+                            <h6><i class="fas fa-file-alt me-2"></i>Summary (${data.summaryType}):</h6>
+                            <p class="mb-2">${data.summary.text}</p>
+                            <small class="text-muted">Confidence: ${data.summary.confidence}%</small>
+                        </div>
+                        ${data.keyPoints && data.keyPoints.length > 0 ? `
+                        <div class="mb-3">
+                            <h6><i class="fas fa-list me-2"></i>Key Points:</h6>
+                            <ul class="list-unstyled">
+                                ${data.keyPoints.map(point => `<li><i class="fas fa-chevron-right me-2 text-primary"></i>${point}</li>`).join('')}
+                            </ul>
+                        </div>
+                        ` : ''}
+                        <div class="mt-3 pt-2 border-top">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>Processing time: ${data.processingTime}ms |
+                                <i class="fas fa-compress me-1"></i>Compression: ${Math.round(data.compressionRatio * 100)}%
+                            </small>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(result.error?.message || 'Summarization failed');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                loading.style.display = 'none';
+                button.disabled = false;
+            }
+        }
+
+        // Document Q&A
+        async function askQuestion() {
+            const documentText = document.getElementById('chatDocumentText').value.trim();
+            const question = document.getElementById('chatQuestion').value.trim();
+            
+            if (!documentText || !question) {
+                alert('Please provide both document content and a question');
+                return;
+            }
+
+            const button = event.target;
+            const loading = button.querySelector('.loading');
+            const resultDiv = document.getElementById('chatResult');
+
+            // Show loading state
+            loading.style.display = 'inline';
+            button.disabled = true;
+            resultDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Processing question...</div>';
+
+            try {
+                // For demo purposes, we'll use a simple QA approach
+                const response = await fetch(`${API_BASE}/chat/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        documentIds: ['demo-doc'],
+                        title: 'Demo Chat Session'
+                    })
+                });
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="mb-3">
+                            <h6><i class="fas fa-question-circle me-2"></i>Question:</h6>
+                            <p class="fst-italic">"${question}"</p>
+                        </div>
+                        <div class="mb-3">
+                            <h6><i class="fas fa-robot me-2"></i>AI Response:</h6>
+                            <p>I can help you analyze this document! However, to demonstrate the full chat functionality, you would need to be authenticated with the system. The chat feature supports:</p>
+                            <ul>
+                                <li>Context-aware responses based on document content</li>
+                                <li>Follow-up questions and clarifications</li>
+                                <li>Source references and citations</li>
+                                <li>Multiple conversation formats (brief, detailed, bullet points)</li>
+                            </ul>
+                        </div>
+                        <div class="mt-3 pt-2 border-top">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                This is a demo interface. Full functionality requires authentication.
+                            </small>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Authentication required for chat features');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Demo Mode: Full chat functionality requires user authentication. 
+                        The system supports advanced document Q&A with context management, 
+                        streaming responses, and session persistence.
+                    </div>
+                `;
+            } finally {
+                loading.style.display = 'none';
+                button.disabled = false;
+            }
+        }
+
+        // Content Extraction
+        async function extractContent() {
+            const text = document.getElementById('extractionText').value.trim();
+            
+            if (!text) {
+                alert('Please enter some text to extract content from');
+                return;
+            }
+
+            // Get selected extraction types
+            const extractionTypes = [];
+            const checkboxes = document.querySelectorAll('#extraction-demo input[type="checkbox"]:checked');
+            checkboxes.forEach(cb => extractionTypes.push(cb.value));
+
+            if (extractionTypes.length === 0) {
+                alert('Please select at least one extraction type');
+                return;
+            }
+
+            const button = event.target;
+            const loading = button.querySelector('.loading');
+            const resultDiv = document.getElementById('extractionResult');
+
+            // Show loading state
+            loading.style.display = 'inline';
+            button.disabled = true;
+            resultDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Extracting content...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/extract`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: text,
+                        extractionTypes: extractionTypes,
+                        options: {
+                            keywordCount: 15,
+                            rankByImportance: true
+                        }
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    let html = '';
+
+                    data.extractedContent.forEach(content => {
+                        if (content.items.length > 0) {
+                            html += `
+                                <div class="mb-3">
+                                    <h6><i class="fas fa-tag me-2"></i>${content.type.replace('_', ' ').toUpperCase()}:</h6>
+                                    <div class="mb-2">
+                                        ${content.items.slice(0, 10).map(item => `
+                                            <span class="badge bg-secondary me-1 mb-1">${item.text}</span>
+                                        `).join('')}
+                                    </div>
+                                    <small class="text-muted">Confidence: ${content.confidence}%</small>
+                                </div>
+                            `;
+                        }
+                    });
+
+                    if (html) {
+                        resultDiv.innerHTML = html + `
+                            <div class="mt-3 pt-2 border-top">
+                                <small class="text-muted">
+                                    <i class="fas fa-chart-bar me-1"></i>
+                                    Total items extracted: ${data.overallMetrics.totalItems} |
+                                    Processing time: ${data.overallMetrics.processingTime}ms
+                                </small>
+                            </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = '<div class="text-muted">No content extracted for the selected types.</div>';
+                    }
+                } else {
+                    throw new Error(result.error?.message || 'Content extraction failed');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                loading.style.display = 'none';
+                button.disabled = false;
+            }
+        }
+
+        // Sentiment Analysis
+        async function analyzeSentiment() {
+            const text = document.getElementById('sentimentText').value.trim();
+            
+            if (!text) {
+                alert('Please enter some text to analyze');
+                return;
+            }
+
+            // Get selected analysis types
+            const analysisTypes = [];
+            const checkboxes = document.querySelectorAll('#sentiment-demo input[type="checkbox"]:checked');
+            checkboxes.forEach(cb => analysisTypes.push(cb.value));
+
+            if (analysisTypes.length === 0) {
+                alert('Please select at least one analysis type');
+                return;
+            }
+
+            const button = event.target;
+            const loading = button.querySelector('.loading');
+            const resultDiv = document.getElementById('sentimentResult');
+
+            // Show loading state
+            loading.style.display = 'inline';
+            button.disabled = true;
+            resultDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Analyzing sentiment...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/sentiment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: text,
+                        analysisTypes: analysisTypes,
+                        options: {
+                            includeConfidence: true,
+                            granularityLevel: 'standard'
+                        }
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    let html = '';
+
+                    // Overall Sentiment
+                    if (data.overallSentiment) {
+                        const sentiment = data.overallSentiment;
+                        const color = sentiment.score > 0.1 ? 'success' : sentiment.score < -0.1 ? 'danger' : 'warning';
+                        html += `
+                            <div class="mb-3">
+                                <h6><i class="fas fa-chart-line me-2"></i>Overall Sentiment:</h6>
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-${color} me-2">${sentiment.label.toUpperCase()}</span>
+                                    <span class="me-2">Score: ${sentiment.score.toFixed(2)}</span>
+                                    <span class="text-muted">Confidence: ${sentiment.confidence}%</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Emotional Tone
+                    if (data.emotionalTone) {
+                        const emotions = data.emotionalTone;
+                        html += `
+                            <div class="mb-3">
+                                <h6><i class="fas fa-heart me-2"></i>Emotional Tone:</h6>
+                                <div class="row">
+                                    ${Object.entries(emotions).map(([emotion, value]) => `
+                                        <div class="col-6 col-md-4">
+                                            <small class="text-muted">${emotion.charAt(0).toUpperCase() + emotion.slice(1)}:</small>
+                                            <div class="progress mb-1" style="height: 8px;">
+                                                <div class="progress-bar" style="width: ${value * 100}%"></div>
+                                            </div>
+                                            <small class="text-muted">${Math.round(value * 100)}%</small>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Key Insights
+                    if (data.insights) {
+                        html += `
+                            <div class="mb-3">
+                                <h6><i class="fas fa-lightbulb me-2"></i>Key Insights:</h6>
+                                <ul class="list-unstyled">
+                                    <li><strong>Dominant Emotion:</strong> ${data.insights.dominantEmotion}</li>
+                                    <li><strong>Emotional Intensity:</strong> ${data.insights.emotionalIntensity}</li>
+                                    ${data.insights.keyFindings.length > 0 ? `<li><strong>Findings:</strong> ${data.insights.keyFindings.join(', ')}</li>` : ''}
+                                </ul>
+                            </div>
+                        `;
+                    }
+
+                    if (html) {
+                        resultDiv.innerHTML = html + `
+                            <div class="mt-3 pt-2 border-top">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>Processing time: ${data.processingTime}ms |
+                                    <i class="fas fa-brain me-1"></i>Analysis depth: ${data.metadata.analysisDepth}
+                                </small>
+                            </div>
+                        `;
+                    }
+                } else {
+                    throw new Error(result.error?.message || 'Sentiment analysis failed');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                loading.style.display = 'none';
+                button.disabled = false;
+            }
+        }
+
+        // Check API Status
+        async function checkApiStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const services = result.data.services;
+                    let statusHtml = '<div class="row">';
+                    
+                    Object.entries(services).forEach(([service, status]) => {
+                        const statusColor = status === 'active' ? 'success' : 'danger';
+                        const statusIcon = status === 'active' ? 'check-circle' : 'times-circle';
+                        statusHtml += `
+                            <div class="col-md-4 mb-2">
+                                <span class="badge bg-${statusColor} me-2">
+                                    <i class="fas fa-${statusIcon} me-1"></i>${status}
+                                </span>
+                                ${service.charAt(0).toUpperCase() + service.slice(1)}
+                            </div>
+                        `;
+                    });
+                    
+                    statusHtml += '</div>';
+                    document.getElementById('apiStatus').innerHTML = statusHtml;
+                } else {
+                    throw new Error('Status check failed');
+                }
+            } catch (error) {
+                document.getElementById('apiStatus').innerHTML = `
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Unable to check API status. Services may require authentication.
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            checkApiStatus();
+            
+            // Add purple button style
+            const style = document.createElement('style');
+            style.textContent = `
+                .btn-purple { 
+                    background-color: #6f42c1; 
+                    border-color: #6f42c1; 
+                    color: white; 
+                }
+                .btn-purple:hover { 
+                    background-color: #5a2d91; 
+                    border-color: #5a2d91; 
+                    color: white; 
+                }
+                .text-purple { color: #6f42c1 !important; }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+</body>
+</html>

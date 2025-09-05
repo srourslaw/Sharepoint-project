@@ -1,0 +1,232 @@
+groups:
+  - name: sharepoint_ai_dashboard_alerts
+    rules:
+      # Application Health Alerts
+      - alert: ApplicationDown
+        expr: up{job="sharepoint-backend"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: sharepoint-backend
+        annotations:
+          summary: "SharePoint AI Dashboard backend is down"
+          description: "Backend application has been down for more than 5 minutes."
+
+      - alert: FrontendDown
+        expr: up{job="sharepoint-frontend"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: sharepoint-frontend
+        annotations:
+          summary: "SharePoint AI Dashboard frontend is down"
+          description: "Frontend application has been down for more than 5 minutes."
+
+      # Database Alerts
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: postgres
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "Database has been unreachable for more than 2 minutes."
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis cache has been unreachable for more than 2 minutes."
+
+      # Performance Alerts
+      - alert: HighResponseTime
+        expr: http_request_duration_seconds{quantile="0.95"} > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: sharepoint-backend
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is above 2 seconds for {{ $labels.handler }} endpoint."
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          service: sharepoint-backend
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 10% for the last 5 minutes."
+
+      # Resource Usage Alerts
+      - alert: HighCPUUsage
+        expr: (100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+        for: 10m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80% for more than 10 minutes on {{ $labels.instance }}."
+
+      - alert: HighMemoryUsage
+        expr: ((node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 85% for more than 10 minutes on {{ $labels.instance }}."
+
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Low disk space"
+          description: "Available disk space is below 10% on {{ $labels.instance }}:{{ $labels.mountpoint }}."
+
+      # AI Service Alerts
+      - alert: AIServiceHighLatency
+        expr: ai_request_duration_seconds{quantile="0.95"} > 30
+        for: 5m
+        labels:
+          severity: warning
+          service: ai
+        annotations:
+          summary: "AI service high latency"
+          description: "AI service response time is above 30 seconds for {{ $labels.model }}."
+
+      - alert: AIServiceHighCost
+        expr: increase(ai_request_cost_total[1h]) > 50
+        for: 1m
+        labels:
+          severity: warning
+          service: ai
+        annotations:
+          summary: "AI service high cost"
+          description: "AI service costs have exceeded $50 in the last hour."
+
+      - alert: AIRateLimitApproaching
+        expr: ai_rate_limit_remaining / ai_rate_limit_total < 0.1
+        for: 1m
+        labels:
+          severity: warning
+          service: ai
+        annotations:
+          summary: "AI rate limit approaching"
+          description: "AI service rate limit is below 10% remaining for {{ $labels.model }}."
+
+      # SharePoint Integration Alerts
+      - alert: SharePointAuthFailure
+        expr: increase(sharepoint_auth_failures_total[10m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+          service: sharepoint
+        annotations:
+          summary: "SharePoint authentication failures"
+          description: "More than 5 SharePoint authentication failures in the last 10 minutes."
+
+      - alert: SharePointSyncFailure
+        expr: increase(sharepoint_sync_failures_total[30m]) > 3
+        for: 1m
+        labels:
+          severity: warning
+          service: sharepoint
+        annotations:
+          summary: "SharePoint sync failures"
+          description: "More than 3 SharePoint sync failures in the last 30 minutes."
+
+      # Security Alerts
+      - alert: UnauthorizedAccessAttempts
+        expr: increase(http_requests_total{status="401"}[10m]) > 20
+        for: 1m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "High number of unauthorized access attempts"
+          description: "More than 20 unauthorized access attempts in the last 10 minutes."
+
+      - alert: SuspiciousIPActivity
+        expr: count by (client_ip) (increase(http_requests_total[5m])) > 1000
+        for: 1m
+        labels:
+          severity: critical
+          service: security
+        annotations:
+          summary: "Suspicious IP activity detected"
+          description: "IP {{ $labels.client_ip }} has made more than 1000 requests in 5 minutes."
+
+      # Business Logic Alerts
+      - alert: DocumentProcessingBacklog
+        expr: document_processing_queue_size > 100
+        for: 15m
+        labels:
+          severity: warning
+          service: document-processing
+        annotations:
+          summary: "Document processing backlog"
+          description: "Document processing queue has more than 100 items for 15 minutes."
+
+      - alert: LowUserActivity
+        expr: increase(user_active_sessions_total[1h]) < 5
+        for: 2h
+        labels:
+          severity: info
+          service: business
+        annotations:
+          summary: "Low user activity"
+          description: "Less than 5 active user sessions in the last hour."
+
+  - name: elasticsearch_alerts
+    rules:
+      - alert: ElasticsearchDown
+        expr: up{job="elasticsearch"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: elasticsearch
+        annotations:
+          summary: "Elasticsearch is down"
+          description: "Elasticsearch has been down for more than 2 minutes."
+
+      - alert: ElasticsearchHighJVMMemoryUsage
+        expr: elasticsearch_jvm_memory_used_bytes / elasticsearch_jvm_memory_max_bytes > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          service: elasticsearch
+        annotations:
+          summary: "Elasticsearch high JVM memory usage"
+          description: "Elasticsearch JVM memory usage is above 85% for more than 10 minutes."
+
+      - alert: ElasticsearchClusterYellow
+        expr: elasticsearch_cluster_health_status{color="yellow"} == 1
+        for: 10m
+        labels:
+          severity: warning
+          service: elasticsearch
+        annotations:
+          summary: "Elasticsearch cluster status is yellow"
+          description: "Elasticsearch cluster health is yellow for more than 10 minutes."
+
+      - alert: ElasticsearchClusterRed
+        expr: elasticsearch_cluster_health_status{color="red"} == 1
+        for: 1m
+        labels:
+          severity: critical
+          service: elasticsearch
+        annotations:
+          summary: "Elasticsearch cluster status is red"
+          description: "Elasticsearch cluster health is red - immediate attention required."

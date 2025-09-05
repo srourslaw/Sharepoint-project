@@ -1,0 +1,81 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage
+.nyc_output
+tests
+test
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Development files (keep src and tsconfig.json for building)
+# src (we need this for building)
+# tsconfig.json (we need this for building)
+jest.config.js
+.eslintrc*
+.prettierrc*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git
+.gitignore
+README.md
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Logs (will be handled by container logging)
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Documentation
+docs
+*.md
+
+# Build artifacts (keep dist for production)
+# dist (commented out as we need it)
+
+# Temporary files
+tmp
+temp
