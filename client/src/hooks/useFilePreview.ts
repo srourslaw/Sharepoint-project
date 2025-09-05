@@ -19,6 +19,7 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
 
   const fetchFile = async (id: string): Promise<void> => {
     try {
+      console.log('🔍 useFilePreview: Starting fetch for file ID:', id);
       setLoading(true);
       setError(null);
 
@@ -26,6 +27,8 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
       const fileResponse = await api.get<ApiResponse<SharePointFile>>(
         `/api/sharepoint-advanced/files/${id}`
       );
+      
+      console.log('📄 useFilePreview: File response:', fileResponse.data);
 
       if (fileResponse.data.success && fileResponse.data.data) {
         const fileData = fileResponse.data.data;
@@ -48,7 +51,9 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
 
   const fetchFileContent = async (id: string, fileData: SharePointFile): Promise<void> => {
     try {
+      console.log('🔍 useFilePreview: Fetching content for file:', fileData.name, 'Type:', fileData.mimeType, 'Extension:', fileData.extension);
       const isPreviewable = isFilePreviewable(fileData);
+      console.log('📋 useFilePreview: Is previewable?', isPreviewable);
       
       if (!isPreviewable) {
         setContent(null);
@@ -57,13 +62,16 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
 
       // For images, get the file content as a blob URL
       if (fileData.mimeType.startsWith('image/')) {
+        console.log('🖼️ useFilePreview: Processing image file');
         const contentResponse = await api.get(
           `/api/sharepoint-advanced/files/${id}/content`,
           { responseType: 'blob' }
         );
         
+        console.log('🖼️ useFilePreview: Got blob response, size:', contentResponse.data.size);
         const blob = new Blob([contentResponse.data], { type: fileData.mimeType });
         const blobUrl = URL.createObjectURL(blob);
+        console.log('🖼️ useFilePreview: Created blob URL:', blobUrl);
         setContent(blobUrl);
         return;
       }
@@ -99,16 +107,29 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
         return;
       }
 
-      // For other supported file types, try to get a preview URL
-      const previewResponse = await api.get<ApiResponse<{ previewUrl: string }>>(
-        `/api/sharepoint-advanced/files/${id}/preview`
-      );
-
-      if (previewResponse.data.success && previewResponse.data.data) {
-        setContent(previewResponse.data.data.previewUrl);
-      } else {
-        setContent(null);
+      // For Office documents (DOCX, Excel, PowerPoint), get text content
+      const officeExtensions = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+      if (officeExtensions.includes(fileData.extension.toLowerCase())) {
+        console.log('📄 useFilePreview: Processing Office document');
+        try {
+          const contentResponse = await api.get(
+            `/api/sharepoint-advanced/files/${id}/content`,
+            { responseType: 'text' }
+          );
+          
+          console.log('📄 useFilePreview: Got text response, length:', contentResponse.data?.length);
+          // For Office docs, we'll get the raw content and display it
+          setContent(contentResponse.data || 'Document content available - please use AI features to analyze this file.');
+        } catch (officeError) {
+          console.log('📄 useFilePreview: Office content error:', officeError);
+          // If we can't get text content, show a helpful message
+          setContent(`This ${fileData.extension.toUpperCase()} document is available for AI processing. Click on AI features to analyze, summarize, or edit this document.`);
+        }
+        return;
       }
+
+      // For other file types, show not available message
+      setContent(null);
     } catch (err: any) {
       console.warn('Could not fetch file content for preview:', err);
       // Don't set error for content fetch failures - file metadata is still valid

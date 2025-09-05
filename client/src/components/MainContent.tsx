@@ -88,6 +88,35 @@ export const MainContent: React.FC<MainContentProps> = ({
     filters: searchFilters,
     viewMode,
   });
+  
+  // Debug log to see what data we're getting and validate objects
+  React.useEffect(() => {
+    if (files.length > 0) {
+      console.log('📄 MainContent: Files data received (count):', files.length);
+      files.forEach((file, index) => {
+        console.log(`📄 File ${index}:`, JSON.stringify({
+          id: typeof file.id, idValue: file.id,
+          name: typeof file.name, nameValue: file.name,
+          displayName: typeof file.displayName, displayNameValue: file.displayName,
+          size: typeof file.size, sizeValue: file.size,
+          lastModifiedDateTime: typeof file.lastModifiedDateTime, dateValue: file.lastModifiedDateTime,
+          lastModifiedBy: typeof file.lastModifiedBy, lastModifiedByValue: file.lastModifiedBy,
+          createdBy: typeof file.createdBy, createdByValue: file.createdBy,
+        }, null, 2));
+        
+        // Check if any objects are being passed to React text rendering
+        Object.keys(file).forEach(key => {
+          const value = (file as any)[key];
+          if (value && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            console.warn(`🚨 Object found in file.${key}:`, JSON.stringify(value, null, 2));
+            if (!value.toString || typeof value.toString !== 'function') {
+              console.error(`❌ Object ${key} has no toString method!`, JSON.stringify(value, null, 2));
+            }
+          }
+        });
+      });
+    }
+  }, [files]);
 
   const handleFileSelect = (fileId: string, isSelected: boolean) => {
     if (isSelected) {
@@ -166,60 +195,93 @@ export const MainContent: React.FC<MainContentProps> = ({
 
   const renderGridView = () => (
     <Grid container spacing={2} sx={{ p: { xs: 1, sm: 2 } }}>
-      {files.map((file) => (
-        <Grid item xs={6} sm={4} md={3} lg={2} xl={2} key={file.id}>
-          <Card
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { boxShadow: 4 },
-              border: selectedFiles.includes(file.id) ? 2 : 0,
-              borderColor: 'primary.main',
-            }}
-            onClick={() => file.isFolder ? onNavigate(file.parentPath + '/' + file.name) : null}
-          >
-            <CardContent sx={{ pb: 1 }}>
-              <Box display="flex" alignItems="center" mb={1}>
-                <Checkbox
-                  checked={selectedFiles.includes(file.id)}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    handleFileSelect(file.id, e.target.checked);
-                  }}
-                  size="small"
-                />
-                <Box flexGrow={1} />
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAnchorEl(e.currentTarget);
-                  }}
-                >
-                  <MoreIcon fontSize="small" />
-                </IconButton>
-              </Box>
-              
-              <Box display="flex" flexDirection="column" alignItems="center" textAlign="center">
-                <Box mb={1}>
-                  {renderFileIcon(file)}
+      {files.map((file, index) => {
+        // Debug logging for each file - properly stringify objects
+        console.log(`🐛 Grid item ${index}:`, JSON.stringify({
+          id: file.id,
+          name: file.name,
+          displayName: file.displayName,
+          size: file.size,
+          lastModifiedDateTime: file.lastModifiedDateTime,
+          extension: file.extension,
+          isFolder: file.isFolder
+        }, null, 2));
+        
+        // Validate all properties that will be rendered
+        const safeDisplayName = String(file.displayName || file.name || 'Unknown');
+        const safeSize = typeof file.size === 'number' ? file.size : 0;
+        const safeDate = file.lastModifiedDateTime || new Date().toISOString();
+        
+        console.log(`🔍 Safe values for ${index}:`, JSON.stringify({
+          safeDisplayName,
+          safeSize,
+          safeDate: typeof safeDate
+        }, null, 2));
+        
+        return (
+          <Grid item xs={6} sm={4} md={3} lg={2} xl={2} key={String(file.id || `file-${index}`)}>
+            <Card
+              sx={{
+                cursor: 'pointer',
+                '&:hover': { boxShadow: 4 },
+                border: (file.id && selectedFiles.includes(String(file.id))) ? 2 : 0,
+                borderColor: 'primary.main',
+              }}
+              onClick={() => {
+                if (file.isFolder) {
+                  onNavigate(file.parentPath + '/' + file.name);
+                } else if (file.id) {
+                  // For files, select them and open preview
+                  console.log('Clicking file:', file.name, 'ID:', file.id);
+                  onFileSelect([String(file.id)]);
+                  onPreviewToggle();
+                }
+              }}
+            >
+              <CardContent sx={{ pb: 1 }}>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <Checkbox
+                    checked={file.id ? selectedFiles.includes(String(file.id)) : false}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleFileSelect(file.id, e.target.checked);
+                    }}
+                    size="small"
+                  />
+                  <Box flexGrow={1} />
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAnchorEl(e.currentTarget);
+                    }}
+                  >
+                    <MoreIcon fontSize="small" />
+                  </IconButton>
                 </Box>
                 
-                <Typography variant="body2" noWrap sx={{ width: '100%', fontWeight: 500 }}>
-                  {file.displayName}
-                </Typography>
-                
-                <Typography variant="caption" color="text.secondary">
-                  {file.isFolder ? 'Folder' : formatFileSize(file.size)}
-                </Typography>
-                
-                <Typography variant="caption" color="text.secondary">
-                  {formatDate(file.lastModifiedDateTime)}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      ))}
+                <Box display="flex" flexDirection="column" alignItems="center" textAlign="center">
+                  <Box mb={1}>
+                    {renderFileIcon(file)}
+                  </Box>
+                  
+                  <Typography variant="body2" noWrap sx={{ width: '100%', fontWeight: 500 }}>
+                    {safeDisplayName}
+                  </Typography>
+                  
+                  <Typography variant="caption" color="text.secondary">
+                    {file.isFolder ? 'Folder' : formatFileSize(safeSize)}
+                  </Typography>
+                  
+                  <Typography variant="caption" color="text.secondary">
+                    {formatDate(safeDate)}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        );
+      })}
     </Grid>
   );
 
@@ -227,18 +289,27 @@ export const MainContent: React.FC<MainContentProps> = ({
     <List sx={{ px: 1 }}>
       {files.map((file) => (
         <ListItem
-          key={file.id}
+          key={String(file.id || Math.random())}
           sx={{
-            border: selectedFiles.includes(file.id) ? 1 : 0,
+            border: (file.id && selectedFiles.includes(String(file.id))) ? 1 : 0,
             borderColor: 'primary.main',
             borderRadius: 1,
             mb: 0.5,
             '&:hover': { bgcolor: 'action.hover' },
           }}
-          onClick={() => file.isFolder ? onNavigate(file.parentPath + '/' + file.name) : null}
+          onClick={() => {
+            if (file.isFolder) {
+              onNavigate(file.parentPath + '/' + file.name);
+            } else if (file.id) {
+              // For files, select them and open preview
+              console.log('Clicking file (list):', file.name, 'ID:', file.id);
+              onFileSelect([String(file.id)]);
+              onPreviewToggle();
+            }
+          }}
         >
           <Checkbox
-            checked={selectedFiles.includes(file.id)}
+            checked={file.id ? selectedFiles.includes(String(file.id)) : false}
             onChange={(e) => {
               e.stopPropagation();
               handleFileSelect(file.id, e.target.checked);
@@ -251,13 +322,20 @@ export const MainContent: React.FC<MainContentProps> = ({
           </ListItemIcon>
           
           <ListItemText
-            primary={file.displayName}
+            primary={String(file.displayName || file.name || 'Unknown')}
             secondary={
               <Box component="span">
                 <Typography component="span" variant="caption" color="text.secondary">
-                  {file.isFolder ? 'Folder' : `${formatFileSize(file.size)} • `}
-                  {formatDate(file.lastModifiedDateTime)}
-                  {file.lastModifiedBy && ` • ${file.lastModifiedBy.displayName}`}
+                  {file.isFolder ? 'Folder' : `${formatFileSize(file.size || 0)} • `}
+                  {formatDate(file.lastModifiedDateTime || new Date())}
+                  {(file.lastModifiedBy && 
+                    typeof file.lastModifiedBy === 'object' && 
+                    file.lastModifiedBy !== null &&
+                    Object.keys(file.lastModifiedBy).length > 0 &&
+                    file.lastModifiedBy.displayName && 
+                    typeof file.lastModifiedBy.displayName === 'string') 
+                    ? ` • ${file.lastModifiedBy.displayName}` 
+                    : ''}
                 </Typography>
               </Box>
             }

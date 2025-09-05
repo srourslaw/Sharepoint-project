@@ -75,11 +75,11 @@ export const createAuthRoutes = (authService: AuthService, authMiddleware: AuthM
       
       // Set session cookie (secure in production)
       const isProduction = process.env.NODE_ENV === 'production';
-      res.cookie('session-id', sessionId, {
+      res.cookie('session_id', sessionId, {
         httpOnly: true,
-        secure: isProduction,
+        secure: false, // Allow HTTP for localhost development
         sameSite: 'lax',
-        domain: 'localhost',
+        path: '/',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
       });
 

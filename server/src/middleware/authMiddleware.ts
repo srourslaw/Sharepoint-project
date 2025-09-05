@@ -156,7 +156,7 @@ export class AuthMiddleware {
     }
 
     // Check cookies
-    const sessionCookie = req.cookies?.['session-id'];
+    const sessionCookie = req.cookies?.['session_id'] || req.cookies?.['session-id'];
     if (sessionCookie) {
       return sessionCookie;
     }

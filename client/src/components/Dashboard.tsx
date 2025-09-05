@@ -23,6 +23,7 @@ import { FileBrowser } from './FileBrowser';
 import { AIPanel } from './AIPanel';
 import { FilePreview } from './FilePreview';
 import { BreadcrumbNavigation } from './BreadcrumbNavigation';
+import { ErrorBoundary } from './ErrorBoundary';
 import { LayoutState } from '../types';
 
 const getDrawerWidth = (theme: any, isMobile: boolean) => {
@@ -48,7 +49,7 @@ export const Dashboard: React.FC = () => {
     aiPanelOpen: !isMobile,
     aiPanelWidth: aiPanelWidth,
     previewOpen: false,
-    previewHeight: isMobile ? 250 : 300,
+    previewHeight: isMobile ? 600 : 800,
   });
 
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -63,7 +64,7 @@ export const Dashboard: React.FC = () => {
       aiPanelOpen: !isMobile,
       sidebarWidth: drawerWidth,
       aiPanelWidth: aiPanelWidth,
-      previewHeight: isMobile ? 250 : 300,
+      previewHeight: isMobile ? 600 : 800,
     }));
   }, [isMobile, drawerWidth, aiPanelWidth]);
 
@@ -184,13 +185,15 @@ export const Dashboard: React.FC = () => {
         
         {/* File Content Area */}
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <MainContent
-            currentPath={currentPath}
-            selectedFiles={selectedFiles}
-            onFileSelect={setSelectedFiles}
-            onNavigate={setCurrentPath}
-            onPreviewToggle={handlePreviewToggle}
-          />
+          <ErrorBoundary>
+            <MainContent
+              currentPath={currentPath}
+              selectedFiles={selectedFiles}
+              onFileSelect={setSelectedFiles}
+              onNavigate={setCurrentPath}
+              onPreviewToggle={handlePreviewToggle}
+            />
+          </ErrorBoundary>
           
           {/* File Preview Area */}
           {layout.previewOpen && (

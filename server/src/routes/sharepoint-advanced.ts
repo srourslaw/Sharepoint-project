@@ -95,28 +95,10 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
                 console.log('⚠️  Root site access failed, trying user drives...');
                 
                 try {
-                // Third try: Get user's drives (OneDrive, SharePoint libraries they have access to)
-                console.log('🔍 Trying to get user drives...');
-                const drivesResponse = await graphClient.api('/me/drives').get();
-                console.log(`✅ Found ${drivesResponse.value?.length || 0} drives`);
-                
-                // Also try to get the specific site the user mentioned
-                try {
-                  console.log('🔍 Trying to get specific SharePoint sites by hostname...');
-                  const specificSiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com').get();
-                  console.log('✅ Found specific site:', specificSiteResponse.displayName);
-                  
-                  // Also try the allcompany subsite
-                  try {
-                    const subsiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany').get();
-                    console.log('✅ Found allcompany subsite:', subsiteResponse.displayName);
-                    sitesResponse.value = [specificSiteResponse, subsiteResponse];
-                  } catch (subsiteError: any) {
-                    console.log('⚠️ Allcompany subsite not accessible, using root site only');
-                    sitesResponse.value = [specificSiteResponse];
-                  }
-                } catch (specificSiteError: any) {
-                  console.log('⚠️ Specific site access failed, using drives only');
+                  // Fourth try: Get user's drives (OneDrive, SharePoint libraries they have access to)
+                  console.log('🔍 Trying to get user drives...');
+                  const drivesResponse = await graphClient.api('/me/drives').get();
+                  console.log(`✅ Found ${drivesResponse.value?.length || 0} drives`);
                   
                   // Convert drives to site-like objects
                   sitesResponse.value = drivesResponse.value?.map((drive: any) => ({
@@ -127,7 +109,6 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
                     description: `${drive.driveType} - ${drive.name}`,
                     driveId: drive.id
                   })) || [];
-                }
                 } catch (drivesError: any) {
                   console.log('❌ All Graph API attempts failed:', drivesError.message);
                   throw drivesError;
@@ -555,6 +536,105 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
             }
           }
           
+          // Handle specific SharePoint sites
+          if (driveId === 'netorgft18344752.sharepoint.com') {
+            console.log('🔍 Accessing Communication site - getting drives first...');
+            
+            // First get the site drives to find the correct drive ID
+            try {
+              const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/drives').get();
+              console.log(`📂 Found ${siteResponse.value?.length || 0} drives in Communication site`);
+              
+              if (siteResponse.value && siteResponse.value.length > 0) {
+                // Use the first drive (usually the default document library)
+                const defaultDrive = siteResponse.value[0];
+                console.log(`🔍 Using drive: ${defaultDrive.id} (${defaultDrive.name})`);
+                
+                const itemsResponse = await graphClient.api(`/drives/${defaultDrive.id}/root/children`).get();
+                console.log(`✅ Found ${itemsResponse.value?.length || 0} items in Communication site`);
+                
+                // Map SharePoint items to expected frontend format
+                const mappedItems = (itemsResponse.value || []).map((item: any) => ({
+                  id: item.id,
+                  name: item.name,
+                  displayName: item.name, // Frontend expects displayName
+                  size: item.size || 0,
+                  webUrl: item.webUrl,
+                  mimeType: item.file?.mimeType || (item.folder ? 'folder' : 'application/octet-stream'),
+                  extension: item.file ? (item.name.split('.').pop() || '') : '',
+                  createdDateTime: item.createdDateTime,
+                  lastModifiedDateTime: item.lastModifiedDateTime,
+                  parentPath: item.parentReference?.path || '/',
+                  isFolder: !!item.folder,
+                  lastModifiedBy: item.lastModifiedBy?.user || { displayName: 'Unknown', email: '' },
+                  createdBy: item.createdBy?.user || { displayName: 'Unknown', email: '' }
+                }));
+                
+                res.json({
+                  success: true,
+                  data: {
+                    items: mappedItems,
+                    totalCount: mappedItems.length,
+                    currentPage: 1,
+                    totalPages: 1
+                  },
+                  message: `Retrieved ${mappedItems.length} items from Communication site`
+                });
+                return;
+              }
+            } catch (driveError: any) {
+              console.error('❌ Error getting Communication site drives:', driveError.message);
+            }
+          } else if (driveId === 'netorgft18344752.sharepoint.com:sites:allcompany') {
+            console.log('🔍 Accessing All Company subsite - getting drives first...');
+            
+            // First get the subsite drives to find the correct drive ID
+            try {
+              const subsiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany:/drives').get();
+              console.log(`📂 Found ${subsiteResponse.value?.length || 0} drives in All Company subsite`);
+              
+              if (subsiteResponse.value && subsiteResponse.value.length > 0) {
+                // Use the first drive (usually the default document library)
+                const defaultDrive = subsiteResponse.value[0];
+                console.log(`🔍 Using drive: ${defaultDrive.id} (${defaultDrive.name})`);
+                
+                const itemsResponse = await graphClient.api(`/drives/${defaultDrive.id}/root/children`).get();
+                console.log(`✅ Found ${itemsResponse.value?.length || 0} items in All Company subsite`);
+                
+                // Map SharePoint items to expected frontend format
+                const mappedItems = (itemsResponse.value || []).map((item: any) => ({
+                  id: item.id,
+                  name: item.name,
+                  displayName: item.name, // Frontend expects displayName
+                  size: item.size || 0,
+                  webUrl: item.webUrl,
+                  mimeType: item.file?.mimeType || (item.folder ? 'folder' : 'application/octet-stream'),
+                  extension: item.file ? (item.name.split('.').pop() || '') : '',
+                  createdDateTime: item.createdDateTime,
+                  lastModifiedDateTime: item.lastModifiedDateTime,
+                  parentPath: item.parentReference?.path || '/',
+                  isFolder: !!item.folder,
+                  lastModifiedBy: item.lastModifiedBy?.user || { displayName: 'Unknown', email: '' },
+                  createdBy: item.createdBy?.user || { displayName: 'Unknown', email: '' }
+                }));
+                
+                res.json({
+                  success: true,
+                  data: {
+                    items: mappedItems,
+                    totalCount: mappedItems.length,
+                    currentPage: 1,
+                    totalPages: 1
+                  },
+                  message: `Retrieved ${mappedItems.length} items from All Company subsite`
+                });
+                return;
+              }
+            } catch (driveError: any) {
+              console.error('❌ Error getting All Company subsite drives:', driveError.message);
+            }
+          }
+          
           // Try as regular drive ID
           const itemsPath = itemId ? `/drives/${driveId}/items/${itemId}/children` : `/drives/${driveId}/root/children`;
           console.log(`🔍 Calling: ${itemsPath}`);
@@ -872,8 +952,51 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           console.log('🔍 Getting real file metadata for ID:', fileId);
           const graphClient = authService.getGraphClient(req.session!.accessToken);
           
-          // Try to get file directly by ID - Microsoft Graph supports this
-          const fileResponse = await graphClient.api(`/drives/items/${fileId}`).get();
+          // We need to find the file in the correct drive
+          // First, try to find which drive contains this file by checking both our SharePoint sites
+          let fileResponse = null;
+          
+          // Try Communication site first
+          try {
+            console.log('🔍 Searching Communication site for file...');
+            const commSiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/drives').get();
+            
+            for (const drive of commSiteResponse.value || []) {
+              try {
+                fileResponse = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
+                console.log(`✅ Found file in Communication site drive: ${drive.name}`);
+                break;
+              } catch (driveError) {
+                // File not in this drive, continue searching
+              }
+            }
+          } catch (siteError) {
+            console.log('⚠️ Could not search Communication site');
+          }
+          
+          // If not found in Communication site, try All Company subsite
+          if (!fileResponse) {
+            try {
+              console.log('🔍 Searching All Company subsite for file...');
+              const subsiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany:/drives').get();
+              
+              for (const drive of subsiteResponse.value || []) {
+                try {
+                  fileResponse = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
+                  console.log(`✅ Found file in All Company drive: ${drive.name}`);
+                  break;
+                } catch (driveError) {
+                  // File not in this drive, continue searching
+                }
+              }
+            } catch (subsiteError) {
+              console.log('⚠️ Could not search All Company subsite');
+            }
+          }
+          
+          if (!fileResponse) {
+            throw new Error(`File with ID ${fileId} not found in any accessible drive`);
+          }
           
           console.log('✅ Retrieved real file metadata:', fileResponse.name);
           
@@ -1771,9 +1894,92 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
       if (isRealSharePointEnabled) {
         try {
           const graphClient = authService.getGraphClient(req.session!.accessToken);
-          // Try to get file content directly
-          const content = await graphClient.api(`/drives/items/${fileId}/content`).get();
-          res.setHeader('Content-Type', 'application/octet-stream');
+          
+          // We need to find the file in the correct drive, similar to metadata endpoint
+          let fileContent = null;
+          
+          // Try Communication site first
+          try {
+            console.log('🔍 Searching Communication site for file content...');
+            const commSiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/drives').get();
+            
+            for (const drive of commSiteResponse.value || []) {
+              try {
+                fileContent = await graphClient.api(`/drives/${drive.id}/items/${fileId}/content`).get();
+                console.log(`✅ Found file content in Communication site drive: ${drive.name}`);
+                break;
+              } catch (driveError) {
+                // File not in this drive, continue searching
+              }
+            }
+          } catch (siteError) {
+            console.log('⚠️ Could not search Communication site for content');
+          }
+          
+          // If not found in Communication site, try All Company subsite
+          if (!fileContent) {
+            try {
+              console.log('🔍 Searching All Company subsite for file content...');
+              const subsiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany:/drives').get();
+              
+              for (const drive of subsiteResponse.value || []) {
+                try {
+                  fileContent = await graphClient.api(`/drives/${drive.id}/items/${fileId}/content`).get();
+                  console.log(`✅ Found file content in All Company drive: ${drive.name}`);
+                  break;
+                } catch (driveError) {
+                  // File not in this drive, continue searching
+                }
+              }
+            } catch (subsiteError) {
+              console.log('⚠️ Could not search All Company subsite for content');
+            }
+          }
+          
+          if (!fileContent) {
+            throw new Error(`File content with ID ${fileId} not found in any accessible drive`);
+          }
+          
+          // Get file metadata to determine content type
+          let fileMetadata = null;
+          
+          // Try to find file metadata to get proper content type
+          try {
+            // Try Communication site first
+            const commSiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/drives').get();
+            for (const drive of commSiteResponse.value || []) {
+              try {
+                fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
+                break;
+              } catch (driveError) {
+                // File not in this drive, continue searching
+              }
+            }
+            
+            // If not found in Communication site, try All Company subsite
+            if (!fileMetadata) {
+              const subsiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany:/drives').get();
+              for (const drive of subsiteResponse.value || []) {
+                try {
+                  fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
+                  break;
+                } catch (driveError) {
+                  // File not in this drive, continue searching
+                }
+              }
+            }
+          } catch (metadataError) {
+            console.log('⚠️ Could not get file metadata for content type');
+          }
+          
+          // Set appropriate content type based on file metadata
+          if (fileMetadata && fileMetadata.file && fileMetadata.file.mimeType) {
+            res.setHeader('Content-Type', fileMetadata.file.mimeType);
+          } else {
+            res.setHeader('Content-Type', 'application/octet-stream');
+          }
+          
+          const content = fileContent;
           res.send(content);
           return;
         } catch (apiError: any) {

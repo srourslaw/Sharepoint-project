@@ -117,6 +117,18 @@ export const useSharePointFiles = (options: UseSharePointFilesOptions): UseShare
       }
     }
 
+      // Handle specific folder navigation for your SharePoint sites
+      if (pathParts.length === 1) {
+        const folderName = pathParts[0];
+        if (folderName === 'Communication site' || folderName === 'Communication%20site') {
+          // Navigate to Communication site contents
+          return '/api/sharepoint-advanced/drives/netorgft18344752.sharepoint.com/items/root/children';
+        } else if (folderName === 'All Company' || folderName === 'All%20Company') {
+          // Navigate to All Company subsite contents  
+          return '/api/sharepoint-advanced/drives/netorgft18344752.sharepoint.com:sites:allcompany/items/root/children';
+        }
+      }
+      
       // Default fallback
       return '/api/sharepoint-advanced/drives/root/items/root/children';
     } catch (error) {
