@@ -52,7 +52,7 @@ jobs:
         npm run test:coverage
         
     - name: Upload frontend coverage reports
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         directory: ./client/coverage
         flags: frontend
@@ -158,7 +158,7 @@ jobs:
         JWT_SECRET: test_jwt_secret
         
     - name: Upload backend coverage reports
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         directory: ./server/coverage
         flags: backend
