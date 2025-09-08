@@ -733,7 +733,7 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
         
         console.log('🔍 Getting real pending invitations from SharePoint...');
         
-        let realInvitations = [];
+        let realInvitations: any[] = [];
         
         try {
           // Try to get site membership requests and sharing invitations
