@@ -15,6 +15,48 @@ export const useRecentFiles = (): UseRecentFilesReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Generate consistent mock data that persists across refreshes
+  const generateMockRecentFiles = (): SharePointFile[] => {
+    const mockRecentFiles: SharePointFile[] = [];
+    
+    // Use consistent data - same files every time
+    const files = [
+      { name: 'Project Proposal', type: 'docx', days: 1 },
+      { name: 'Budget Report Q3', type: 'xlsx', days: 2 },
+      { name: 'Meeting Minutes', type: 'docx', days: 3 },
+      { name: 'Technical Specification', type: 'pdf', days: 4 },
+      { name: 'User Manual v2', type: 'pdf', days: 5 },
+      { name: 'Performance Review', type: 'docx', days: 7 },
+      { name: 'Marketing Plan 2024', type: 'pptx', days: 10 },
+      { name: 'Financial Summary', type: 'xlsx', days: 12 },
+      { name: 'Training Materials', type: 'pptx', days: 15 },
+      { name: 'Code Documentation', type: 'pdf', days: 18 },
+      { name: 'Design Mockups', type: 'pptx', days: 20 },
+      { name: 'Client Presentation', type: 'pptx', days: 25 },
+    ];
+
+    files.forEach((file, i) => {
+      const modifiedDate = new Date();
+      modifiedDate.setDate(modifiedDate.getDate() - file.days);
+
+      mockRecentFiles.push({
+        id: `recent-file-${i}`,
+        name: `${file.name}.${file.type}`,
+        displayName: file.name,
+        webUrl: `https://company.sharepoint.com/sites/docs/file-${i}`,
+        size: Math.floor(Math.random() * 5000000) + 10000, // 10KB to 5MB
+        mimeType: `application/${file.type}`,
+        extension: file.type,
+        createdDateTime: modifiedDate.toISOString(),
+        lastModifiedDateTime: modifiedDate.toISOString(),
+        parentPath: '/sites/docs/Shared Documents',
+        isFolder: false,
+      });
+    });
+
+    return mockRecentFiles;
+  };
+
   const fetchRecentFiles = async (): Promise<SharePointFile[]> => {
     try {
       const response = await api.get('/api/sharepoint-advanced/files/recent');
@@ -26,43 +68,8 @@ export const useRecentFiles = (): UseRecentFilesReturn => {
       }
     } catch (err: any) {
       console.warn('Error fetching recent files:', err);
-      // Return mock data when API fails
-      const mockRecentFiles: SharePointFile[] = [];
-      
-      // Generate some mock recent files with realistic data
-      const fileTypes = ['docx', 'xlsx', 'pptx', 'pdf', 'txt'];
-      const fileNames = [
-        'Project Proposal', 'Budget Report', 'Meeting Minutes', 'Technical Specification',
-        'User Manual', 'Performance Review', 'Marketing Plan', 'Financial Summary',
-        'Training Materials', 'Code Documentation', 'Design Mockups', 'Client Presentation'
-      ];
-
-      for (let i = 0; i < Math.floor(Math.random() * 20) + 5; i++) { // Random 5-25 files
-        const randomName = fileNames[Math.floor(Math.random() * fileNames.length)];
-        const randomType = fileTypes[Math.floor(Math.random() * fileTypes.length)];
-        const daysAgo = Math.floor(Math.random() * 30); // Up to 30 days ago
-        const modifiedDate = new Date();
-        modifiedDate.setDate(modifiedDate.getDate() - daysAgo);
-
-        mockRecentFiles.push({
-          id: `recent-file-${i}`,
-          name: `${randomName}-${i + 1}.${randomType}`,
-          displayName: `${randomName} ${i + 1}`,
-          webUrl: `https://company.sharepoint.com/sites/docs/file-${i}`,
-          size: Math.floor(Math.random() * 5000000) + 10000, // 10KB to 5MB
-          mimeType: `application/${randomType}`,
-          extension: randomType,
-          createdDateTime: modifiedDate.toISOString(),
-          lastModifiedDateTime: modifiedDate.toISOString(),
-          parentPath: '/sites/docs/Shared Documents',
-          isFolder: false,
-        });
-      }
-
-      // Sort by last modified date (most recent first)
-      return mockRecentFiles.sort((a, b) => 
-        new Date(b.lastModifiedDateTime).getTime() - new Date(a.lastModifiedDateTime).getTime()
-      );
+      // Return consistent mock data (same every time)
+      return generateMockRecentFiles();
     }
   };
 
