@@ -150,7 +150,7 @@ export const Dashboard: React.FC = () => {
           width: { sm: layout.sidebarOpen ? `calc(100% - ${layout.sidebarWidth}px)` : '100%' },
           ml: { sm: layout.sidebarOpen ? `${layout.sidebarWidth}px` : 0 },
           zIndex: theme.zIndex.drawer + 1,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(135deg, #0078d4 0%, #8764b8 100%)',
           transition: theme.transitions.create(['width', 'margin'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
@@ -287,12 +287,24 @@ export const Dashboard: React.FC = () => {
         )}
         
         {/* Dynamic Content Based on Route */}
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', paddingBottom: '200px' }}>
           {renderMainContent()}
-          
-          {/* Thakral One Footer - only show when not in preview mode */}
-          {!layout.previewOpen && <ThakralFooter />}
         </Box>
+      </Box>
+
+      {/* Fixed Thakral One Footer */}
+      <Box sx={{ 
+        position: 'fixed',
+        bottom: 0,
+        left: { sm: layout.sidebarOpen ? `${layout.sidebarWidth}px` : 0 },
+        right: { sm: layout.aiPanelOpen ? `${layout.aiPanelWidth}px` : 0 },
+        zIndex: 1000,
+        transition: theme.transitions.create(['left', 'right'], {
+          easing: theme.transitions.easing.sharp,
+          duration: theme.transitions.duration.leavingScreen,
+        }),
+      }}>
+        <ThakralFooter />
       </Box>
 
       {/* AI Panel - RESTORED */}

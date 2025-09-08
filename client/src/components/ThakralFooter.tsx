@@ -6,133 +6,93 @@ export const ThakralFooter: React.FC = () => {
     <Box
       component="footer"
       sx={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: { xs: '20px', md: '30px' },
-        marginTop: '40px',
-        borderRadius: '15px',
+        background: 'linear-gradient(135deg, #0078d4 0%, #8764b8 100%)',
+        padding: { xs: '12px', md: '16px' },
         textAlign: 'center',
         color: 'white',
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-        mx: { xs: 2, md: 3 },
-        mb: 3
+        boxShadow: '0 -4px 8px rgba(0, 0, 0, 0.1)',
+        width: '100%'
       }}
     >
       <Box sx={{ 
         display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        marginBottom: '15px',
-        flexDirection: { xs: 'column', sm: 'row' },
-        gap: { xs: 1, sm: 2 }
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        flexDirection: { xs: 'column', md: 'row' },
+        gap: { xs: 2, md: 4 }
       }}>
-        <img 
-          src="https://www.thakralone.com/wp-content/uploads/2020/08/Thakral-One-Logo.png"
-          alt="Thakral One Logo"
-          style={{ 
-            height: '40px', 
-            filter: 'brightness(0) invert(1)'
-          }}
-        />
+        {/* Left side - Logo and Company */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <img 
+            src="https://www.thakralone.com/wp-content/uploads/2020/08/Thakral-One-Logo.png"
+            alt="Thakral One Logo"
+            style={{ 
+              height: '28px', 
+              filter: 'brightness(0) invert(1)'
+            }}
+          />
+          <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                fontSize: '0.95rem', 
+                fontWeight: 'bold',
+                lineHeight: 1.2
+              }}
+            >
+              Thakral One AI Solutions
+            </Typography>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                fontSize: '0.75rem',
+                color: 'rgba(255,255,255,0.8)'
+              }}
+            >
+              SharePoint AI Intelligence Prototype
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Center - Copyright */}
         <Typography 
-          variant="h5" 
-          component="h3" 
+          variant="body2" 
           sx={{ 
-            margin: 0, 
-            fontSize: { xs: '1.3rem', md: '1.5rem' }, 
-            fontWeight: 'bold' 
+            fontSize: '0.8rem',
+            color: 'rgba(255,255,255,0.9)',
+            textAlign: 'center'
           }}
         >
-          Thakral One AI Solutions
+          © 2025 Thakral One • Proprietary AI Solution
         </Typography>
-      </Box>
-      
-      <Typography 
-        variant="h6" 
-        sx={{ 
-          fontSize: { xs: '1rem', md: '1.125rem' }, 
-          margin: '10px 0', 
-          fontWeight: 500 
-        }}
-      >
-        🎯 SharePoint AI Intelligence Prototype
-      </Typography>
-      
-      <Typography 
-        variant="body1" 
-        sx={{ 
-          fontSize: { xs: '0.875rem', md: '1rem' }, 
-          margin: '8px 0',
-          px: { xs: 1, md: 0 }
-        }}
-      >
-        Advanced AI-Powered SharePoint Analytics and Intelligence Platform
-      </Typography>
-      
-      <Box sx={{ 
-        borderTop: '1px solid rgba(255,255,255,0.3)', 
-        margin: '20px 0', 
-        paddingTop: '20px' 
-      }}>
-        <Typography 
-          variant="body2" 
-          sx={{ fontSize: '0.875rem', margin: '5px 0' }}
-        >
-          <strong>© 2025 Thakral One. All Rights Reserved.</strong>
-        </Typography>
-        
-        <Typography 
-          variant="body2" 
-          sx={{ fontSize: '0.8125rem', margin: '5px 0' }}
-        >
-          Proprietary AI Prototype - Intellectual Property Protected
-        </Typography>
-        
-        <Typography 
-          variant="body2" 
-          sx={{ fontSize: '0.8125rem', margin: '5px 0' }}
-        >
+
+        {/* Right side - Website */}
+        <Box sx={{ textAlign: { xs: 'center', md: 'right' } }}>
           <Link 
             href="https://www.thakralone.com" 
             target="_blank" 
             sx={{ 
               color: '#87ceeb', 
               textDecoration: 'none',
+              fontSize: '0.8rem',
+              fontWeight: 500,
               '&:hover': { textDecoration: 'underline' }
             }}
           >
             www.thakralone.com
           </Link>
-          {' | Further. Together.'}
-        </Typography>
-      </Box>
-      
-      <Box sx={{ 
-        background: 'rgba(255,255,255,0.1)', 
-        padding: { xs: '12px', md: '15px' }, 
-        borderRadius: '10px', 
-        marginTop: '15px' 
-      }}>
-        <Typography 
-          variant="body1" 
-          sx={{ 
-            fontSize: { xs: '0.875rem', md: '1rem' }, 
-            margin: 0, 
-            fontWeight: 'bold' 
-          }}
-        >
-          Ready to transform your SharePoint experience?
-        </Typography>
-        
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            fontSize: { xs: '0.8125rem', md: '0.875rem' }, 
-            margin: '5px 0',
-            px: { xs: 1, md: 0 }
-          }}
-        >
-          Contact Thakral One to discuss your AI-powered business intelligence solutions
-        </Typography>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              display: 'block',
+              fontSize: '0.7rem',
+              color: 'rgba(255,255,255,0.8)',
+              mt: 0.5
+            }}
+          >
+            Further. Together.
+          </Typography>
+        </Box>
       </Box>
     </Box>
   );
