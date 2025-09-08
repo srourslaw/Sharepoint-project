@@ -44,7 +44,7 @@ jobs:
     - name: Run frontend type checking
       run: |
         cd client
-        npm run type-check
+        npm run typecheck
         
     - name: Run frontend tests
       run: |
@@ -125,7 +125,7 @@ jobs:
     - name: Run backend type checking
       run: |
         cd server
-        npm run type-check
+        npm run typecheck
         
     - name: Run database migrations
       run: |
