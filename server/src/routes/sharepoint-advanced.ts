@@ -167,35 +167,35 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
         }
       }
 
-      // Mock sites as folders for navigation
+      // Mock sites as folders for navigation - using names that match the hook mapping
       const mockSiteFolders = [
         {
-          id: 'site-1',
-          name: 'BlueWave Intelligence Team',
-          displayName: 'BlueWave Intelligence Team',
+          id: 'site-communication',
+          name: 'Communication site',
+          displayName: 'Communication site', 
           folder: { childCount: 3 },
           isFolder: true,
           parentPath: '/',
           extension: '', // No extension for folders
           mimeType: 'folder',
           size: 0,
-          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/team',
-          description: 'Main team collaboration site',
+          webUrl: 'https://netorgft18344752.sharepoint.com',
+          description: 'Main communication site with documents',
           createdDateTime: '2024-01-01T00:00:00Z',
           lastModifiedDateTime: new Date().toISOString()
         },
         {
-          id: 'site-2', 
-          name: 'Project Documents',
-          displayName: 'Project Documents',
+          id: 'site-allcompany', 
+          name: 'All Company',
+          displayName: 'All Company',
           folder: { childCount: 2 },
           isFolder: true,
           parentPath: '/',
           extension: '', // No extension for folders
           mimeType: 'folder',
           size: 0,
-          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/projects',
-          description: 'Shared project documentation',
+          webUrl: 'https://netorgft18344752.sharepoint.com/sites/allcompany',
+          description: 'All company shared documents',
           createdDateTime: '2024-01-01T00:00:00Z',
           lastModifiedDateTime: new Date().toISOString()
         }
@@ -490,6 +490,459 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           message: 'Failed to retrieve OneDrive',
           details: error.message
         }
+      });
+    }
+  });
+
+  /**
+   * GET /api/sharepoint-advanced/me/drive/root/children
+   * List files and folders in user's OneDrive root
+   */
+  router.get('/me/drive/root/children', async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (isRealSharePointEnabled) {
+        try {
+          console.log('🔍 Getting OneDrive root files...');
+          const graphClient = authService.getGraphClient(req.session!.accessToken);
+          
+          // Get files from user's OneDrive root
+          const response = await graphClient.api('/me/drive/root/children')
+            .select('id,name,displayName,size,createdDateTime,lastModifiedDateTime,file,folder,parentPath,webUrl')
+            .expand('thumbnails($select=medium)')
+            .top(500)
+            .get();
+          
+          console.log(`✅ Found ${response.value?.length || 0} items in OneDrive root`);
+          
+          // Transform the response to match our expected format
+          const transformedItems = response.value?.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            displayName: item.displayName || item.name,
+            size: item.size || 0,
+            mimeType: item.file?.mimeType || 'folder',
+            extension: item.file ? item.name.split('.').pop()?.toLowerCase() || '' : '',
+            createdDateTime: item.createdDateTime,
+            lastModifiedDateTime: item.lastModifiedDateTime,
+            parentPath: item.parentPath || '/onedrive',
+            isFolder: !!item.folder,
+            webUrl: item.webUrl,
+            thumbnail: item.thumbnails?.[0]?.medium?.url,
+            lastModifiedBy: {
+              displayName: 'OneDrive User',
+              email: 'user@onedrive.com'
+            },
+            createdBy: {
+              displayName: 'OneDrive User', 
+              email: 'user@onedrive.com'
+            }
+          })) || [];
+          
+          res.json({
+            success: true,
+            data: {
+              items: transformedItems,
+              totalCount: transformedItems.length
+            },
+            message: `Retrieved ${transformedItems.length} OneDrive items`
+          });
+          return;
+        } catch (error: any) {
+          console.error('❌ OneDrive API error:', error);
+          console.log('🔄 Falling back to mock OneDrive data');
+        }
+      }
+      
+      // Mock OneDrive data for development/fallback
+      const mockOneDriveItems = [
+        {
+          id: 'onedrive-folder-1',
+          name: 'Photos',
+          displayName: 'Photos',
+          folder: { childCount: 45 },
+          createdDateTime: '2024-01-15T10:00:00Z',
+          lastModifiedDateTime: '2024-12-20T14:30:00Z',
+          parentPath: '/onedrive',
+          isFolder: true,
+          webUrl: 'https://onedrive.live.com/photos',
+          lastModifiedBy: { displayName: 'You', email: 'user@onedrive.com' },
+          createdBy: { displayName: 'You', email: 'user@onedrive.com' }
+        },
+        {
+          id: 'onedrive-folder-2',
+          name: 'Documents',
+          displayName: 'Documents',
+          folder: { childCount: 23 },
+          createdDateTime: '2024-01-15T10:00:00Z',
+          lastModifiedDateTime: '2024-12-22T09:15:00Z',
+          parentPath: '/onedrive',
+          isFolder: true,
+          webUrl: 'https://onedrive.live.com/documents',
+          lastModifiedBy: { displayName: 'You', email: 'user@onedrive.com' },
+          createdBy: { displayName: 'You', email: 'user@onedrive.com' }
+        },
+        {
+          id: 'onedrive-file-1',
+          name: 'Resume.docx',
+          displayName: 'Resume.docx',
+          size: 45632,
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          extension: 'docx',
+          createdDateTime: '2024-03-10T14:20:00Z',
+          lastModifiedDateTime: '2024-12-18T11:45:00Z',
+          parentPath: '/onedrive',
+          isFolder: false,
+          webUrl: 'https://onedrive.live.com/resume.docx',
+          lastModifiedBy: { displayName: 'You', email: 'user@onedrive.com' },
+          createdBy: { displayName: 'You', email: 'user@onedrive.com' }
+        },
+        {
+          id: 'onedrive-file-2',
+          name: 'Budget Spreadsheet.xlsx',
+          displayName: 'Budget Spreadsheet.xlsx',
+          size: 78432,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          extension: 'xlsx',
+          createdDateTime: '2024-06-05T16:30:00Z',
+          lastModifiedDateTime: '2024-12-21T13:20:00Z',
+          parentPath: '/onedrive',
+          isFolder: false,
+          webUrl: 'https://onedrive.live.com/budget.xlsx',
+          lastModifiedBy: { displayName: 'You', email: 'user@onedrive.com' },
+          createdBy: { displayName: 'You', email: 'user@onedrive.com' }
+        },
+        {
+          id: 'onedrive-file-3',
+          name: 'Vacation Photos.zip',
+          displayName: 'Vacation Photos.zip',
+          size: 15678432,
+          mimeType: 'application/zip',
+          extension: 'zip',
+          createdDateTime: '2024-08-20T09:15:00Z',
+          lastModifiedDateTime: '2024-08-20T09:15:00Z',
+          parentPath: '/onedrive',
+          isFolder: false,
+          webUrl: 'https://onedrive.live.com/vacation-photos.zip',
+          lastModifiedBy: { displayName: 'You', email: 'user@onedrive.com' },
+          createdBy: { displayName: 'You', email: 'user@onedrive.com' }
+        }
+      ];
+      
+      res.json({
+        success: true,
+        data: {
+          items: mockOneDriveItems,
+          totalCount: mockOneDriveItems.length
+        },
+        message: `Retrieved ${mockOneDriveItems.length} OneDrive items (mock data)`
+      });
+    } catch (error: any) {
+      console.error('OneDrive root children error:', error);
+      res.status(500).json({
+        error: {
+          code: 'ONEDRIVE_ROOT_CHILDREN_ERROR',
+          message: 'Failed to retrieve OneDrive files',
+          details: error.message
+        }
+      });
+    }
+  });
+
+  /**
+   * GET /api/sharepoint-advanced/me/drive/root/children (filtered views)
+   * Handle filtered OneDrive views: /onedrive/photos, /onedrive/documents, /onedrive/shared, /onedrive/recent
+   */
+  router.get('/drives/:driveId/items/root/children', async (req: Request, res: Response): Promise<void> => {
+    const { driveId } = req.params;
+    
+    // Check if this is a filtered OneDrive view
+    if (driveId === 'onedrive') {
+      // This should be handled by the regular /me/drive/root/children endpoint
+      res.status(404).json({
+        error: { code: 'REDIRECT_TO_MAIN', message: 'Use /me/drive/root/children for main OneDrive view' }
+      });
+      return;
+    }
+
+    // Handle SharePoint site drives
+    if (driveId === 'netorgft18344752.sharepoint.com' || driveId === 'netorgft18344752.sharepoint.com:sites:allcompany') {
+      if (isRealSharePointEnabled) {
+        try {
+          console.log(`🔍 Getting real SharePoint files from ${driveId}...`);
+          const graphClient = authService.getGraphClient(req.session!.accessToken);
+          
+          let apiEndpoint = '';
+          let siteName = '';
+          
+          if (driveId === 'netorgft18344752.sharepoint.com') {
+            // Communication site - get the default document library
+            apiEndpoint = '/sites/netorgft18344752.sharepoint.com/drive/root/children';
+            siteName = 'Communication site';
+          } else if (driveId === 'netorgft18344752.sharepoint.com:sites:allcompany') {
+            // All Company subsite - get the default document library  
+            apiEndpoint = '/sites/netorgft18344752.sharepoint.com:/sites/allcompany/drive/root/children';
+            siteName = 'All Company';
+          }
+          
+          const response = await graphClient.api(apiEndpoint)
+            .select('id,name,displayName,size,createdDateTime,lastModifiedDateTime,file,folder,parentPath,webUrl,createdBy,lastModifiedBy')
+            .expand('thumbnails($select=medium)')
+            .top(500)
+            .get();
+          
+          const transformedItems = (response.value || []).map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            displayName: item.displayName || item.name,
+            size: item.size || 0,
+            mimeType: item.file?.mimeType || (item.folder ? 'application/folder' : 'application/octet-stream'),
+            extension: item.file ? (item.name.split('.').pop()?.toLowerCase() || '') : '',
+            createdDateTime: item.createdDateTime,
+            lastModifiedDateTime: item.lastModifiedDateTime,
+            parentPath: `/${siteName}`,
+            isFolder: !!item.folder,
+            webUrl: item.webUrl,
+            thumbnail: item.thumbnails?.[0]?.medium?.url,
+            lastModifiedBy: { 
+              displayName: item.lastModifiedBy?.user?.displayName || 'SharePoint User',
+              email: item.lastModifiedBy?.user?.email || 'user@sharepoint.com'
+            },
+            createdBy: { 
+              displayName: item.createdBy?.user?.displayName || 'SharePoint User',
+              email: item.createdBy?.user?.email || 'user@sharepoint.com'
+            }
+          }));
+          
+          console.log(`✅ Found ${transformedItems.length} real files/folders in ${siteName}`);
+          
+          res.json({
+            success: true,
+            data: {
+              items: transformedItems,
+              totalCount: transformedItems.length,
+              currentPage: 1,
+              totalPages: 1
+            },
+            message: `Retrieved ${transformedItems.length} items from ${siteName}`,
+            isRealData: true
+          });
+          return;
+        } catch (error: any) {
+          console.error(`❌ SharePoint site ${driveId} error:`, error);
+          console.log(`🔄 Falling back to mock data for ${driveId}`);
+        }
+      }
+      
+      // Fallback mock data for SharePoint sites
+      const mockSiteFiles = [
+        {
+          id: 'mock-file-1',
+          name: 'Project Proposal.docx',
+          displayName: 'Project Proposal.docx',
+          size: 156743,
+          webUrl: `https://${driveId}/Shared%20Documents/Project%20Proposal.docx`,
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          extension: 'docx',
+          createdDateTime: '2024-12-15T10:30:00Z',
+          lastModifiedDateTime: '2024-12-20T14:45:00Z',
+          parentPath: driveId === 'netorgft18344752.sharepoint.com' ? '/Communication site' : '/All Company',
+          isFolder: false,
+          lastModifiedBy: { displayName: 'Hussein Srour', email: 'hussein.srour@bluewaveintelligence.com.au' },
+          createdBy: { displayName: 'Hussein Srour', email: 'hussein.srour@bluewaveintelligence.com.au' }
+        },
+        {
+          id: 'mock-file-2',
+          name: 'Financial Analysis.xlsx',
+          displayName: 'Financial Analysis.xlsx',
+          size: 287456,
+          webUrl: `https://${driveId}/Shared%20Documents/Financial%20Analysis.xlsx`,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          extension: 'xlsx',
+          createdDateTime: '2024-12-18T09:15:00Z',
+          lastModifiedDateTime: '2024-12-22T16:20:00Z',
+          parentPath: driveId === 'netorgft18344752.sharepoint.com' ? '/Communication site' : '/All Company',
+          isFolder: false,
+          lastModifiedBy: { displayName: 'Hussein Srour', email: 'hussein.srour@bluewaveintelligence.com.au' },
+          createdBy: { displayName: 'Sarah Johnson', email: 'sarah.johnson@bluewaveintelligence.com.au' }
+        }
+      ];
+      
+      res.json({
+        success: true,
+        data: {
+          items: mockSiteFiles,
+          totalCount: mockSiteFiles.length,
+          currentPage: 1,
+          totalPages: 1
+        },
+        message: `Mock data for ${driveId}`,
+        isRealData: false
+      });
+      return;
+    }
+    
+    // Handle filtered OneDrive views
+    if (['onedrive-photos', 'onedrive-documents', 'onedrive-shared', 'onedrive-recent'].includes(driveId)) {
+      try {
+        const filterType = driveId.replace('onedrive-', '');
+        console.log(`🔍 Getting filtered OneDrive files: ${filterType}`);
+        
+        if (isRealSharePointEnabled) {
+          try {
+            const graphClient = authService.getGraphClient(req.session!.accessToken);
+            
+            // Get all files first
+            const response = await graphClient.api('/me/drive/root/children')
+              .select('id,name,displayName,size,createdDateTime,lastModifiedDateTime,file,folder,parentPath,webUrl')
+              .expand('thumbnails($select=medium)')
+              .top(500)
+              .get();
+            
+            let filteredItems = response.value || [];
+            
+            // Apply filters based on type
+            switch (filterType) {
+              case 'photos':
+                filteredItems = filteredItems.filter((item: any) => {
+                  if (item.folder) return false;
+                  const ext = item.name.split('.').pop()?.toLowerCase() || '';
+                  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'svg', 'webp', 'heic'].includes(ext);
+                });
+                break;
+              case 'documents':
+                filteredItems = filteredItems.filter((item: any) => {
+                  if (item.folder) return false;
+                  const ext = item.name.split('.').pop()?.toLowerCase() || '';
+                  return ['doc', 'docx', 'pdf', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext);
+                });
+                break;
+              case 'recent':
+                // Filter for files modified in last 30 days
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                filteredItems = filteredItems
+                  .filter((item: any) => !item.folder)
+                  .filter((item: any) => new Date(item.lastModifiedDateTime) >= thirtyDaysAgo)
+                  .sort((a: any, b: any) => new Date(b.lastModifiedDateTime).getTime() - new Date(a.lastModifiedDateTime).getTime());
+                break;
+              case 'shared':
+                // For shared, we'd need to check permissions - for now, simulate with some files
+                filteredItems = filteredItems.filter((item: any, index: number) => !item.folder && index % 3 === 0); // Every 3rd file
+                break;
+            }
+            
+            // Transform the response
+            const transformedItems = filteredItems.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              displayName: item.displayName || item.name,
+              size: item.size || 0,
+              mimeType: item.file?.mimeType || 'folder',
+              extension: item.file ? item.name.split('.').pop()?.toLowerCase() || '' : '',
+              createdDateTime: item.createdDateTime,
+              lastModifiedDateTime: item.lastModifiedDateTime,
+              parentPath: `/onedrive/${filterType}`,
+              isFolder: !!item.folder,
+              webUrl: item.webUrl,
+              thumbnail: item.thumbnails?.[0]?.medium?.url,
+              lastModifiedBy: { displayName: 'OneDrive User', email: 'user@onedrive.com' },
+              createdBy: { displayName: 'OneDrive User', email: 'user@onedrive.com' }
+            }));
+            
+            res.json({
+              success: true,
+              data: { items: transformedItems, totalCount: transformedItems.length },
+              message: `Retrieved ${transformedItems.length} ${filterType} files from OneDrive`
+            });
+            return;
+          } catch (error: any) {
+            console.error(`❌ OneDrive ${filterType} filter error:`, error);
+            console.log(`🔄 Falling back to mock ${filterType} data`);
+          }
+        }
+        
+        // Mock filtered data for development/fallback
+        const generateMockFilteredData = (type: string) => {
+          const baseItems = [
+            { name: 'Resume.docx', ext: 'docx', type: 'document' },
+            { name: 'Budget.xlsx', ext: 'xlsx', type: 'document' },
+            { name: 'Vacation.jpg', ext: 'jpg', type: 'photo' },
+            { name: 'Profile.png', ext: 'png', type: 'photo' },
+            { name: 'Presentation.pptx', ext: 'pptx', type: 'document' },
+            { name: 'Screenshot.png', ext: 'png', type: 'photo' },
+            { name: 'Report.pdf', ext: 'pdf', type: 'document' },
+            { name: 'Family.jpg', ext: 'jpg', type: 'photo' }
+          ];
+          
+          let filtered;
+          switch (type) {
+            case 'photos':
+              filtered = baseItems.filter(item => item.type === 'photo');
+              break;
+            case 'documents':
+              filtered = baseItems.filter(item => item.type === 'document');
+              break;
+            case 'recent':
+              filtered = baseItems.slice(0, 4); // First 4 as recent
+              break;
+            case 'shared':
+              filtered = baseItems.slice(0, 2); // First 2 as shared
+              break;
+            default:
+              filtered = baseItems;
+          }
+          
+          return filtered.map((item, index) => ({
+            id: `onedrive-${type}-${index}`,
+            name: item.name,
+            displayName: item.name,
+            size: Math.floor(Math.random() * 2000000) + 50000,
+            mimeType: getMimeType(item.ext),
+            extension: item.ext,
+            createdDateTime: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+            lastModifiedDateTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+            parentPath: `/onedrive/${type}`,
+            isFolder: false,
+            webUrl: `https://onedrive.live.com/${item.name}`,
+            lastModifiedBy: { displayName: 'You', email: 'user@onedrive.com' },
+            createdBy: { displayName: 'You', email: 'user@onedrive.com' }
+          }));
+        };
+        
+        const getMimeType = (ext: string) => {
+          const mimeMap: Record<string, string> = {
+            docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            pdf: 'application/pdf',
+            jpg: 'image/jpeg',
+            png: 'image/png'
+          };
+          return mimeMap[ext] || 'application/octet-stream';
+        };
+        
+        const mockFilteredItems = generateMockFilteredData(filterType);
+        
+        res.json({
+          success: true,
+          data: { items: mockFilteredItems, totalCount: mockFilteredItems.length },
+          message: `Retrieved ${mockFilteredItems.length} ${filterType} files (mock data)`
+        });
+      } catch (error: any) {
+        const filterType = driveId.replace('onedrive-', '');
+        console.error(`OneDrive ${filterType} filter error:`, error);
+        res.status(500).json({
+          error: {
+            code: 'ONEDRIVE_FILTER_ERROR',
+            message: `Failed to retrieve ${filterType} files`,
+            details: error.message
+          }
+        });
+      }
+    } else {
+      // Handle regular drive requests
+      res.status(404).json({
+        error: { code: 'DRIVE_NOT_FOUND', message: 'Drive not found' }
       });
     }
   });

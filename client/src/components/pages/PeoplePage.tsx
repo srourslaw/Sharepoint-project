@@ -22,6 +22,8 @@ import {
   InputAdornment,
   Tooltip,
   Badge,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -37,6 +39,7 @@ import {
   Public as PublicIcon,
   Lock as LockIcon,
 } from '@mui/icons-material';
+import { useSharePointPeople } from '../../hooks/useSharePointPeople';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -55,6 +58,7 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 export const PeoplePage: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const { peopleData, loading, error, refreshPeopleData } = useSharePointPeople();
 
   const teamMembers = [
     { 
@@ -146,6 +150,30 @@ export const PeoplePage: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          Loading People & Sharing Data...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+        <Typography variant="body1">
+          Unable to load people and sharing data from SharePoint. Please check your connection and try again.
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -155,16 +183,23 @@ export const PeoplePage: React.FC = () => {
             👥 People & Sharing
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Manage team members, permissions, and shared content
+            Real-time data from your SharePoint environment
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<PersonAddIcon />}
-          sx={{ ml: 2 }}
-        >
+        <Box>
+          <Tooltip title="Refresh Data">
+            <IconButton color="primary" onClick={refreshPeopleData} sx={{ mr: 1 }}>
+              <ShareIcon />
+            </IconButton>
+          </Tooltip>
+          <Button
+            variant="contained"
+            startIcon={<PersonAddIcon />}
+            sx={{ ml: 1 }}
+          >
           Invite People
         </Button>
+        </Box>
       </Box>
 
       {/* Quick Stats */}
@@ -174,7 +209,7 @@ export const PeoplePage: React.FC = () => {
             <CardContent>
               <PeopleIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
               <Typography variant="h5" fontWeight="bold">
-                {teamMembers.length}
+                {peopleData.recentContacts.length + (peopleData.currentUser ? 1 : 0)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Team Members
@@ -188,7 +223,7 @@ export const PeoplePage: React.FC = () => {
             <CardContent>
               <ShareIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
               <Typography variant="h5" fontWeight="bold">
-                {sharedFiles.length}
+                {peopleData.totalSharedItems}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Shared Files
@@ -257,32 +292,32 @@ export const PeoplePage: React.FC = () => {
       {/* Tab Panels */}
       <TabPanel value={tabValue} index={0}>
         <Card>
-          <CardHeader title="Team Members" subheader={`${teamMembers.length} active members`} />
+          <CardHeader title="Team Members" subheader={`${peopleData.recentContacts.length + (peopleData.currentUser ? 1 : 0)} team members`} />
           <CardContent>
             <List>
-              {teamMembers.map((member) => (
+              {peopleData.recentContacts.map((member) => (
                 <ListItem key={member.id} sx={{ py: 2 }}>
                   <ListItemAvatar>
                     <Badge
                       badgeContent=""
-                      color={getStatusColor(member.status) as any}
+                      color="success"
                       variant="dot"
                       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                     >
                       <Avatar sx={{ bgcolor: 'primary.main' }}>
-                        {member.avatar}
+                        {member.displayName.charAt(0).toUpperCase()}
                       </Avatar>
                     </Badge>
                   </ListItemAvatar>
                   <ListItemText
-                    primary={member.name}
+                    primary={member.displayName}
                     secondary={
                       <Box>
                         <Typography variant="body2" color="text.secondary">
-                          {member.role} • {member.department}
+                          {member.jobTitle || 'Team Member'} • {member.department || 'SharePoint'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {member.email} • {member.lastActive}
+                          {member.email}
                         </Typography>
                       </Box>
                     }
@@ -316,7 +351,7 @@ export const PeoplePage: React.FC = () => {
           <CardHeader title="Shared Files" subheader="Recently shared content" />
           <CardContent>
             <List>
-              {sharedFiles.map((file, index) => (
+              {peopleData.recentShares.map((file, index) => (
                 <ListItem key={index} sx={{ py: 2 }}>
                   <ListItemAvatar>
                     <Avatar sx={{ bgcolor: 'secondary.main' }}>
@@ -328,10 +363,10 @@ export const PeoplePage: React.FC = () => {
                     secondary={
                       <Box>
                         <Typography variant="body2" color="text.secondary">
-                          Shared with {file.sharedWith} people • {file.sharedBy}
+                          Shared with {file.sharedWith.length} people • {file.sharedBy}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {file.date}
+                          {new Date(file.sharedDate).toLocaleDateString()}
                         </Typography>
                       </Box>
                     }
@@ -460,6 +495,7 @@ export const PeoplePage: React.FC = () => {
           </CardContent>
         </Card>
       </TabPanel>
+      
     </Box>
   );
 };

@@ -43,6 +43,8 @@ import {
   Description as DocIcon,
   TableChart as ExcelIcon,
   Slideshow as PowerPointIcon,
+  ArrowBack as ArrowBackIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 
 import { SharePointFile, ViewMode, SearchFilters } from '../types';
@@ -106,6 +108,28 @@ export const MainContent: React.FC<MainContentProps> = ({
       onFileSelect(files.map(file => file.id));
     }
   };
+
+  const handleGoBack = () => {
+    if (!currentPath || currentPath === '' || currentPath === '/') {
+      // If we're at root, can't go back further
+      return;
+    }
+
+    // Split the path and go up one level
+    const pathParts = currentPath.split('/').filter(Boolean);
+    if (pathParts.length === 0) {
+      // Go to root
+      onNavigate('');
+    } else {
+      // Remove the last part to go up one level
+      pathParts.pop();
+      const parentPath = pathParts.length > 0 ? '/' + pathParts.join('/') : '';
+      onNavigate(parentPath);
+    }
+  };
+
+  // Determine if we can go back (not at root level)
+  const canGoBack = currentPath && currentPath !== '' && currentPath !== '/';
 
   const handleViewModeChange = (type: ViewMode['type']) => {
     setViewMode(prev => ({ ...prev, type }));
@@ -226,6 +250,47 @@ export const MainContent: React.FC<MainContentProps> = ({
               onChange={handleSelectAll}
               size="small"
             />
+            
+            {canGoBack && (
+              <>
+                <Tooltip title="Go back / Up one level">
+                  <IconButton
+                    size="small"
+                    onClick={handleGoBack}
+                    sx={{ ml: 0.5 }}
+                  >
+                    <ArrowBackIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Go to Home">
+                  <IconButton
+                    size="small"
+                    onClick={() => onNavigate('')}
+                    sx={{ ml: 0.5 }}
+                  >
+                    <HomeIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+            
+            {/* Current Path Display */}
+            {currentPath && (
+              <Typography
+                variant="body2"
+                sx={{ 
+                  ml: 1, 
+                  color: 'text.secondary',
+                  display: { xs: 'none', md: 'block' },
+                  maxWidth: '200px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                📁 {currentPath.split('/').filter(Boolean).pop() || 'Root'}
+              </Typography>
+            )}
             
             {selectedFiles.length > 0 && (
               <Chip

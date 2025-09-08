@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Drawer,
@@ -23,6 +24,11 @@ import { MainContent } from './MainContent.step5';
 import { AIPanel } from './AIPanel';
 import { FilePreview } from './FilePreview';
 import { BreadcrumbNavigation } from './BreadcrumbNavigation';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { PeoplePage } from './pages/PeoplePage';
+import { SettingsPage } from './pages/SettingsPage';
+import { RecentFilesPage } from './pages/RecentFilesPage';
+import { OneDrivePage } from './pages/OneDrivePage';
 import { LayoutState } from '../types';
 
 const getDrawerWidth = (theme: any, isMobile: boolean) => {
@@ -37,6 +43,7 @@ const getAIPanelWidth = (theme: any, isMobile: boolean) => {
 
 export const Dashboard: React.FC = () => {
   const theme = useTheme();
+  const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   const drawerWidth = getDrawerWidth(theme, isMobile);
@@ -73,6 +80,60 @@ export const Dashboard: React.FC = () => {
       ...prev,
       previewOpen: !prev.previewOpen
     }));
+  };
+
+  // Render content based on current route
+  const renderMainContent = () => {
+    switch (location.pathname) {
+      case '/analytics':
+        return <AnalyticsPage />;
+      case '/people':
+        return <PeoplePage />;
+      case '/settings':
+        return <SettingsPage />;
+      case '/recent':
+        return <RecentFilesPage />;
+      case '/onedrive':
+        return <OneDrivePage />;
+      default:
+        // Home page - SharePoint sites and documents
+        return (
+          <>
+            <Typography variant="h4" gutterBottom>
+              🏠 SharePoint Home
+            </Typography>
+            <Typography variant="body1" gutterBottom>
+              Browse your SharePoint sites, libraries, and documents
+            </Typography>
+            
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <MainContent
+                currentPath={currentPath}
+                selectedFiles={selectedFiles}
+                onFileSelect={setSelectedFiles}
+                onNavigate={setCurrentPath}
+                onPreviewToggle={handlePreviewToggle}
+              />
+              
+              {/* File Preview Panel */}
+              {layout.previewOpen && selectedFiles.length > 0 && (
+                <Box sx={{ 
+                  height: layout.previewHeight, 
+                  borderTop: 1, 
+                  borderColor: 'divider',
+                  flexShrink: 0
+                }}>
+                  <FilePreview
+                    selectedFiles={selectedFiles}
+                    height={layout.previewHeight}
+                    onClose={handlePreviewToggle}
+                  />
+                </Box>
+              )}
+            </Box>
+          </>
+        );
+    }
   };
 
   console.log('Dashboard.debug rendering...');
@@ -168,43 +229,14 @@ export const Dashboard: React.FC = () => {
       >
         <Toolbar />
         
-        {/* Breadcrumb Navigation */}
-        <BreadcrumbNavigation currentPath={currentPath} onNavigate={setCurrentPath} />
+        {/* Conditional Breadcrumb Navigation - only for Home/SharePoint content */}
+        {location.pathname === '/' && (
+          <BreadcrumbNavigation currentPath={currentPath} onNavigate={setCurrentPath} />
+        )}
         
-        {/* MainContent - RESTORED */}
+        {/* Dynamic Content Based on Route */}
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Typography variant="h4" gutterBottom>
-            SharePoint AI Dashboard - Complete with AI
-          </Typography>
-          <Typography variant="body1" gutterBottom>
-            Full functionality with file browsing, search, filters, and AI integration
-          </Typography>
-          
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <MainContent
-              currentPath={currentPath}
-              selectedFiles={selectedFiles}
-              onFileSelect={setSelectedFiles}
-              onNavigate={setCurrentPath}
-              onPreviewToggle={handlePreviewToggle}
-            />
-            
-            {/* File Preview Panel */}
-            {layout.previewOpen && selectedFiles.length > 0 && (
-              <Box sx={{ 
-                height: layout.previewHeight, 
-                borderTop: 1, 
-                borderColor: 'divider',
-                flexShrink: 0
-              }}>
-                <FilePreview
-                  selectedFiles={selectedFiles}
-                  height={layout.previewHeight}
-                  onClose={handlePreviewToggle}
-                />
-              </Box>
-            )}
-          </Box>
+          {renderMainContent()}
         </Box>
       </Box>
 

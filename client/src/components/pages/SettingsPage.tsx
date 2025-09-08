@@ -20,6 +20,9 @@ import {
   Alert,
   IconButton,
   Tooltip,
+  CircularProgress,
+  Avatar,
+  LinearProgress,
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
@@ -33,55 +36,62 @@ import {
   Refresh as RefreshIcon,
   Info as InfoIcon,
 } from '@mui/icons-material';
+import { useSharePointSettings } from '../../hooks/useSharePointSettings';
 
 export const SettingsPage: React.FC = () => {
-  const [settings, setSettings] = useState({
-    notifications: {
-      emailUpdates: true,
-      desktopNotifications: false,
-      weeklyDigest: true,
-      shareNotifications: true,
-    },
-    appearance: {
-      darkMode: false,
-      compactView: false,
-      showThumbnails: true,
-    },
-    privacy: {
-      shareAnalytics: true,
-      allowExternalSharing: false,
-      requireTwoFactor: true,
-    },
-    general: {
-      language: 'en',
-      timezone: 'UTC+10',
-      defaultView: 'list',
-    },
-  });
+  const { settingsData, loading, error, updateSettings, refreshSettings, hasUnsavedChanges } = useSharePointSettings();
+  const [localSettings, setLocalSettings] = useState(settingsData.settings);
 
-  const [hasChanges, setHasChanges] = useState(false);
+  // Sync local settings when data loads
+  React.useEffect(() => {
+    setLocalSettings(settingsData.settings);
+  }, [settingsData.settings]);
 
   const handleSettingChange = (category: string, setting: string, value: boolean | string) => {
-    setSettings(prev => ({
+    setLocalSettings(prev => ({
       ...prev,
       [category]: {
         ...prev[category as keyof typeof prev],
         [setting]: value,
       },
     }));
-    setHasChanges(true);
   };
 
-  const handleSave = () => {
-    // Here you would typically save to backend
-    console.log('Saving settings:', settings);
-    setHasChanges(false);
+  const handleSave = async () => {
+    try {
+      await updateSettings(localSettings);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+    }
   };
 
   const handleReset = () => {
-    // Reset to default values
-    setHasChanges(false);
+    setLocalSettings(settingsData.settings);
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          Loading Settings...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+        <Typography variant="body1">
+          Unable to load settings from SharePoint. Please check your connection and try again.
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -92,7 +102,7 @@ export const SettingsPage: React.FC = () => {
             ⚙️ Settings
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Customize your SharePoint AI Dashboard experience
+            Manage your SharePoint environment preferences
           </Typography>
         </Box>
         <Box>
@@ -101,7 +111,7 @@ export const SettingsPage: React.FC = () => {
             startIcon={<RefreshIcon />}
             onClick={handleReset}
             sx={{ mr: 2 }}
-            disabled={!hasChanges}
+            disabled={!hasUnsavedChanges}
           >
             Reset
           </Button>
@@ -109,7 +119,7 @@ export const SettingsPage: React.FC = () => {
             variant="contained"
             startIcon={<SaveIcon />}
             onClick={handleSave}
-            disabled={!hasChanges}
+            disabled={!hasUnsavedChanges}
           >
             Save Changes
           </Button>
@@ -117,7 +127,7 @@ export const SettingsPage: React.FC = () => {
       </Box>
 
       {/* Alert for unsaved changes */}
-      {hasChanges && (
+      {hasUnsavedChanges && (
         <Alert severity="warning" sx={{ mb: 3 }}>
           You have unsaved changes. Don't forget to save your settings!
         </Alert>
@@ -141,7 +151,7 @@ export const SettingsPage: React.FC = () => {
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.notifications.emailUpdates}
+                      checked={localSettings.notifications.emailUpdates}
                       onChange={(e) => handleSettingChange('notifications', 'emailUpdates', e.target.checked)}
                     />
                   </ListItemSecondaryAction>
@@ -154,7 +164,7 @@ export const SettingsPage: React.FC = () => {
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.notifications.desktopNotifications}
+                      checked={localSettings.notifications.desktopNotifications}
                       onChange={(e) => handleSettingChange('notifications', 'desktopNotifications', e.target.checked)}
                     />
                   </ListItemSecondaryAction>
@@ -167,7 +177,7 @@ export const SettingsPage: React.FC = () => {
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.notifications.weeklyDigest}
+                      checked={localSettings.notifications.weeklyDigest}
                       onChange={(e) => handleSettingChange('notifications', 'weeklyDigest', e.target.checked)}
                     />
                   </ListItemSecondaryAction>
@@ -180,7 +190,7 @@ export const SettingsPage: React.FC = () => {
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.notifications.shareNotifications}
+                      checked={localSettings.notifications.shareNotifications}
                       onChange={(e) => handleSettingChange('notifications', 'shareNotifications', e.target.checked)}
                     />
                   </ListItemSecondaryAction>
@@ -207,7 +217,7 @@ export const SettingsPage: React.FC = () => {
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.appearance.darkMode}
+                      checked={localSettings.appearance.darkMode}
                       onChange={(e) => handleSettingChange('appearance', 'darkMode', e.target.checked)}
                     />
                   </ListItemSecondaryAction>
@@ -220,7 +230,7 @@ export const SettingsPage: React.FC = () => {
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.appearance.compactView}
+                      checked={localSettings.appearance.compactView}
                       onChange={(e) => handleSettingChange('appearance', 'compactView', e.target.checked)}
                     />
                   </ListItemSecondaryAction>
@@ -233,7 +243,7 @@ export const SettingsPage: React.FC = () => {
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.appearance.showThumbnails}
+                      checked={localSettings.appearance.showThumbnails}
                       onChange={(e) => handleSettingChange('appearance', 'showThumbnails', e.target.checked)}
                     />
                   </ListItemSecondaryAction>
@@ -260,7 +270,7 @@ export const SettingsPage: React.FC = () => {
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.privacy.shareAnalytics}
+                      checked={localSettings.privacy.shareAnalytics}
                       onChange={(e) => handleSettingChange('privacy', 'shareAnalytics', e.target.checked)}
                     />
                   </ListItemSecondaryAction>
@@ -273,7 +283,7 @@ export const SettingsPage: React.FC = () => {
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.privacy.allowExternalSharing}
+                      checked={localSettings.privacy.allowExternalSharing}
                       onChange={(e) => handleSettingChange('privacy', 'allowExternalSharing', e.target.checked)}
                     />
                   </ListItemSecondaryAction>
@@ -288,7 +298,7 @@ export const SettingsPage: React.FC = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Chip label="Required" size="small" color="success" sx={{ mr: 1 }} />
                       <Switch
-                        checked={settings.privacy.requireTwoFactor}
+                        checked={localSettings.privacy.requireTwoFactor}
                         onChange={(e) => handleSettingChange('privacy', 'requireTwoFactor', e.target.checked)}
                       />
                     </Box>
@@ -312,7 +322,7 @@ export const SettingsPage: React.FC = () => {
                 <TextField
                   select
                   label="Language"
-                  value={settings.general.language}
+                  value={localSettings.general.language}
                   onChange={(e) => handleSettingChange('general', 'language', e.target.value)}
                   fullWidth
                 >
@@ -325,7 +335,7 @@ export const SettingsPage: React.FC = () => {
                 <TextField
                   select
                   label="Timezone"
-                  value={settings.general.timezone}
+                  value={localSettings.general.timezone}
                   onChange={(e) => handleSettingChange('general', 'timezone', e.target.value)}
                   fullWidth
                 >
@@ -338,7 +348,7 @@ export const SettingsPage: React.FC = () => {
                 <TextField
                   select
                   label="Default View"
-                  value={settings.general.defaultView}
+                  value={localSettings.general.defaultView}
                   onChange={(e) => handleSettingChange('general', 'defaultView', e.target.value)}
                   fullWidth
                 >

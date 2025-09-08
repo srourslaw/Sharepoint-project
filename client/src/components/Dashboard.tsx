@@ -24,6 +24,7 @@ import { AIPanel } from './AIPanel';
 import { FilePreview } from './FilePreview';
 import { BreadcrumbNavigation } from './BreadcrumbNavigation';
 import { ErrorBoundary } from './ErrorBoundary';
+import { ThakralFooter } from './ThakralFooter';
 import { LayoutState } from '../types';
 
 const getDrawerWidth = (theme: any, isMobile: boolean) => {
@@ -96,20 +97,21 @@ export const Dashboard: React.FC = () => {
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <CssBaseline />
       
-      {/* App Bar */}
+      {/* App Bar with Thakral One Branding */}
       <AppBar
         position="fixed"
         sx={{
           width: { sm: layout.sidebarOpen ? `calc(100% - ${layout.sidebarWidth}px)` : '100%' },
           ml: { sm: layout.sidebarOpen ? `${layout.sidebarWidth}px` : 0 },
           zIndex: theme.zIndex.drawer + 1,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           transition: theme.transitions.create(['width', 'margin'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
           }),
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: '64px', py: 1 }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -120,8 +122,58 @@ export const Dashboard: React.FC = () => {
             <MenuIcon />
           </IconButton>
           
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            SharePoint AI Dashboard
+          {/* Thakral One Logo and Branding */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, mr: 2 }}>
+            <img
+              src="https://www.thakralone.com/wp-content/uploads/2020/08/Thakral-One-Logo.png"
+              alt="Thakral One Logo"
+              style={{
+                height: '32px',
+                marginRight: '12px',
+                filter: 'brightness(0) invert(1)'
+              }}
+            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <Typography
+                variant="h6"
+                noWrap
+                component="div"
+                sx={{ 
+                  fontWeight: 700,
+                  letterSpacing: '0.5px',
+                  color: 'white',
+                  fontSize: { xs: '1rem', sm: '1.1rem' },
+                  lineHeight: 1.2
+                }}
+              >
+                📊 SharePoint AI Dashboard
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{ 
+                  color: 'rgba(255,255,255,0.85)',
+                  fontSize: '0.7rem',
+                  fontWeight: 500,
+                  display: { xs: 'none', sm: 'block' }
+                }}
+              >
+                Prototype by Thakral One
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Copyright notice */}
+          <Typography
+            variant="caption"
+            sx={{ 
+              color: 'rgba(255,255,255,0.9)',
+              fontSize: '0.7rem',
+              fontWeight: 500,
+              mr: 2,
+              display: { xs: 'none', md: 'block' }
+            }}
+          >
+            © 2025 Proprietary AI Solution
           </Typography>
           
           <IconButton
@@ -194,7 +246,7 @@ export const Dashboard: React.FC = () => {
         <BreadcrumbNavigation currentPath={currentPath} onNavigate={setCurrentPath} />
         
         {/* File Content Area */}
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
           <ErrorBoundary>
             <MainContent
               currentPath={currentPath}
@@ -204,6 +256,9 @@ export const Dashboard: React.FC = () => {
               onPreviewToggle={handlePreviewToggle}
             />
           </ErrorBoundary>
+          
+          {/* Thakral One Footer - only show when not in preview mode */}
+          {!layout.previewOpen && <ThakralFooter />}
           
           {/* File Preview Area */}
           {layout.previewOpen && (

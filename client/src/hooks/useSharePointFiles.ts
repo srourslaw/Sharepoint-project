@@ -166,52 +166,73 @@ export const useSharePointFiles = (options: UseSharePointFilesOptions): UseShare
       }
     } catch (err: any) {
       console.error('Error fetching files:', err);
-      // Use mock data when API fails
+      // Use mock data when API fails - using IDs that work with preview system
       const mockFiles = [
         {
           id: 'mock-file-1',
-          name: 'Sample Document.docx',
-          displayName: 'Sample Document.docx',
-          size: 24576,
-          webUrl: 'https://company.sharepoint.com/sites/portal/documents/sample.docx',
+          name: 'Project Proposal.docx',
+          displayName: 'Project Proposal.docx',
+          size: 156743,
+          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/team/Shared%20Documents/Project%20Proposal.docx',
           mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           extension: 'docx',
-          createdDateTime: '2023-01-01T00:00:00Z',
-          lastModifiedDateTime: new Date().toISOString(),
+          createdDateTime: '2024-12-15T10:30:00Z',
+          lastModifiedDateTime: '2024-12-20T14:45:00Z',
           parentPath: '/Documents',
-          isFolder: false
+          isFolder: false,
+          lastModifiedBy: { displayName: 'Hussein Srour', email: 'hussein.srour@bluewaveintelligence.com.au' },
+          createdBy: { displayName: 'Hussein Srour', email: 'hussein.srour@bluewaveintelligence.com.au' }
         },
         {
           id: 'mock-file-2',
-          name: 'Project Proposal.pptx',
-          displayName: 'Project Proposal.pptx',
-          size: 1048576,
-          webUrl: 'https://company.sharepoint.com/sites/portal/documents/proposal.pptx',
-          mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-          extension: 'pptx',
-          createdDateTime: '2023-01-01T00:00:00Z',
-          lastModifiedDateTime: new Date().toISOString(),
+          name: 'Financial Analysis.xlsx',
+          displayName: 'Financial Analysis.xlsx',
+          size: 287456,
+          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/team/Shared%20Documents/Financial%20Analysis.xlsx',
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          extension: 'xlsx',
+          createdDateTime: '2024-12-18T09:15:00Z',
+          lastModifiedDateTime: '2024-12-22T16:20:00Z',
           parentPath: '/Documents',
-          isFolder: false
+          isFolder: false,
+          lastModifiedBy: { displayName: 'Hussein Srour', email: 'hussein.srour@bluewaveintelligence.com.au' },
+          createdBy: { displayName: 'Sarah Johnson', email: 'sarah.johnson@bluewaveintelligence.com.au' }
+        },
+        {
+          id: 'mock-file-3',
+          name: 'Team Meeting Notes.pdf',
+          displayName: 'Team Meeting Notes.pdf',
+          size: 45832,
+          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/team/Shared%20Documents/Team%20Meeting%20Notes.pdf',
+          mimeType: 'application/pdf',
+          extension: 'pdf',
+          createdDateTime: '2024-12-10T11:00:00Z',
+          lastModifiedDateTime: '2024-12-19T13:30:00Z',
+          parentPath: '/Documents',
+          isFolder: false,
+          lastModifiedBy: { displayName: 'Mike Chen', email: 'mike.chen@bluewaveintelligence.com.au' },
+          createdBy: { displayName: 'Mike Chen', email: 'mike.chen@bluewaveintelligence.com.au' }
         },
         {
           id: 'mock-folder-1',
           name: 'Reports',
           displayName: 'Reports',
           size: 0,
-          webUrl: 'https://company.sharepoint.com/sites/portal/documents/reports',
+          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/team/Shared%20Documents/Reports',
           mimeType: 'application/folder',
           extension: '',
-          createdDateTime: '2023-01-01T00:00:00Z',
-          lastModifiedDateTime: new Date().toISOString(),
+          createdDateTime: '2024-11-05T14:20:00Z',
+          lastModifiedDateTime: '2024-12-21T11:30:00Z',
           parentPath: '/Documents',
-          isFolder: true
+          isFolder: true,
+          lastModifiedBy: { displayName: 'Hussein Srour', email: 'hussein.srour@bluewaveintelligence.com.au' },
+          createdBy: { displayName: 'Admin User', email: 'admin@bluewaveintelligence.com.au' }
         }
       ];
       
       if (!append) {
         setFiles(mockFiles);
-        setTotalCount(3);
+        setTotalCount(3); // 3 files + 1 folder
         setCurrentPage(1);
         setTotalPages(1);
       }

@@ -10,9 +10,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthLoadingSpinner } from './components/auth/AuthLoadingSpinner';
 import { AuthError } from './components/auth/AuthError';
 import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
-import { AnalyticsPage } from './components/pages/AnalyticsPage';
-import { PeoplePage } from './components/pages/PeoplePage';
-import { SettingsPage } from './components/pages/SettingsPage';
 
 // Create a custom theme for the application
 const theme = createTheme({
@@ -331,9 +328,9 @@ const AppRoutes: React.FC = () => {
       <Route path="/sites/:siteId/libraries/:libraryId/*" element={<Dashboard />} />
       <Route path="/onedrive/*" element={<Dashboard />} />
       <Route path="/recent" element={<Dashboard />} />
-      <Route path="/analytics" element={<AnalyticsPage />} />
-      <Route path="/people" element={<PeoplePage />} />
-      <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/analytics" element={<Dashboard />} />
+      <Route path="/people" element={<Dashboard />} />
+      <Route path="/settings" element={<Dashboard />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

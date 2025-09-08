@@ -10,6 +10,8 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -21,32 +23,34 @@ import {
   Refresh as RefreshIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
+import { useSharePointAnalytics } from '../../hooks/useSharePointAnalytics';
 
 export const AnalyticsPage: React.FC = () => {
-  const mockAnalyticsData = {
-    totalFiles: 1247,
-    totalStorage: '15.6 GB',
-    activeUsers: 28,
-    recentActivity: 156,
-    weeklyGrowth: '+12%',
-    monthlyGrowth: '+34%',
-  };
+  const { analytics, loading, error, refreshAnalytics } = useSharePointAnalytics();
 
-  const topFileTypes = [
-    { type: 'Word Documents', count: 428, percentage: 34 },
-    { type: 'Excel Sheets', count: 312, percentage: 25 },
-    { type: 'PowerPoint', count: 203, percentage: 16 },
-    { type: 'PDFs', count: 178, percentage: 14 },
-    { type: 'Images', count: 126, percentage: 11 },
-  ];
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          Loading SharePoint Analytics...
+        </Typography>
+      </Box>
+    );
+  }
 
-  const recentActivities = [
-    { user: 'Sarah Johnson', action: 'uploaded', file: 'Q3 Budget Report.xlsx', time: '2 minutes ago' },
-    { user: 'Mike Chen', action: 'shared', file: 'Project Timeline.pptx', time: '15 minutes ago' },
-    { user: 'Emily Davis', action: 'modified', file: 'Meeting Notes.docx', time: '1 hour ago' },
-    { user: 'Alex Wilson', action: 'downloaded', file: 'Technical Specs.pdf', time: '2 hours ago' },
-    { user: 'Lisa Brown', action: 'created', file: 'Marketing Plan v2.docx', time: '3 hours ago' },
-  ];
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+        <Typography variant="body1">
+          Unable to load analytics data from SharePoint. Please check your connection and try again.
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -54,20 +58,20 @@ export const AnalyticsPage: React.FC = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
           <Typography variant="h4" gutterBottom>
-            📊 Analytics Dashboard
+            📊 SharePoint Analytics
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Comprehensive insights into your SharePoint usage and performance
+            Real-time insights from your SharePoint environment
           </Typography>
         </Box>
         <Box>
-          <Tooltip title="Refresh Data">
-            <IconButton>
+          <Tooltip title="Refresh Analytics">
+            <IconButton color="primary" onClick={refreshAnalytics}>
               <RefreshIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="Export Report">
-            <IconButton>
+            <IconButton color="primary">
               <DownloadIcon />
             </IconButton>
           </Tooltip>
@@ -81,7 +85,7 @@ export const AnalyticsPage: React.FC = () => {
             <CardContent>
               <ChartIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
               <Typography variant="h5" fontWeight="bold">
-                {mockAnalyticsData.totalFiles}
+                {analytics.totalFiles}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Total Files
@@ -95,7 +99,7 @@ export const AnalyticsPage: React.FC = () => {
             <CardContent>
               <AssessmentIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
               <Typography variant="h5" fontWeight="bold">
-                {mockAnalyticsData.totalStorage}
+                {analytics.totalStorage}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Storage Used
@@ -109,10 +113,10 @@ export const AnalyticsPage: React.FC = () => {
             <CardContent>
               <TimelineIcon sx={{ fontSize: 40, color: 'info.main', mb: 1 }} />
               <Typography variant="h5" fontWeight="bold">
-                {mockAnalyticsData.activeUsers}
+                {analytics.totalSites}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Active Users
+                SharePoint Sites
               </Typography>
             </CardContent>
           </Card>
@@ -123,10 +127,10 @@ export const AnalyticsPage: React.FC = () => {
             <CardContent>
               <TrendingUpIcon sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
               <Typography variant="h5" fontWeight="bold">
-                {mockAnalyticsData.recentActivity}
+                {analytics.recentActivity.length}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Recent Activities
+                Recent Changes
               </Typography>
             </CardContent>
           </Card>
@@ -137,10 +141,10 @@ export const AnalyticsPage: React.FC = () => {
             <CardContent>
               <PieChartIcon sx={{ fontSize: 40, color: 'secondary.main', mb: 1 }} />
               <Typography variant="h5" fontWeight="bold" color="success.main">
-                {mockAnalyticsData.weeklyGrowth}
+                {analytics.fileTypes.length}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Weekly Growth
+                File Types
               </Typography>
             </CardContent>
           </Card>
@@ -151,10 +155,10 @@ export const AnalyticsPage: React.FC = () => {
             <CardContent>
               <BarChartIcon sx={{ fontSize: 40, color: 'error.main', mb: 1 }} />
               <Typography variant="h5" fontWeight="bold" color="success.main">
-                {mockAnalyticsData.monthlyGrowth}
+                {analytics.totalLibraries || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Monthly Growth
+                Libraries
               </Typography>
             </CardContent>
           </Card>
@@ -190,7 +194,7 @@ export const AnalyticsPage: React.FC = () => {
             <CardHeader title="File Types Distribution" subheader="By document count" />
             <CardContent>
               <Box sx={{ mb: 2 }}>
-                {topFileTypes.map((fileType, index) => (
+                {analytics.fileTypes.map((fileType, index) => (
                   <Box key={index} sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                       <Typography variant="body2">{fileType.type}</Typography>
@@ -225,15 +229,15 @@ export const AnalyticsPage: React.FC = () => {
         <CardHeader title="Recent Activity" subheader="Latest user actions across your SharePoint" />
         <CardContent>
           <Box>
-            {recentActivities.map((activity, index) => (
+            {analytics.recentActivity.map((activity, index) => (
               <Paper key={index} sx={{ p: 2, mb: 1, display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="body1">
-                    <strong>{activity.user}</strong> {activity.action}{' '}
-                    <Chip label={activity.file} size="small" variant="outlined" sx={{ mx: 1 }} />
+                    <Chip label={activity.fileName} size="small" variant="outlined" sx={{ mr: 1 }} />
+                    was {activity.action}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {activity.time}
+                    {activity.timestamp} • {activity.site}
                   </Typography>
                 </Box>
                 <Chip 

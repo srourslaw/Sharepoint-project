@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   List,
@@ -46,6 +47,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   onNavigate,
   currentPath,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['sites', 'main-navigation']));
   const [searchQuery, setSearchQuery] = useState('');
   const { sites, libraries, loading, error, refreshData } = useSharePointData();
@@ -53,7 +56,14 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const handleItemClick = (item: NavigationItem) => {
     if (item.path) {
-      onNavigate(item.path);
+      // Use React Router navigation for main pages and dedicated pages
+      if (item.path === '/' || item.path === '/recent' || item.path === '/onedrive' || 
+          item.path === '/analytics' || item.path === '/people' || item.path === '/settings') {
+        navigate(item.path);
+      } else {
+        // Use internal navigation for SharePoint content (sites, libraries, folders)
+        onNavigate(item.path);
+      }
     }
     
     if (item.children) {
@@ -214,7 +224,11 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     }
 
     const isExpanded = expandedItems.has(item.id);
-    const isActive = currentPath === item.path;
+    // Use React Router location for active state of main and dedicated pages
+    const isActive = (item.path === '/' || item.path === '/recent' || item.path === '/onedrive' || 
+                     item.path === '/analytics' || item.path === '/people' || item.path === '/settings') 
+      ? location.pathname === item.path 
+      : currentPath === item.path;
     const hasChildren = item.children && item.children.length > 0;
 
     return (
