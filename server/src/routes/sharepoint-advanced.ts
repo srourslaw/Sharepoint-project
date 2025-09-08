@@ -565,7 +565,8 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
               userPrincipalName: currentUserResponse.userPrincipalName || currentUserResponse.mail,
               jobTitle: currentUserResponse.jobTitle || 'Current User',
               department: currentUserResponse.department || 'Organization',
-              officeLocation: currentUserResponse.officeLocation
+              officeLocation: currentUserResponse.officeLocation,
+              permissions: 'Full Control' // Current user gets full control
             });
           }
           
@@ -588,7 +589,8 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
                       mail: email,
                       userPrincipalName: email,
                       jobTitle: 'Team Member',
-                      department: 'SharePoint User'
+                      department: 'SharePoint User',
+                      permissions: 'Contribute' // File creators get contribute permissions
                     });
                   }
                 }
@@ -603,7 +605,8 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
                       mail: email,
                       userPrincipalName: email,
                       jobTitle: 'Team Member',
-                      department: 'SharePoint User'
+                      department: 'SharePoint User',
+                      permissions: 'Contribute' // File editors get contribute permissions
                     });
                   }
                 }
@@ -637,7 +640,8 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
                 userPrincipalName: currentUserResponse.userPrincipalName || currentUserResponse.mail,
                 jobTitle: currentUserResponse.jobTitle || 'Team Lead',
                 department: currentUserResponse.department || orgName,
-                officeLocation: currentUserResponse.officeLocation
+                officeLocation: currentUserResponse.officeLocation,
+                permissions: 'Full Control' // Current user gets full control
               }
             ];
             console.log(`✅ Using current user data from ${orgName}`);
@@ -655,8 +659,9 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           jobTitle: user.jobTitle,
           department: user.department,
           officeLocation: user.officeLocation,
-          permissions: user.userPrincipalName?.includes('admin') ? 'Full Control' : 
-                      user.jobTitle?.toLowerCase().includes('manager') ? 'Contribute' : 'Read'
+          permissions: user.userPrincipalName?.includes('admin') || user.jobTitle?.toLowerCase().includes('admin') ? 'Full Control' : 
+                      user.jobTitle?.toLowerCase().includes('manager') || user.jobTitle?.toLowerCase().includes('lead') || user.jobTitle?.toLowerCase().includes('director') || user.jobTitle?.toLowerCase().includes('owner') ? 'Full Control' :
+                      user.jobTitle?.toLowerCase().includes('developer') || user.jobTitle?.toLowerCase().includes('engineer') || user.jobTitle?.toLowerCase().includes('analyst') || user.jobTitle?.toLowerCase().includes('specialist') ? 'Contribute' : 'Read'
         }));
         
         console.log(`✅ Found ${transformedPeople.length} people`);

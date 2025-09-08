@@ -399,10 +399,19 @@ export const PeoplePage: React.FC = () => {
                 <Typography variant="body2" color="text.secondary" paragraph>
                   Complete access to manage content, permissions, and site settings.
                 </Typography>
-                <Typography variant="h6">2 Users</Typography>
+                <Typography variant="h6">
+                  {peopleData.recentContacts.filter(person => person.permissions === 'Full Control').length + 
+                   (peopleData.currentUser?.permissions === 'Full Control' ? 1 : 0)} Users
+                </Typography>
                 <Box sx={{ mt: 2 }}>
-                  <Chip label="Sarah Johnson" size="small" sx={{ mr: 1, mb: 1 }} />
-                  <Chip label="Lisa Brown" size="small" sx={{ mr: 1, mb: 1 }} />
+                  {peopleData.currentUser?.permissions === 'Full Control' && (
+                    <Chip label={peopleData.currentUser.displayName} size="small" sx={{ mr: 1, mb: 1 }} />
+                  )}
+                  {peopleData.recentContacts
+                    .filter(person => person.permissions === 'Full Control')
+                    .map(person => (
+                      <Chip key={person.id} label={person.displayName} size="small" sx={{ mr: 1, mb: 1 }} />
+                    ))}
                 </Box>
               </CardContent>
             </Card>
@@ -415,10 +424,19 @@ export const PeoplePage: React.FC = () => {
                 <Typography variant="body2" color="text.secondary" paragraph>
                   Can add, edit, and delete files and folders.
                 </Typography>
-                <Typography variant="h6">2 Users</Typography>
+                <Typography variant="h6">
+                  {peopleData.recentContacts.filter(person => person.permissions === 'Contribute').length +
+                   (peopleData.currentUser?.permissions === 'Contribute' ? 1 : 0)} Users
+                </Typography>
                 <Box sx={{ mt: 2 }}>
-                  <Chip label="Mike Chen" size="small" sx={{ mr: 1, mb: 1 }} />
-                  <Chip label="Alex Wilson" size="small" sx={{ mr: 1, mb: 1 }} />
+                  {peopleData.currentUser?.permissions === 'Contribute' && (
+                    <Chip label={peopleData.currentUser.displayName} size="small" sx={{ mr: 1, mb: 1 }} />
+                  )}
+                  {peopleData.recentContacts
+                    .filter(person => person.permissions === 'Contribute')
+                    .map(person => (
+                      <Chip key={person.id} label={person.displayName} size="small" sx={{ mr: 1, mb: 1 }} />
+                    ))}
                 </Box>
               </CardContent>
             </Card>
@@ -431,9 +449,19 @@ export const PeoplePage: React.FC = () => {
                 <Typography variant="body2" color="text.secondary" paragraph>
                   Can view and download files but cannot make changes.
                 </Typography>
-                <Typography variant="h6">1 User</Typography>
+                <Typography variant="h6">
+                  {peopleData.recentContacts.filter(person => person.permissions === 'Read').length +
+                   (peopleData.currentUser?.permissions === 'Read' ? 1 : 0)} Users
+                </Typography>
                 <Box sx={{ mt: 2 }}>
-                  <Chip label="Emily Davis" size="small" sx={{ mr: 1, mb: 1 }} />
+                  {peopleData.currentUser?.permissions === 'Read' && (
+                    <Chip label={peopleData.currentUser.displayName} size="small" sx={{ mr: 1, mb: 1 }} />
+                  )}
+                  {peopleData.recentContacts
+                    .filter(person => person.permissions === 'Read')
+                    .map(person => (
+                      <Chip key={person.id} label={person.displayName} size="small" sx={{ mr: 1, mb: 1 }} />
+                    ))}
                 </Box>
               </CardContent>
             </Card>
