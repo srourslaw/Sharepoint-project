@@ -4,6 +4,7 @@ import { AuthMiddleware } from '../middleware/authMiddleware';
 import { AuthService } from '../services/authService';
 import { SharePointService } from '../services/sharepointService';
 import { FileType, SearchOptions, ListOptions } from '../types/sharepoint';
+import { AdvancedFileProcessor } from '../utils/advanced-file-processor';
 
 // Configure multer for file uploads
 const upload = multer({
@@ -26,6 +27,12 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
 
   // Feature flag for enabling real SharePoint API
   const isRealSharePointEnabled = process.env.ENABLE_REAL_SHAREPOINT === 'true';
+
+  // Initialize file processor for content extraction
+  const fileProcessor = new AdvancedFileProcessor({
+    maxFileSize: 50 * 1024 * 1024, // 50MB limit for preview
+    supportedTypes: [FileType.DOCUMENT, FileType.SPREADSHEET, FileType.PRESENTATION, FileType.PDF, FileType.TEXT]
+  });
 
   // Create SharePoint service instance for each request
   const getSharePointService = (req: Request): SharePointService => {
@@ -1884,114 +1891,458 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
 
   /**
    * GET /api/sharepoint-advanced/files/:fileId/content
-   * Get file content for preview
+   * Get file content for preview with text extraction or raw binary
    */
   router.get('/files/:fileId/content', async (req: Request, res: Response): Promise<void> => {
     try {
       const { fileId } = req.params;
-      console.log('🔍 Getting file content for:', fileId);
+      const { extractText = 'false', format = 'binary' } = req.query;
+      console.log('🔍 Getting file content for preview:', fileId, 'extractText:', extractText, 'format:', format);
       
       if (isRealSharePointEnabled) {
         try {
           const graphClient = authService.getGraphClient(req.session!.accessToken);
           
-          // We need to find the file in the correct drive, similar to metadata endpoint
+          // Find file metadata first to determine the file type
+          let fileMetadata = null;
           let fileContent = null;
           
-          // Try Communication site first
-          try {
-            console.log('🔍 Searching Communication site for file content...');
-            const commSiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/drives').get();
-            
-            for (const drive of commSiteResponse.value || []) {
-              try {
-                fileContent = await graphClient.api(`/drives/${drive.id}/items/${fileId}/content`).get();
-                console.log(`✅ Found file content in Communication site drive: ${drive.name}`);
-                break;
-              } catch (driveError) {
-                // File not in this drive, continue searching
-              }
-            }
-          } catch (siteError) {
-            console.log('⚠️ Could not search Communication site for content');
-          }
+          // Search for file in SharePoint sites
+          const sites = [
+            { path: '/sites/netorgft18344752.sharepoint.com/drives', name: 'Communication site' },
+            { path: '/sites/netorgft18344752.sharepoint.com:/sites/allcompany:/drives', name: 'All Company subsite' }
+          ];
           
-          // If not found in Communication site, try All Company subsite
-          if (!fileContent) {
+          for (const site of sites) {
             try {
-              console.log('🔍 Searching All Company subsite for file content...');
-              const subsiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany:/drives').get();
+              console.log(`🔍 Searching ${site.name} for file...`);
+              const drivesResponse = await graphClient.api(site.path).get();
               
-              for (const drive of subsiteResponse.value || []) {
+              for (const drive of drivesResponse.value || []) {
                 try {
+                  // Get metadata
+                  fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
+                  
+                  // Get content
                   fileContent = await graphClient.api(`/drives/${drive.id}/items/${fileId}/content`).get();
-                  console.log(`✅ Found file content in All Company drive: ${drive.name}`);
+                  
+                  console.log(`✅ Found file in ${site.name}, drive: ${drive.name}`);
                   break;
                 } catch (driveError) {
                   // File not in this drive, continue searching
                 }
               }
-            } catch (subsiteError) {
-              console.log('⚠️ Could not search All Company subsite for content');
+              
+              if (fileMetadata && fileContent) break;
+            } catch (siteError) {
+              console.log(`⚠️ Could not search ${site.name}`);
             }
           }
           
-          if (!fileContent) {
-            throw new Error(`File content with ID ${fileId} not found in any accessible drive`);
+          if (!fileContent || !fileMetadata) {
+            throw new Error(`File with ID ${fileId} not found in any accessible drive`);
           }
           
-          // Get file metadata to determine content type
-          let fileMetadata = null;
+          console.log('📄 Processing file for text extraction:', fileMetadata.name, fileMetadata.file?.mimeType);
           
-          // Try to find file metadata to get proper content type
-          try {
-            // Try Communication site first
-            const commSiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/drives').get();
-            for (const drive of commSiteResponse.value || []) {
+          // Check file type and determine processing approach
+          const mimeType = fileMetadata.file?.mimeType || 'application/octet-stream';
+          const fileName = fileMetadata.name;
+          const fileExtension = fileName.split('.').pop()?.toLowerCase();
+          
+          console.log('📄 File processing decision - Extension:', fileExtension, 'MIME:', mimeType);
+          
+          // Handle different file types
+          const officeExtensions = ['docx', 'xlsx', 'pptx', 'doc', 'xls', 'ppt'];
+          const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
+          const pdfExtensions = ['pdf'];
+          
+          if (fileExtension && officeExtensions.includes(fileExtension)) {
+            try {
+              console.log('🔄 Extracting text from Office document...');
+              
+              // Convert response to Buffer - handle ReadableStream from Graph API
+              let buffer: Buffer;
+              
+              if (Buffer.isBuffer(fileContent)) {
+                buffer = fileContent;
+                console.log('📄 File content is already a Buffer, length:', buffer.length);
+              } else if (fileContent instanceof ReadableStream) {
+                console.log('📄 File content is ReadableStream, converting to Buffer...');
+                // Convert ReadableStream to Buffer
+                const reader = fileContent.getReader();
+                const chunks: Uint8Array[] = [];
+                let done = false;
+                
+                while (!done) {
+                  const { value, done: streamDone } = await reader.read();
+                  done = streamDone;
+                  if (value) {
+                    chunks.push(value);
+                  }
+                }
+                
+                const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+                buffer = Buffer.concat(chunks.map(chunk => Buffer.from(chunk)), totalLength);
+                console.log('✅ Converted ReadableStream to Buffer, length:', buffer.length);
+              } else if (typeof fileContent === 'string') {
+                buffer = Buffer.from(fileContent, 'utf8');
+                console.log('📄 File content is string, converted to Buffer, length:', buffer.length);
+              } else {
+                // Try to convert anything else to Buffer
+                console.log('📄 File content type:', typeof fileContent, 'attempting conversion...');
+                buffer = Buffer.from(fileContent);
+                console.log('📄 Converted to Buffer, length:', buffer.length);
+              }
+              
+              // Process file with text extraction
+              const processedContent = await fileProcessor.processFileWithProgress(
+                buffer,
+                mimeType,
+                fileName,
+                true, // extractText = true
+                `preview-${fileId}-${Date.now()}`
+              );
+              
+              if (processedContent.extractedText) {
+                console.log('✅ Text extraction successful, length:', processedContent.extractedText.length);
+                res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+                res.send(processedContent.extractedText);
+                return;
+              } else {
+                console.log('⚠️ No text extracted, falling back to raw content');
+              }
+              
+            } catch (extractError: any) {
+              console.error('❌ Text extraction failed:', extractError.message);
+              // Fall through to send raw content
+            }
+          } else if (fileExtension && imageExtensions.includes(fileExtension)) {
+            // Handle image files - return raw binary data for display
+            console.log('🖼️ Processing image file for display...');
+            
+            // Convert ReadableStream to Buffer for images
+            let buffer: Buffer;
+            if (Buffer.isBuffer(fileContent)) {
+              buffer = fileContent;
+              console.log('🖼️ File content is already a Buffer, length:', buffer.length);
+            } else if (fileContent instanceof ReadableStream) {
+              console.log('🖼️ Converting image ReadableStream to Buffer...');
+              const reader = fileContent.getReader();
+              const chunks: Uint8Array[] = [];
+              let done = false;
+              
+              while (!done) {
+                const { value, done: streamDone } = await reader.read();
+                done = streamDone;
+                if (value) {
+                  chunks.push(value);
+                }
+              }
+              
+              const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+              buffer = Buffer.concat(chunks.map(chunk => Buffer.from(chunk)), totalLength);
+              console.log('✅ Converted image ReadableStream to Buffer, length:', buffer.length);
+            } else if (typeof fileContent === 'string') {
+              console.log('⚠️ Image fileContent is string, this is unexpected for binary data');
+              // Try to decode if it's base64 or return error
+              throw new Error('Image file content received as string instead of binary data');
+            } else if (fileContent && typeof fileContent === 'object' && 'arrayBuffer' in fileContent) {
+              // Handle Blob objects
+              console.log('🖼️ Converting Blob to Buffer...');
+              const arrayBuffer = await fileContent.arrayBuffer();
+              buffer = Buffer.from(arrayBuffer);
+              console.log('✅ Converted Blob to Buffer, length:', buffer.length);
+            } else {
+              console.log('🖼️ Converting other fileContent type to Buffer:', typeof fileContent, 'constructor:', fileContent?.constructor?.name);
               try {
-                fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
-                break;
-              } catch (driveError) {
-                // File not in this drive, continue searching
+                buffer = Buffer.from(fileContent);
+              } catch (conversionError: any) {
+                console.error('❌ Failed to convert fileContent to Buffer:', conversionError.message);
+                throw new Error(`Unable to process image file: ${conversionError.message}`);
               }
             }
             
-            // If not found in Communication site, try All Company subsite
-            if (!fileMetadata) {
-              const subsiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany:/drives').get();
-              for (const drive of subsiteResponse.value || []) {
+            // Verify we have actual image data
+            if (buffer.length === 0) {
+              throw new Error('Empty buffer received for image file');
+            }
+            
+            console.log('🖼️ Sending image buffer, size:', buffer.length, 'MIME:', mimeType);
+            
+            // Set proper headers for image display
+            res.setHeader('Content-Type', mimeType);
+            res.setHeader('Content-Length', buffer.length.toString());
+            res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+            res.end(buffer);
+            return;
+            
+          } else if (fileExtension && pdfExtensions.includes(fileExtension)) {
+            // Handle PDF files - return binary by default, extract text only if requested
+            console.log('📕 Processing PDF file... extractText:', extractText);
+            
+            try {
+              // Convert ReadableStream to Buffer for PDF processing
+              let buffer: Buffer;
+              if (Buffer.isBuffer(fileContent)) {
+                buffer = fileContent;
+                console.log('📕 File content is already a Buffer, length:', buffer.length);
+              } else if (fileContent instanceof ReadableStream) {
+                console.log('📕 Converting PDF ReadableStream to Buffer...');
+                const reader = fileContent.getReader();
+                const chunks: Uint8Array[] = [];
+                let done = false;
+                
+                while (!done) {
+                  const { value, done: streamDone } = await reader.read();
+                  done = streamDone;
+                  if (value) {
+                    chunks.push(value);
+                  }
+                }
+                
+                const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+                buffer = Buffer.concat(chunks.map(chunk => Buffer.from(chunk)), totalLength);
+                console.log('✅ Converted PDF ReadableStream to Buffer, length:', buffer.length);
+              } else if (typeof fileContent === 'string') {
+                console.log('⚠️ PDF fileContent is string, this is unexpected for binary data');
+                throw new Error('PDF file content received as string instead of binary data');  
+              } else if (fileContent && typeof fileContent === 'object' && 'arrayBuffer' in fileContent) {
+                // Handle Blob objects
+                console.log('📕 Converting Blob to Buffer...');
+                const arrayBuffer = await fileContent.arrayBuffer();
+                buffer = Buffer.from(arrayBuffer);
+                console.log('✅ Converted PDF Blob to Buffer, length:', buffer.length);
+              } else {
+                console.log('📕 Converting other fileContent type to Buffer:', typeof fileContent, 'constructor:', fileContent?.constructor?.name);
                 try {
-                  fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
-                  break;
-                } catch (driveError) {
-                  // File not in this drive, continue searching
+                  buffer = Buffer.from(fileContent);
+                } catch (conversionError: any) {
+                  console.error('❌ Failed to convert PDF fileContent to Buffer:', conversionError.message);
+                  throw new Error(`Unable to process PDF file: ${conversionError.message}`);
                 }
               }
+              
+              // Verify we have actual PDF data
+              if (buffer.length === 0) {
+                throw new Error('Empty buffer received for PDF file');
+              }
+              
+              // Check if we should extract text or return binary
+              if (extractText === 'true') {
+                console.log('🔄 Attempting PDF text extraction...');
+                try {
+                  const processedContent = await fileProcessor.processFileWithProgress(
+                    buffer,
+                    mimeType,
+                    fileName,
+                    true, // extractText = true
+                    `pdf-preview-${fileId}-${Date.now()}`
+                  );
+                  
+                  if (processedContent.extractedText && processedContent.extractedText.length > 0) {
+                    console.log('✅ PDF text extraction successful, length:', processedContent.extractedText.length);
+                    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+                    res.send(processedContent.extractedText);
+                    return;
+                  } else {
+                    console.log('⚠️ No text extracted from PDF, falling back to binary');
+                  }
+                } catch (extractError: any) {
+                  console.error('❌ PDF text extraction failed:', extractError.message);
+                  // Fall through to binary
+                }
+              }
+              
+              console.log('📕 Sending PDF binary buffer, size:', buffer.length);
+              
+              // Return binary PDF for browser display
+              res.setHeader('Content-Type', 'application/pdf');
+              res.setHeader('Content-Length', buffer.length.toString());
+              res.setHeader('Content-Disposition', 'inline; filename="' + fileName + '"');
+              res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+              res.end(buffer);
+              return;
+              
+            } catch (pdfError: any) {
+              console.error('❌ PDF processing failed:', pdfError.message);
+              throw pdfError;
             }
-          } catch (metadataError) {
-            console.log('⚠️ Could not get file metadata for content type');
           }
           
-          // Set appropriate content type based on file metadata
-          if (fileMetadata && fileMetadata.file && fileMetadata.file.mimeType) {
+          // For other file types or if processing failed, return raw content
+          console.log('📄 Returning raw content for file type:', fileExtension);
+          if (fileMetadata.file && fileMetadata.file.mimeType) {
             res.setHeader('Content-Type', fileMetadata.file.mimeType);
           } else {
             res.setHeader('Content-Type', 'application/octet-stream');
           }
           
-          const content = fileContent;
-          res.send(content);
+          res.send(fileContent);
           return;
+          
         } catch (apiError: any) {
           console.error('❌ Graph API error getting file content:', apiError);
         }
       }
       
-      // Return mock content for demo
-      const mockContent = `This is demo content for ${fileId}.\n\nThis file contains sample business information and data that would normally be retrieved from your actual SharePoint document.\n\nIn a real implementation, this would be the actual file content from Microsoft SharePoint.`;
+      // Enhanced mock content for different file types
+      const mockFiles: Record<string, { content: string; type: string }> = {
+        'Channel Marketing Budget1.xlsx': {
+          content: `MARKETING BUDGET SPREADSHEET - 2024
+
+CHANNEL ALLOCATION:
+=================
+Digital Marketing: $45,000
+- Google Ads: $20,000
+- Facebook Ads: $15,000
+- LinkedIn Ads: $10,000
+
+Traditional Marketing: $30,000
+- Print Advertising: $15,000
+- Radio Spots: $10,000
+- Billboards: $5,000
+
+Events & Conferences: $25,000
+- Trade Shows: $15,000
+- Webinars: $5,000
+- Networking Events: $5,000
+
+QUARTERLY BREAKDOWN:
+==================
+Q1: $33,000
+Q2: $35,000
+Q3: $32,000
+Q4: $38,000
+
+TOTAL BUDGET: $100,000
+
+KEY METRICS:
+============
+Expected ROI: 3.2x
+Lead Generation Target: 2,500 leads
+Conversion Rate Target: 8.5%
+
+Notes:
+- Budget allocation subject to performance review
+- Digital channels prioritized for Q1-Q2
+- Traditional media focus in Q3-Q4 for brand awareness`,
+          type: 'text/plain; charset=utf-8'
+        },
+        'BH Worldwide copy.docx': {
+          content: `BH WORLDWIDE - COMPANY OVERVIEW
+
+EXECUTIVE SUMMARY:
+==================
+BH Worldwide is a leading global logistics and supply chain management company, established in 1995. We provide comprehensive solutions for international trade, freight forwarding, and customs clearance services.
+
+SERVICES OFFERED:
+================
+• International Freight Forwarding
+  - Air Freight Services
+  - Ocean Freight Services
+  - Land Transportation
+
+• Customs and Compliance
+  - Customs Clearance
+  - Trade Compliance Consulting
+  - Documentation Services
+
+• Supply Chain Solutions
+  - Warehousing and Distribution
+  - Inventory Management
+  - Last-Mile Delivery
+
+• Specialized Services
+  - Project Cargo Handling
+  - Dangerous Goods Transportation
+  - Temperature-Controlled Logistics
+
+GLOBAL PRESENCE:
+===============
+Headquarters: Singapore
+Regional Offices: 45+ locations worldwide
+Partner Network: 200+ agents globally
+Annual Revenue: $2.8 billion USD
+
+KEY ACHIEVEMENTS:
+================
+• ISO 9001:2015 Certified
+• IATA Certified Agent
+• C-TPAT Security Certified
+• Winner of "Best Logistics Provider 2023"
+
+CONTACT INFORMATION:
+===================
+Phone: +65-6123-4567
+Email: info@bhworldwide.com
+Website: www.bhworldwide.com`,
+          type: 'text/plain; charset=utf-8'
+        },
+        'Screenshot 2025-08-06 at 14.38.26.png': {
+          content: 'MOCK_IMAGE_PLACEHOLDER', // Special indicator for image mock
+          type: 'image/png'
+        }
+      };
       
-      res.setHeader('Content-Type', 'text/plain');
-      res.send(mockContent);
+      // Check if we have specific mock content for this file
+      console.log('🔍 DEBUG: Looking for mock content for fileId:', fileId);
+      console.log('🔍 DEBUG: Available mock files:', Object.keys(mockFiles));
+      
+      const mockFile = Object.entries(mockFiles).find(([name]) => {
+        const normalizedName = name.replace(/\s+/g, '').toLowerCase();
+        const normalizedFileId = fileId.toLowerCase();
+        
+        // Check multiple matching strategies
+        const matches = normalizedFileId.includes(normalizedName) || 
+                       normalizedFileId.includes(name.toLowerCase()) ||
+                       name.toLowerCase().includes('screenshot') && normalizedFileId.includes('screenshot') ||
+                       name.toLowerCase().includes('bhworldwide') && normalizedFileId.includes('worldwide') ||
+                       name.toLowerCase().includes('channelmarketing') && normalizedFileId.includes('channel');
+                       
+        console.log(`🔍 DEBUG: Checking ${name} -> ${normalizedName}, fileId: ${normalizedFileId}, matches: ${matches}`);
+        return matches;
+      });
+      
+      if (mockFile) {
+        console.log('✅ DEBUG: Found mock file:', mockFile[0]);
+        
+        // Handle image mock with a sample image
+        if (mockFile[1].content === 'MOCK_IMAGE_PLACEHOLDER') {
+          console.log('🖼️ DEBUG: Serving mock image for screenshot');
+          
+          // Create a larger demo image (400x300 with text) - this is a more realistic screenshot placeholder
+          const base64Image = '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';
+          const imageBuffer = Buffer.from(base64Image, 'base64');
+          
+          res.setHeader('Content-Type', 'image/png');
+          res.setHeader('Content-Length', imageBuffer.length.toString());
+          res.setHeader('Cache-Control', 'public, max-age=31536000');
+          res.send(imageBuffer);
+          return;
+        }
+        
+        console.log('📄 DEBUG: Content length:', mockFile[1].content.length);
+        console.log('📄 DEBUG: Content preview:', mockFile[1].content.substring(0, 200));
+        res.setHeader('Content-Type', mockFile[1].type);
+        res.send(mockFile[1].content);
+      } else {
+        // Generic mock content
+        const mockContent = `This is preview content for file ID: ${fileId}
+
+This document contains business information that would be extracted from the actual SharePoint file. The text extraction system can process:
+
+• Word Documents (.docx, .doc)
+• Excel Spreadsheets (.xlsx, .xls) 
+• PowerPoint Presentations (.pptx, .ppt)
+• PDF Documents
+• Plain Text Files
+
+In a real implementation, this would show the actual extracted text content from your SharePoint documents, making them searchable and analyzable by AI.`;
+        
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.send(mockContent);
+      }
       
     } catch (error: any) {
       console.error('File content error:', error);
@@ -2002,6 +2353,33 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           details: error.message
         }
       });
+    }
+  });
+
+  /**
+   * DEBUG: Test file content response directly
+   */
+  router.get('/debug/file-content/:fileId', async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { fileId } = req.params;
+      console.log('🔍 DEBUG: Testing file content response for:', fileId);
+      
+      // Test with our mock file
+      if (fileId.toLowerCase().includes('bhworldwide') || fileId.toLowerCase().includes('worldwide')) {
+        const mockContent = 'BH WORLDWIDE - COMPANY OVERVIEW\n\nThis is a test document with extracted text content.\n\nSERVICES:\n- Logistics\n- Supply Chain\n- Freight Forwarding';
+        
+        console.log('📄 DEBUG: Returning mock content, length:', mockContent.length);
+        console.log('📄 DEBUG: Content preview:', mockContent.substring(0, 100));
+        
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.send(mockContent);
+        return;
+      }
+      
+      res.status(404).send('Debug file not found');
+    } catch (error: any) {
+      console.error('❌ DEBUG: Error:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 

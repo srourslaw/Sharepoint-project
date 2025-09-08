@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
+import axios from 'axios';
 import { AuthService } from '../services/authService';
 import { AuthMiddleware } from '../middleware/authMiddleware';
 import { GeminiService } from '../services/geminiService';
+import { OpenAIService } from '../services/openaiService';
 import { DocumentSummarizationService, EnhancedSummarizationRequest } from '../services/documentSummarizationService';
 import { DocumentChatService, EnhancedChatRequest } from '../services/documentChatService';
 import { ContentExtractionService, ExtractionType } from '../services/contentExtractionService';
@@ -11,6 +13,7 @@ import { DocumentComparisonService, ComparisonType } from '../services/documentC
 import { SentimentAnalysisService, SentimentAnalysisType } from '../services/sentimentAnalysisService';
 import { SanitizationService } from '../services/sanitizationService';
 import { DocumentAnalysisService } from '../services/documentAnalysisService';
+import { SharePointService } from '../services/sharepointService';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 
 // Rate limiting configuration
@@ -38,38 +41,72 @@ const upload = multer({
 
 export function createAIFeaturesRoutes(
   authService: AuthService,
-  authMiddleware: AuthMiddleware
+  authMiddleware: AuthMiddleware,
+  sharepointService?: SharePointService
 ): Router {
   const router = Router();
 
-  // Initialize services
-  const geminiService = new GeminiService({
-    apiKey: process.env.GEMINI_API_KEY!,
-    model: process.env.GEMINI_MODEL || 'gemini-pro',
-    defaultOptions: {},
-    rateLimiting: {
-      maxRequests: 100,
-      windowMs: 60000
-    },
-    retryOptions: {
-      maxRetries: 3,
-      baseDelay: 1000,
-      maxDelay: 5000,
-      backoffMultiplier: 2,
-      retryableErrors: []
-    },
-    cachingEnabled: true,
-    streamingEnabled: true
-  });
+  // Initialize AI service - prefer OpenAI if available, fallback to GEMINI
+  let aiService: GeminiService | OpenAIService;
+  
+  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '') {
+    console.log('🤖 Using OpenAI service');
+    aiService = new OpenAIService({
+      apiKey: process.env.OPENAI_API_KEY,
+      model: process.env.OPENAI_MODEL || 'gpt-4',
+      maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || '2048'),
+      temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '0.7'),
+      timeout: parseInt(process.env.AI_TIMEOUT || '30000')
+    });
+  } else {
+    console.log('🤖 Using GEMINI service');
+    aiService = new GeminiService({
+      apiKey: process.env.GEMINI_API_KEY!,
+      model: process.env.GEMINI_MODEL || 'gemini-pro',
+      defaultOptions: {},
+      rateLimiting: {
+        maxRequests: 100,
+        windowMs: 60000
+      },
+      retryOptions: {
+        maxRetries: 3,
+        baseDelay: 1000,
+        maxDelay: 5000,
+        backoffMultiplier: 2,
+        retryableErrors: []
+      },
+      cachingEnabled: true,
+      streamingEnabled: true
+    });
+  }
 
-  const analysisService = new DocumentAnalysisService(geminiService);
-  const summarizationService = new DocumentSummarizationService(geminiService, analysisService);
-  const chatService = new DocumentChatService(geminiService, analysisService);
-  const extractionService = new ContentExtractionService(geminiService, analysisService);
-  const translationService = new TranslationService(geminiService);
-  const comparisonService = new DocumentComparisonService(geminiService, extractionService, analysisService);
-  const sentimentService = new SentimentAnalysisService(geminiService);
+  const analysisService = new DocumentAnalysisService(aiService as any);
+  const summarizationService = new DocumentSummarizationService(aiService as any, analysisService);
+  const chatService = new DocumentChatService(aiService as any, analysisService);
+  const extractionService = new ContentExtractionService(aiService as any, analysisService);
+  const translationService = new TranslationService(aiService as any);
+  const comparisonService = new DocumentComparisonService(aiService as any, extractionService, analysisService);
+  const sentimentService = new SentimentAnalysisService(aiService as any);
   const sanitizationService = new SanitizationService();
+  
+  // Simple in-memory storage for chat sessions
+  const chatSessions = new Map<string, any>();
+
+  // Helper function to truncate text to fit within token limits
+  const truncateTextForTokens = (text: string, maxTokens: number = 60000): string => {
+    if (!text) return text;
+    
+    // Rough estimation: 1 token ≈ 4 characters
+    const maxChars = maxTokens * 4;
+    
+    if (text.length <= maxChars) {
+      return text;
+    }
+    
+    // Truncate and add notice
+    const truncated = text.substring(0, maxChars);
+    return truncated + '\n\n[NOTE: Document content has been truncated due to size limits. This shows the first part of the document.]';
+  };
 
   // Rate limiting middleware
   const rateLimitMiddleware = async (req: Request, res: Response, next: Function) => {
@@ -94,16 +131,79 @@ export function createAIFeaturesRoutes(
   // Document Summarization Endpoints
   router.post('/summarize', async (req: Request, res: Response) => {
     try {
-      const { text, summaryType, length, ...options }: EnhancedSummarizationRequest = req.body;
+      const { text, documentIds, summaryType, length, ...options }: EnhancedSummarizationRequest & { documentIds?: string[] } = req.body;
 
-      if (!text) {
+      let textContent = text;
+
+      // If documentIds are provided, fetch and combine document content
+      if (documentIds && Array.isArray(documentIds) && documentIds.length > 0) {
+        console.log('📄 AI Summarize: Processing document IDs:', documentIds);
+        
+        try {
+          // Use the document analysis service to fetch document content
+          const documentContents: string[] = [];
+          
+          for (const docId of documentIds) {
+            console.log('📄 AI Summarize: Fetching content for document ID:', docId);
+            
+            try {
+              // Use the internal SharePoint file content endpoint with text extraction
+              
+              try {
+                const response = await axios.get(`http://localhost:3001/api/sharepoint-advanced/files/${docId}/content?extractText=true&format=text`, {
+                  headers: {
+                    'Authorization': req.headers.authorization,
+                    'Cookie': req.headers.cookie
+                  }
+                });
+                
+                const extractedText = response.data;
+                
+                if (extractedText && typeof extractedText === 'string' && extractedText.trim().length > 0) {
+                  // Truncate text to prevent token limit issues
+                  const truncatedText = truncateTextForTokens(extractedText, 40000); // More space for summarization
+                  documentContents.push(`[Document ID: ${docId}]\n${truncatedText}`);
+                  console.log('✅ AI Summarize: Added actual document content for analysis, original length:', extractedText.length, 'truncated length:', truncatedText.length);
+                } else {
+                  console.warn('⚠️ AI Summarize: No text content extracted from document:', docId);
+                }
+                
+              } catch (apiError: any) {
+                console.warn('⚠️ AI Summarize: API error fetching content for document:', docId, apiError.message);
+              }
+              
+            } catch (docFetchError: any) {
+              console.warn('⚠️ AI Summarize: Could not fetch content for document:', docId, docFetchError.message);
+              // Continue with other documents
+            }
+          }
+          
+          if (documentContents.length === 0) {
+            return res.status(400).json({
+              error: { code: 'NO_DOCUMENT_CONTENT', message: 'Could not extract text from any of the provided documents' }
+            });
+          }
+          
+          // Combine all document contents
+          textContent = documentContents.join('\n\n--- Document Separator ---\n\n');
+          console.log('📄 AI Summarize: Combined document content, total length:', textContent.length);
+          
+        } catch (docError: any) {
+          console.error('📄 AI Summarize: Error fetching document content:', docError);
+          return res.status(500).json({
+            error: { code: 'DOCUMENT_FETCH_ERROR', message: 'Failed to fetch document content: ' + docError.message }
+          });
+        }
+      }
+
+      if (!textContent) {
         return res.status(400).json({
-          error: { code: 'MISSING_TEXT', message: 'Text content is required' }
+          error: { code: 'MISSING_CONTENT', message: 'Either text content or document IDs are required' }
         });
       }
 
       // Sanitize input
-      const sanitizedResult = await sanitizationService.sanitizeInput(text, {
+      const sanitizedResult = await sanitizationService.sanitizeInput(textContent, {
         maxLength: 100000,
         stripHtml: true,
         preventInjection: true
@@ -115,6 +215,7 @@ export function createAIFeaturesRoutes(
         });
       }
 
+      console.log('🤖 AI Summarize: Sending to GEMINI for summarization...');
       const result = await summarizationService.summarizeDocument({
         text: sanitizedResult.sanitizedValue,
         summaryType: summaryType || 'abstractive',
@@ -122,6 +223,7 @@ export function createAIFeaturesRoutes(
         ...options
       });
 
+      console.log('✅ AI Summarize: GEMINI summarization completed');
       res.json({
         success: true,
         data: result
@@ -180,7 +282,117 @@ export function createAIFeaturesRoutes(
         });
       }
 
-      const session = await chatService.startChatSession(userId, documentIds, title);
+      console.log('📄 AI Chat Start: Processing document IDs:', documentIds);
+      
+      // Fetch document contents for the chat session
+      const documentContents: string[] = [];
+      
+      for (const docId of documentIds) {
+        try {
+          console.log('📄 AI Chat: Fetching content for document ID:', docId);
+          
+          // Use the internal SharePoint file content endpoint with text extraction
+          // This mimics the /api/sharepoint-advanced/files/:fileId/content?extractText=true endpoint
+          
+          try {
+            // First, get file metadata to determine the file type
+            const fileMetadataResponse = await axios.get(`http://localhost:3001/api/sharepoint-advanced/files/${docId}`, {
+              headers: {
+                'Authorization': req.headers.authorization,
+                'Cookie': req.headers.cookie
+              }
+            });
+            
+            const fileMetadata = fileMetadataResponse.data;
+            const fileName = fileMetadata?.name || 'Unknown File';
+            const fileType = fileMetadata?.mimeType || 'unknown';
+            const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
+            
+            console.log('📄 AI Chat: File metadata -', {
+              docId,
+              name: fileName,
+              type: fileType,
+              extension: fileExtension,
+              size: fileMetadata?.size
+            });
+            
+            const response = await axios.get(`http://localhost:3001/api/sharepoint-advanced/files/${docId}/content?extractText=true&format=text`, {
+              headers: {
+                'Authorization': req.headers.authorization,
+                'Cookie': req.headers.cookie
+              }
+            });
+            
+            const extractedText = response.data;
+            
+            console.log('📄 AI Chat: Content extraction result -', {
+              docId,
+              fileName,
+              fileType,
+              extractedTextType: typeof extractedText,
+              extractedTextLength: extractedText?.length || 0,
+              extractedTextPreview: typeof extractedText === 'string' ? extractedText.substring(0, 100) + '...' : String(extractedText).substring(0, 100) + '...'
+            });
+            
+            if (extractedText && typeof extractedText === 'string' && extractedText.trim().length > 0) {
+              // Truncate text to prevent token limit issues - using smaller limit for images
+              const isImageFile = fileType && (fileType.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff'].includes(fileExtension));
+              const tokenLimit = isImageFile ? 5000 : 15000; // Much smaller for images, moderate for other files
+              const truncatedText = truncateTextForTokens(extractedText, tokenLimit);
+              documentContents.push(`[File: ${fileName}]\n[Type: ${fileType}]\n[Document ID: ${docId}]\n${truncatedText}`);
+              console.log('✅ AI Chat: Added document content -', {
+                fileName,
+                fileType,
+                originalLength: extractedText.length,
+                truncatedLength: truncatedText.length
+              });
+            } else {
+              console.warn('⚠️ AI Chat: No text content extracted from document -', {
+                docId,
+                fileName,
+                fileType,
+                extractedText: typeof extractedText,
+                extractedTextValue: extractedText
+              });
+              
+              // For images, add a note that OCR might be needed
+              if (fileType && (fileType.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff'].includes(fileExtension))) {
+                documentContents.push(`[File: ${fileName}]\n[Type: Image - ${fileType}]\n[Document ID: ${docId}]\n[NOTE: This is an image file. Text extraction from images requires OCR processing which may have limited results.]`);
+                console.log('📷 AI Chat: Added image file placeholder for:', fileName);
+              }
+            }
+            
+          } catch (apiError: any) {
+            console.error('❌ AI Chat: API error fetching content for document:', docId, {
+              error: apiError.message,
+              status: apiError.response?.status,
+              statusText: apiError.response?.statusText,
+              data: apiError.response?.data
+            });
+          }
+          
+        } catch (docFetchError: any) {
+          console.warn('⚠️ AI Chat: Could not fetch content for document:', docId, docFetchError.message);
+        }
+      }
+
+      // Create a simple chat session with document content
+      const sessionId = `chat_${userId}_${Date.now()}`;
+      const session = {
+        sessionId,
+        userId,
+        title: title || 'Document Chat',
+        documentIds,
+        documentContent: documentContents.join('\n\n--- Document Separator ---\n\n'),
+        messages: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      console.log('✅ AI Chat: Created session with', documentContents.length, 'documents, total content length:', session.documentContent.length);
+
+      // Store the session
+      chatSessions.set(sessionId, session);
 
       res.json({
         success: true,
@@ -201,16 +413,32 @@ export function createAIFeaturesRoutes(
 
   router.post('/chat/message', async (req: Request, res: Response) => {
     try {
-      const chatRequest: EnhancedChatRequest = req.body;
+      const { message, sessionId } = req.body;
 
-      if (!chatRequest.message || !chatRequest.sessionId) {
+      if (!message || !sessionId) {
         return res.status(400).json({
           error: { code: 'MISSING_PARAMETERS', message: 'Message and session ID are required' }
         });
       }
 
+      // Get the chat session
+      const session = chatSessions.get(sessionId);
+      if (!session) {
+        return res.status(404).json({
+          error: { code: 'SESSION_NOT_FOUND', message: 'Chat session not found' }
+        });
+      }
+
+      console.log('💬 AI Chat: Processing message for session:', sessionId, 'Message:', message.substring(0, 100));
+      console.log('💬 AI Chat: Session details -', {
+        sessionId,
+        documentIds: session.documentIds,
+        documentContentLength: session.documentContent?.length || 0,
+        messageCount: session.messages?.length || 0
+      });
+
       // Sanitize message
-      const sanitizedResult = await sanitizationService.sanitizeInput(chatRequest.message, {
+      const sanitizedResult = await sanitizationService.sanitizeInput(message, {
         maxLength: 10000,
         stripHtml: true,
         preventInjection: true
@@ -222,25 +450,122 @@ export function createAIFeaturesRoutes(
         });
       }
 
-      const response = await chatService.sendMessage({
-        ...chatRequest,
-        message: sanitizedResult.sanitizedValue
+      // Create the prompt with document content
+      const documentContext = session.documentContent || '';
+      console.log('💬 AI Chat: Document context -', {
+        hasDocumentContext: !!documentContext,
+        documentContextLength: documentContext.length,
+        documentContextPreview: documentContext.substring(0, 200) + '...'
       });
+      
+      const prompt = `You are a helpful AI assistant specialized in analyzing and answering questions about documents. 
+
+${documentContext ? `Based on the following document content, please answer the user's question:
+
+DOCUMENT CONTENT:
+${documentContext}
+
+USER QUESTION: ${sanitizedResult.sanitizedValue}
+
+Please provide a helpful and accurate answer based on the document content. If the question cannot be answered from the document content, please say so clearly.` : 
+`USER QUESTION: ${sanitizedResult.sanitizedValue}
+
+I don't have any document content available to analyze. Please provide documents for me to analyze and answer questions about.`}`;
+
+      console.log('🤖 AI Chat: Sending prompt to OpenAI -', {
+        promptLength: prompt.length,
+        messageLength: message.length,
+        sessionDocumentIds: session.documentIds,
+        hasDocumentContent: !!documentContext
+      });
+
+      // Send to AI service
+      const aiResponse = await aiService.generateText({
+        prompt,
+        maxTokens: 500,
+        temperature: 0.7
+      });
+
+      console.log('✅ AI Chat: Received response from AI, length:', aiResponse.text.length);
+
+      // Create response message
+      const responseMessage = {
+        id: `msg_${Date.now()}`,
+        role: 'assistant',
+        content: aiResponse.text,
+        timestamp: new Date().toISOString()
+      };
+
+      // Add messages to session
+      const userMessage = {
+        id: `msg_${Date.now() - 1}`,
+        role: 'user',
+        content: sanitizedResult.sanitizedValue,
+        timestamp: new Date().toISOString()
+      };
+
+      session.messages.push(userMessage, responseMessage);
+      session.updatedAt = new Date().toISOString();
+      chatSessions.set(sessionId, session);
 
       res.json({
         success: true,
-        data: response
+        data: {
+          sessionId,
+          message: responseMessage,
+          processingTime: Date.now()
+        }
       });
 
     } catch (error: any) {
-      console.error('Chat message error:', error);
-      res.status(500).json({
-        error: {
-          code: 'CHAT_MESSAGE_ERROR',
-          message: 'Failed to process chat message',
-          details: error.message
-        }
+      console.error('❌ AI Chat: Error processing message -', {
+        sessionId: req.body.sessionId,
+        message: req.body.message?.substring(0, 100) + '...',
+        error: error.message,
+        errorStack: error.stack,
+        errorType: error.constructor.name,
+        errorCode: error.code,
+        errorStatus: error.status || error.statusCode
       });
+      
+      // Handle specific AI service errors
+      if (error.message && error.message.includes('Request too large')) {
+        console.error('❌ AI Chat: Token limit exceeded error');
+        res.status(400).json({
+          error: {
+            code: 'DOCUMENT_TOO_LARGE',
+            message: 'The document is too large to analyze. Please try with a smaller document or ask more specific questions.',
+            details: 'Token limit exceeded'
+          }
+        });
+      } else if (error.message && error.message.includes('rate limit')) {
+        console.error('❌ AI Chat: Rate limit exceeded error');
+        res.status(429).json({
+          error: {
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: 'AI service rate limit exceeded. Please wait a moment and try again.',
+            details: error.message
+          }
+        });
+      } else if (error.code && error.code.includes('INVALID_REQUEST')) {
+        console.error('❌ AI Chat: Invalid request error');
+        res.status(400).json({
+          error: {
+            code: 'INVALID_AI_REQUEST',
+            message: 'There was an issue with the AI request format. This might be due to document content format issues.',
+            details: error.message
+          }
+        });
+      } else {
+        console.error('❌ AI Chat: Generic error - sending technical difficulties message');
+        res.status(500).json({
+          error: {
+            code: 'CHAT_MESSAGE_ERROR',
+            message: 'I\'m experiencing some technical difficulties connecting to the AI service. Please try again in a moment, or select a document to analyze.',
+            details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+          }
+        });
+      }
     }
   });
 
@@ -736,7 +1061,7 @@ export function createAIFeaturesRoutes(
       const healthStatus = {
         status: 'healthy',
         services: {
-          gemini: await geminiService.getRateLimitStatus('default').then(() => 'active').catch(() => 'inactive'),
+          aiService: aiService instanceof OpenAIService ? 'openai-active' : 'gemini-active',
           summarization: 'active',
           chat: 'active',
           extraction: 'active',

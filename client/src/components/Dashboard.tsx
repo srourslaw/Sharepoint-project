@@ -49,7 +49,7 @@ export const Dashboard: React.FC = () => {
     aiPanelOpen: !isMobile,
     aiPanelWidth: aiPanelWidth,
     previewOpen: false,
-    previewHeight: isMobile ? 600 : 800,
+    previewHeight: window.innerHeight - 200, // Much taller preview
   });
 
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -60,11 +60,11 @@ export const Dashboard: React.FC = () => {
   React.useEffect(() => {
     setLayout(prev => ({
       ...prev,
-      sidebarOpen: !isMobile,
-      aiPanelOpen: !isMobile,
+      sidebarOpen: !isMobile && !prev.previewOpen,
+      aiPanelOpen: !isMobile && !prev.previewOpen,
       sidebarWidth: drawerWidth,
       aiPanelWidth: aiPanelWidth,
-      previewHeight: isMobile ? 600 : 800,
+      previewHeight: window.innerHeight - 64,
     }));
   }, [isMobile, drawerWidth, aiPanelWidth]);
 
@@ -83,10 +83,13 @@ export const Dashboard: React.FC = () => {
   };
 
   const handlePreviewToggle = () => {
+    console.log('🔥 handlePreviewToggle called! Current state:', layout.previewOpen);
+    console.log('🔥 Selected files:', selectedFiles);
     setLayout(prev => ({
       ...prev,
       previewOpen: !prev.previewOpen
     }));
+    console.log('🔥 Setting previewOpen to:', !layout.previewOpen);
   };
 
   return (
@@ -166,11 +169,18 @@ export const Dashboard: React.FC = () => {
           flexGrow: 1,
           p: 0,
           width: { 
-            sm: layout.aiPanelOpen 
-              ? `calc(100% - ${layout.sidebarOpen ? layout.sidebarWidth : 0}px - ${layout.aiPanelWidth}px)`
-              : `calc(100% - ${layout.sidebarOpen ? layout.sidebarWidth : 0}px)`
+            sm: layout.previewOpen 
+              ? '100vw'
+              : (layout.aiPanelOpen 
+                ? `calc(100% - ${layout.sidebarOpen ? layout.sidebarWidth : 0}px - ${layout.aiPanelWidth}px)`
+                : `calc(100% - ${layout.sidebarOpen ? layout.sidebarWidth : 0}px)`)
           },
-          transition: theme.transitions.create('width', {
+          position: layout.previewOpen ? 'fixed' : 'relative',
+          top: layout.previewOpen ? 64 : 'auto',
+          left: layout.previewOpen ? 0 : 'auto',
+          zIndex: layout.previewOpen ? theme.zIndex.modal - 1 : 'auto',
+          height: layout.previewOpen ? 'calc(100vh - 64px)' : 'auto',
+          transition: theme.transitions.create(['width', 'position', 'height'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen,
           }),
@@ -197,14 +207,11 @@ export const Dashboard: React.FC = () => {
           
           {/* File Preview Area */}
           {layout.previewOpen && (
-            <>
-              <Divider />
-              <FilePreview
-                selectedFiles={selectedFiles}
-                height={layout.previewHeight}
-                onClose={handlePreviewToggle}
-              />
-            </>
+            <FilePreview
+              selectedFiles={selectedFiles}
+              height={layout.previewHeight}
+              onClose={handlePreviewToggle}
+            />
           )}
         </Box>
       </Box>

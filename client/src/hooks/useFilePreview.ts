@@ -51,7 +51,7 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
 
   const fetchFileContent = async (id: string, fileData: SharePointFile): Promise<void> => {
     try {
-      console.log('🔍 useFilePreview: Fetching content for file:', fileData.name, 'Type:', fileData.mimeType, 'Extension:', fileData.extension);
+      console.log('🔍 useFilePreview: Fetching content for file:', String(fileData.name), 'Type:', String(fileData.mimeType), 'Extension:', String(fileData.extension));
       const isPreviewable = isFilePreviewable(fileData);
       console.log('📋 useFilePreview: Is previewable?', isPreviewable);
       
@@ -63,22 +63,141 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
       // For images, get the file content as a blob URL
       if (fileData.mimeType.startsWith('image/')) {
         console.log('🖼️ useFilePreview: Processing image file');
-        const contentResponse = await api.get(
-          `/api/sharepoint-advanced/files/${id}/content`,
-          { responseType: 'blob' }
-        );
         
-        console.log('🖼️ useFilePreview: Got blob response, size:', contentResponse.data.size);
-        const blob = new Blob([contentResponse.data], { type: fileData.mimeType });
-        const blobUrl = URL.createObjectURL(blob);
-        console.log('🖼️ useFilePreview: Created blob URL:', blobUrl);
-        setContent(blobUrl);
-        return;
+        try {
+          const contentResponse = await api.get(
+            `/api/sharepoint-advanced/files/${id}/content`,
+            { 
+              responseType: 'blob',
+              withCredentials: true,
+              headers: {
+                'Accept': fileData.mimeType + ',image/*,*/*'
+              }
+            }
+          );
+          
+          const responseBlob = contentResponse.data;
+          console.log('🖼️ useFilePreview: Got image blob response, size:', responseBlob.size, 'type:', responseBlob.type);
+          console.log('🖼️ useFilePreview: Response data type:', typeof responseBlob, 'constructor:', responseBlob.constructor.name);
+          console.log('🖼️ useFilePreview: Response headers:', contentResponse.headers);
+          
+          // Check if the blob is valid
+          if (!responseBlob || responseBlob.size === 0) {
+            throw new Error(`Empty blob received for image: ${fileData.name}`);
+          }
+          
+          // Ensure we have a proper blob with correct MIME type
+          const blob = responseBlob instanceof Blob ? 
+            new Blob([responseBlob], { type: fileData.mimeType }) : 
+            new Blob([responseBlob], { type: fileData.mimeType });
+          
+          console.log('🖼️ useFilePreview: Final blob size:', blob.size, 'type:', blob.type);
+          
+          // Test if we can read the blob as array buffer for debugging
+          blob.arrayBuffer().then(buffer => {
+            console.log('🖼️ useFilePreview: Blob array buffer size:', buffer.byteLength);
+            const first10Bytes = new Uint8Array(buffer.slice(0, 10));
+            console.log('🖼️ useFilePreview: First 10 bytes:', Array.from(first10Bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+          });
+          
+          // Convert blob to base64 data URL to avoid authentication issues
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64DataUrl = reader.result as string;
+            console.log('🖼️ useFilePreview: Created base64 data URL, length:', base64DataUrl.length);
+            setContent(base64DataUrl);
+          };
+          reader.onerror = (error) => {
+            console.error('🖼️ useFilePreview: FileReader error:', error);
+            // Fallback to blob URL
+            const blobUrl = URL.createObjectURL(blob);
+            console.log('🖼️ useFilePreview: Fallback to blob URL:', blobUrl);
+            setContent(blobUrl);
+          };
+          reader.readAsDataURL(blob);
+          return;
+          
+        } catch (imageError) {
+          console.error('🖼️ useFilePreview: Image processing error:', imageError);
+          // Fallback: try direct URL
+          const directUrl = `/api/sharepoint-advanced/files/${id}/content`;
+          console.log('🖼️ useFilePreview: Trying direct URL fallback:', directUrl);
+          setContent(directUrl);
+          return;
+        }
       }
 
-      // For PDFs, videos, and audio, get the download URL
+      // For PDFs, get as blob to avoid authentication issues
+      if (fileData.mimeType === 'application/pdf') {
+        console.log('📕 useFilePreview: Processing PDF file');
+        
+        try {
+          const contentResponse = await api.get(
+            `/api/sharepoint-advanced/files/${id}/content`,
+            { 
+              responseType: 'blob',
+              withCredentials: true,
+              headers: {
+                'Accept': 'application/pdf,*/*'
+              }
+            }
+          );
+          
+          const responseBlob = contentResponse.data;
+          console.log('📕 useFilePreview: Got PDF blob response, size:', responseBlob.size, 'type:', responseBlob.type);
+          console.log('📕 useFilePreview: Response data type:', typeof responseBlob, 'constructor:', responseBlob.constructor.name);
+          console.log('📕 useFilePreview: Response headers:', contentResponse.headers);
+          
+          // Check if the blob is valid
+          if (!responseBlob || responseBlob.size === 0) {
+            throw new Error(`Empty blob received for PDF: ${fileData.name}`);
+          }
+          
+          // Ensure we have a proper blob with correct MIME type
+          const blob = responseBlob instanceof Blob ? 
+            new Blob([responseBlob], { type: 'application/pdf' }) : 
+            new Blob([responseBlob], { type: 'application/pdf' });
+          
+          console.log('📕 useFilePreview: Final blob size:', blob.size, 'type:', blob.type);
+          
+          // Test if we can read the first few bytes to verify it's a PDF
+          blob.arrayBuffer().then(buffer => {
+            console.log('📕 useFilePreview: Blob array buffer size:', buffer.byteLength);
+            const first10Bytes = new Uint8Array(buffer.slice(0, 10));
+            const pdfSignature = Array.from(first10Bytes.slice(0, 4)).map(b => String.fromCharCode(b)).join('');
+            console.log('📕 useFilePreview: First 10 bytes:', Array.from(first10Bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+            console.log('📕 useFilePreview: PDF signature:', pdfSignature, 'Is PDF:', pdfSignature === '%PDF');
+          });
+          
+          // Convert PDF blob to base64 data URL to avoid authentication issues
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64DataUrl = reader.result as string;
+            console.log('📕 useFilePreview: Created PDF base64 data URL, length:', base64DataUrl.length);
+            setContent(base64DataUrl);
+          };
+          reader.onerror = (error) => {
+            console.error('📕 useFilePreview: PDF FileReader error:', error);
+            // Fallback to blob URL
+            const blobUrl = URL.createObjectURL(blob);
+            console.log('📕 useFilePreview: Fallback to PDF blob URL:', blobUrl);
+            setContent(blobUrl);
+          };
+          reader.readAsDataURL(blob);
+          return;
+          
+        } catch (pdfError) {
+          console.error('📕 useFilePreview: PDF processing error:', pdfError);
+          // Fallback: try direct URL
+          const directUrl = `/api/sharepoint-advanced/files/${id}/content`;
+          console.log('📕 useFilePreview: Trying direct URL fallback:', directUrl);
+          setContent(directUrl);
+          return;
+        }
+      }
+
+      // For videos and audio, get the download URL
       if (
-        fileData.mimeType === 'application/pdf' ||
         fileData.mimeType.startsWith('video/') ||
         fileData.mimeType.startsWith('audio/')
       ) {
@@ -107,9 +226,13 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
         return;
       }
 
-      // For Office documents (DOCX, Excel, PowerPoint), get text content
+      // Handle different file types based on extension and MIME type
+      const fileExtension = fileData.extension.toLowerCase();
+      const mimeType = fileData.mimeType;
+      
+      // Office documents - get text content
       const officeExtensions = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
-      if (officeExtensions.includes(fileData.extension.toLowerCase())) {
+      if (officeExtensions.includes(fileExtension)) {
         console.log('📄 useFilePreview: Processing Office document');
         try {
           const contentResponse = await api.get(
@@ -117,14 +240,39 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
             { responseType: 'text' }
           );
           
-          console.log('📄 useFilePreview: Got text response, length:', contentResponse.data?.length);
-          // For Office docs, we'll get the raw content and display it
+          console.log('📄 useFilePreview: Got Office text response, length:', contentResponse.data?.length);
           setContent(contentResponse.data || 'Document content available - please use AI features to analyze this file.');
         } catch (officeError) {
           console.log('📄 useFilePreview: Office content error:', JSON.stringify(officeError, null, 2));
-          // If we can't get text content, show a helpful message
           setContent(`This ${fileData.extension.toUpperCase()} document is available for AI processing. Click on AI features to analyze, summarize, or edit this document.`);
         }
+        return;
+      }
+      
+      // Image files - get binary data for display (this should not be reached due to early return above)
+      const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
+      if (imageExtensions.includes(fileExtension) || mimeType.startsWith('image/')) {
+        console.log('🖼️ useFilePreview: Processing image file (fallback)');
+        try {
+          const contentResponse = await api.get(
+            `/api/sharepoint-advanced/files/${id}/content`,
+            { responseType: 'blob' }
+          );
+          
+          const blob = new Blob([contentResponse.data], { type: fileData.mimeType });
+          const blobUrl = URL.createObjectURL(blob);
+          console.log('🖼️ useFilePreview: Created fallback image blob URL:', blobUrl);
+          setContent(blobUrl);
+        } catch (imageError) {
+          console.log('🖼️ useFilePreview: Image error:', JSON.stringify(imageError, null, 2));
+          setContent('Image preview not available');
+        }
+        return;
+      }
+      
+      // PDF files are handled earlier with blob URL, this is just for text extraction fallback
+      if (fileExtension === 'pdf' || mimeType === 'application/pdf') {
+        console.log('📕 useFilePreview: PDF already processed with blob URL');
         return;
       }
 

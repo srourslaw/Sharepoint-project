@@ -562,7 +562,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({
                       {React.createElement(getFileIcon(file.extension), { fontSize: 'small' })}
                     </Avatar>
                     <Typography variant="body2" noWrap>
-                      {file.displayName}
+                      {String(file.displayName || file.name || 'Unknown')}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -578,7 +578,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2" color="text.secondary">
-                    {file.isFolder ? 'Folder' : file.extension.toUpperCase()}
+                    {file.isFolder ? 'Folder' : String(file.extension || 'unknown').toUpperCase()}
                   </Typography>
                 </TableCell>
                 <TableCell>
@@ -672,9 +672,9 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({
                       variant="body2"
                       fontWeight={500}
                       noWrap
-                      title={file.displayName}
+                      title={String(file.displayName || file.name || 'Unknown')}
                     >
-                      {truncateText(file.displayName, 20)}
+                      {truncateText(String(file.displayName || file.name || 'Unknown'), 20)}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {file.isFolder ? 'Folder' : formatFileSize(file.size)}

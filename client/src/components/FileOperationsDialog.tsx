@@ -160,7 +160,7 @@ export const FileOperationsDialog: React.FC<FileOperationsDialogProps> = ({
             secondary={
               <Box component="span">
                 {file.isFolder ? 'Folder' : formatFileSize(file.size)}
-                {file.lastModifiedBy && ` • Modified by ${file.lastModifiedBy.displayName}`}
+                {file.lastModifiedBy && ` • Modified by ${String(file.lastModifiedBy.displayName || 'Unknown')}`}
               </Box>
             }
           />

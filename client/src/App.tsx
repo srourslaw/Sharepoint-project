@@ -1,3 +1,6 @@
+// MUST BE FIRST: Fix console.log object rendering issue
+import './utils/disableConsole';
+
 import React from 'react';
 import { ThemeProvider, createTheme, CssBaseline, Box, Typography, Button, CircularProgress } from '@mui/material';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -6,6 +9,7 @@ import { Dashboard } from './components/Dashboard.debug';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthLoadingSpinner } from './components/auth/AuthLoadingSpinner';
 import { AuthError } from './components/auth/AuthError';
+import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
 
 // Create a custom theme for the application
 const theme = createTheme({
@@ -331,14 +335,16 @@ const AppRoutes: React.FC = () => {
 
 function App() {
   return (
-    <ThemeProvider theme={responsiveTheme}>
-      <CssBaseline />
-      <AuthProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
-      </AuthProvider>
-    </ThemeProvider>
+    <GlobalErrorBoundary>
+      <ThemeProvider theme={responsiveTheme}>
+        <CssBaseline />
+        <AuthProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
+    </GlobalErrorBoundary>
   );
 }
 

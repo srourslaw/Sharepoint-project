@@ -100,8 +100,8 @@ export const MainContent: React.FC<MainContentProps> = ({
           displayName: typeof file.displayName, displayNameValue: file.displayName,
           size: typeof file.size, sizeValue: file.size,
           lastModifiedDateTime: typeof file.lastModifiedDateTime, dateValue: file.lastModifiedDateTime,
-          lastModifiedBy: typeof file.lastModifiedBy, lastModifiedByValue: file.lastModifiedBy,
-          createdBy: typeof file.createdBy, createdByValue: file.createdBy,
+          lastModifiedBy: typeof file.lastModifiedBy, lastModifiedByValue: JSON.stringify(file.lastModifiedBy),
+          createdBy: typeof file.createdBy, createdByValue: JSON.stringify(file.createdBy),
         }, null, 2));
         
         // Check if any objects are being passed to React text rendering

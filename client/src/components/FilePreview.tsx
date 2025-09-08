@@ -1,43 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  IconButton,
-  Tab,
-  Tabs,
-  Card,
-  CardContent,
-  CardMedia,
-  CircularProgress,
-  Alert,
-  Chip,
-  Divider,
-  Button,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-} from '@mui/material';
-import {
+import React, { useState } from 'react';
+import { Box, Typography, IconButton, Paper, Tabs, Tab, Menu, MenuItem, ListItemIcon } from '@mui/material';
+import { 
   Close as CloseIcon,
-  Download as DownloadIcon,
-  Share as ShareIcon,
-  Edit as EditIcon,
-  Fullscreen as FullscreenIcon,
-  ZoomIn as ZoomInIcon,
-  ZoomOut as ZoomOutIcon,
-  RotateRight as RotateIcon,
-  Print as PrintIcon,
-  MoreVert as MoreIcon,
   Visibility as PreviewIcon,
   Info as InfoIcon,
   History as VersionsIcon,
+  GetApp as DownloadIcon,
+  MoreVert as MoreVertIcon,
+  Share as ShareIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  FileCopy as CopyIcon
 } from '@mui/icons-material';
-
 import { SharePointFile } from '../types';
 import { useFilePreview } from '../hooks/useFilePreview';
-import { formatFileSize, formatDate, getFileTypeLabel } from '../utils/formatters';
+import { formatFileSize, formatDate } from '../utils/formatters';
 
 interface FilePreviewProps {
   selectedFiles: string[];
@@ -52,208 +29,181 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   height,
   onClose,
 }) => {
+  console.log('🚀 FilePreview: Rendering WITHIN dashboard with files:', selectedFiles, 'height:', height);
+  
   const [activeTab, setActiveTab] = useState<PreviewTab>('preview');
-  const [currentFileIndex, setCurrentFileIndex] = useState(0);
-  const [zoom, setZoom] = useState(100);
-  const [rotation, setRotation] = useState(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const currentFileId = selectedFiles[0] || null;
+  const { file, content, loading, error } = useFilePreview(currentFileId);
 
-  const currentFileId = selectedFiles[currentFileIndex];
-  const { file, content, loading, error, downloadFile } = useFilePreview(currentFileId);
+  console.log('🚀 FilePreview: File data:', { file: file?.name, content: content?.substring(0, 50), hasFile: !!file, hasContent: !!content });
 
-  useEffect(() => {
-    setCurrentFileIndex(0);
-    setZoom(100);
-    setRotation(0);
-  }, [selectedFiles]);
+  if (loading) {
+    return (
+      <Paper sx={{ height, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Typography variant="h6">Loading...</Typography>
+      </Paper>
+    );
+  }
 
-  const handleFileNavigation = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && currentFileIndex > 0) {
-      setCurrentFileIndex(prev => prev - 1);
-    } else if (direction === 'next' && currentFileIndex < selectedFiles.length - 1) {
-      setCurrentFileIndex(prev => prev + 1);
-    }
-  };
-
-  const handleZoom = (direction: 'in' | 'out') => {
-    setZoom(prev => {
-      const newZoom = direction === 'in' ? prev + 25 : prev - 25;
-      return Math.max(25, Math.min(200, newZoom));
-    });
-  };
-
-  const handleRotate = () => {
-    setRotation(prev => (prev + 90) % 360);
-  };
-
-  const renderPreviewContent = () => {
-    if (loading) {
-      return (
-        <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-          <CircularProgress />
+  if (error || !file || !content) {
+    console.log('❌ FilePreview: No file or content, showing error');
+    return (
+      <Paper sx={{ height, width: '100%', p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">Preview Error</Typography>
+          <IconButton onClick={onClose}>
+            <CloseIcon />
+          </IconButton>
         </Box>
-      );
-    }
+        <Typography color="error">Error: {error || 'No file or content found'}</Typography>
+      </Paper>
+    );
+  }
 
-    if (error) {
-      return (
-        <Alert severity="error" sx={{ m: 2 }}>
-          {error}
-        </Alert>
-      );
-    }
-
-    if (!file) {
-      return (
-        <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-          <Typography variant="body2" color="text.secondary">
-            No file selected
-          </Typography>
-        </Box>
-      );
-    }
-
-    const isImage = file.mimeType.startsWith('image/');
+  const renderContent = () => {
     const isPdf = file.mimeType === 'application/pdf';
-    const isVideo = file.mimeType.startsWith('video/');
-    const isAudio = file.mimeType.startsWith('audio/');
-    const isText = file.mimeType.startsWith('text/') || 
-                  ['application/json', 'application/javascript'].includes(file.mimeType);
+    const isImage = file.mimeType.startsWith('image/');
+    const isOffice = file.extension === 'docx' || file.extension === 'xlsx' || file.extension === 'pptx';
 
-    if (isImage && (content || file.thumbnail)) {
-      return (
-        <Box
-          sx={{
-            height: '100%',
-            display: 'flex',
+    console.log('🎯 FilePreview: Rendering content type:', { isPdf, isImage, isOffice, mimeType: file.mimeType, extension: file.extension });
+
+    if (isPdf) {
+      const pdfUrl = content.startsWith('blob:') ? content : `/api/sharepoint-advanced/files/${file.id}/content`;
+      console.log('📕 FilePreview: Using PDF URL:', pdfUrl);
+      console.log('📕 FilePreview: Content type:', typeof content, 'Length:', content?.length);
+      
+      if (!content) {
+        return (
+          <Box sx={{ 
+            width: '100%', 
+            height: '100%', 
+            display: 'flex', 
+            alignItems: 'center', 
             justifyContent: 'center',
-            alignItems: 'center',
-            overflow: 'hidden',
-            backgroundColor: '#f5f5f5',
-          }}
-        >
-          <img
-            src={content || file.thumbnail || ''}
-            alt={file.name}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-              transition: 'transform 0.2s',
-              objectFit: 'contain',
-            }}
-          />
-        </Box>
-      );
-    }
-
-    if (isPdf && content) {
+            flexDirection: 'column',
+            backgroundColor: '#f5f5f5'
+          }}>
+            <Typography variant="h6" color="text.secondary">
+              PDF Loading...
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Please wait while the PDF is being prepared
+            </Typography>
+          </Box>
+        );
+      }
+      
       return (
-        <Box sx={{ height: '100%' }}>
+        <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
           <iframe
-            src={content}
+            src={pdfUrl}
             width="100%"
             height="100%"
-            style={{ border: 'none' }}
-            title={`Preview of ${file.name}`}
+            style={{
+              border: 'none',
+              display: 'block',
+              minHeight: '500px'
+            }}
+            title={`PDF: ${String(file.name || file.displayName || 'Document')}`}
+            onLoad={() => console.log('📕 PDF iframe loaded successfully')}
+            onError={(e) => console.error('📕 PDF iframe error:', e)}
           />
         </Box>
       );
     }
 
-    if (isVideo && content) {
-      return (
-        <Box
-          sx={{
-            height: '100%',
-            display: 'flex',
+    if (isImage) {
+      const imageUrl = content.startsWith('blob:') ? content : `/api/sharepoint-advanced/files/${file.id}/content`;
+      console.log('🖼️ FilePreview: Using Image URL:', imageUrl);
+      console.log('🖼️ FilePreview: Content type:', typeof content, 'Length:', content?.length);
+      
+      if (!content) {
+        return (
+          <Box sx={{ 
+            width: '100%', 
+            height: '100%', 
+            display: 'flex', 
+            alignItems: 'center', 
             justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: '#000',
-          }}
-        >
-          <video
-            src={content}
-            controls
+            flexDirection: 'column',
+            backgroundColor: '#f5f5f5'
+          }}>
+            <Typography variant="h6" color="text.secondary">
+              Image Loading...
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Please wait while the image is being prepared
+            </Typography>
+          </Box>
+        );
+      }
+      
+      return (
+        <Box sx={{ 
+          width: '100%', 
+          height: '100%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          backgroundColor: '#f5f5f5',
+          position: 'relative'
+        }}>
+          <img
+            src={imageUrl}
+            alt={String(file.name || file.displayName || 'Image preview')}
             style={{
               maxWidth: '100%',
               maxHeight: '100%',
+              objectFit: 'contain',
+              display: 'block',
+              borderRadius: '4px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}
+            onLoad={() => console.log('🖼️ Image loaded successfully:', imageUrl)}
+            onError={(e) => {
+              console.error('🖼️ Image load error:', e);
+              console.error('🖼️ Failed image URL:', imageUrl);
             }}
           />
         </Box>
       );
     }
 
-    if (isAudio && content) {
+    // Office documents - display as text content
+    if (isOffice && content && !content.startsWith('blob:')) {
+      console.log('📄 FilePreview: Rendering Office document as text');
       return (
-        <Box
-          sx={{
-            height: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <audio src={content} controls />
-        </Box>
-      );
-    }
-
-    if (isText && content) {
-      return (
-        <Box sx={{ height: '100%', overflow: 'auto', p: 2 }}>
-          <pre
-            style={{
-              fontFamily: 'Monaco, Consolas, "Courier New", monospace',
-              fontSize: '12px',
-              whiteSpace: 'pre-wrap',
-              margin: 0,
-            }}
-          >
-            {content}
-          </pre>
-        </Box>
-      );
-    }
-
-    // Handle Office documents and other content types
-    if (content && (file.extension === 'docx' || file.extension === 'xlsx' || file.extension === 'pptx')) {
-      return (
-        <Box sx={{ height: '100%', overflow: 'auto', p: 3 }}>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-            {content}
+        <Box sx={{ 
+          width: '100%', 
+          height: '100%', 
+          overflow: 'auto', 
+          p: 3,
+          backgroundColor: '#fff'
+        }}>
+          <Typography variant="body1" sx={{ 
+            whiteSpace: 'pre-wrap', 
+            lineHeight: 1.6,
+            fontSize: '14px',
+            fontFamily: 'Arial, sans-serif'
+          }}>
+            {String(content)}
           </Typography>
         </Box>
       );
     }
 
-    // Default preview for unsupported file types
     return (
-      <Box
-        sx={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          p: 4,
-        }}
-      >
-        <PreviewIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-        <Typography variant="h6" color="text.secondary" gutterBottom>
-          Preview not available
+      <Box sx={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <Typography variant="h6" color="text.secondary">
+          Cannot preview this file type: {file.mimeType}
         </Typography>
-        <Typography variant="body2" color="text.secondary" textAlign="center">
-          This file type cannot be previewed in the browser.
-        </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<DownloadIcon />}
-          onClick={() => downloadFile()}
-          sx={{ mt: 2 }}
-        >
-          Download to View
-        </Button>
       </Box>
     );
   };
@@ -262,169 +212,261 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     if (!file) return null;
 
     return (
-      <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>
+      <Box sx={{ p: 3, height: '100%', overflow: 'auto', backgroundColor: '#fff' }}>
         <Typography variant="h6" gutterBottom>
           File Details
         </Typography>
         
-        <Card sx={{ mb: 2 }}>
-          <CardContent>
-            <Typography variant="subtitle1" gutterBottom>
-              {file.displayName}
-            </Typography>
-            
-            <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: 'auto 1fr' }}>
-              <Typography variant="body2" color="text.secondary">Type:</Typography>
-              <Typography variant="body2">{getFileTypeLabel(file.extension, file.mimeType)}</Typography>
-              
-              <Typography variant="body2" color="text.secondary">Size:</Typography>
-              <Typography variant="body2">{formatFileSize(file.size)}</Typography>
-              
-              <Typography variant="body2" color="text.secondary">Created:</Typography>
-              <Typography variant="body2">{formatDate(file.createdDateTime)}</Typography>
-              
-              <Typography variant="body2" color="text.secondary">Modified:</Typography>
-              <Typography variant="body2">{formatDate(file.lastModifiedDateTime)}</Typography>
-              
-              {file.createdBy && (
-                <>
-                  <Typography variant="body2" color="text.secondary">Created by:</Typography>
-                  <Typography variant="body2">{file.createdBy.displayName}</Typography>
-                </>
-              )}
-              
-              {file.lastModifiedBy && (
-                <>
-                  <Typography variant="body2" color="text.secondary">Modified by:</Typography>
-                  <Typography variant="body2">{file.lastModifiedBy.displayName}</Typography>
-                </>
-              )}
-              
-              <Typography variant="body2" color="text.secondary">Path:</Typography>
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'auto 1fr', maxWidth: 600 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>Name:</Typography>
+          <Typography variant="body2">{String(file.displayName || file.name || 'Unknown')}</Typography>
+          
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>Size:</Typography>
+          <Typography variant="body2">{formatFileSize(file.size)}</Typography>
+          
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>Type:</Typography>
+          <Typography variant="body2">{file.mimeType}</Typography>
+          
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>Created:</Typography>
+          <Typography variant="body2">{formatDate(file.createdDateTime)}</Typography>
+          
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>Modified:</Typography>
+          <Typography variant="body2">{formatDate(file.lastModifiedDateTime)}</Typography>
+          
+          {file.createdBy && (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>Created by:</Typography>
+              <Typography variant="body2">{String(file.createdBy.displayName || 'Unknown')}</Typography>
+            </>
+          )}
+          
+          {file.lastModifiedBy && (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>Modified by:</Typography>
+              <Typography variant="body2">{String(file.lastModifiedBy.displayName || 'Unknown')}</Typography>
+            </>
+          )}
+          
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>Path:</Typography>
+          <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+            {String(file.parentPath || '/')}
+          </Typography>
+          
+          {file.webUrl && (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>SharePoint URL:</Typography>
               <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                {file.parentPath}
+                <a href={file.webUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>
+                  Open in SharePoint
+                </a>
               </Typography>
-              
-              {file.webUrl && (
-                <>
-                  <Typography variant="body2" color="text.secondary">SharePoint URL:</Typography>
-                  <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                    <a href={file.webUrl} target="_blank" rel="noopener noreferrer">
-                      Open in SharePoint
-                    </a>
-                  </Typography>
-                </>
-              )}
-            </Box>
-          </CardContent>
-        </Card>
+            </>
+          )}
+        </Box>
       </Box>
     );
   };
 
   const renderVersionHistory = () => (
-    <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>
+    <Box sx={{ p: 3, height: '100%', overflow: 'auto', backgroundColor: '#fff' }}>
       <Typography variant="h6" gutterBottom>
         Version History
       </Typography>
-      <Alert severity="info">
+      <Typography variant="body2" color="text.secondary">
         Version history feature coming soon.
-      </Alert>
+      </Typography>
     </Box>
   );
+
+  const handleDownload = async () => {
+    if (!file) return;
+    
+    try {
+      console.log('🔽 Downloading file:', file.displayName || file.name);
+      
+      const downloadUrl = `/api/sharepoint-advanced/files/${file.id}/content`;
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.displayName || file.name || 'file';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('✅ Download completed');
+    } catch (error) {
+      console.error('❌ Download failed:', error);
+      alert('Download failed. Please try again.');
+    }
+  };
+
+  const handleMenuAction = (action: string) => {
+    console.log('🎯 handleMenuAction called with:', action);
+    setAnchorEl(null);
+    
+    if (!file) {
+      console.error('❌ No file available');
+      alert('No file selected');
+      return;
+    }
+    
+    console.log('📁 File info:', {
+      name: file.displayName || file.name,
+      webUrl: file.webUrl,
+      id: file.id
+    });
+    
+    switch (action) {
+      case 'share':
+        console.log('🔄 Processing share action...');
+        const shareUrl = file.webUrl || `File: ${file.displayName || file.name}`;
+        alert(`Share URL:\n${shareUrl}`);
+        
+        // Try to copy to clipboard
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(shareUrl).then(() => {
+            console.log('✅ Copied to clipboard');
+          }).catch((err) => {
+            console.error('❌ Clipboard failed:', err);
+          });
+        }
+        break;
+        
+      case 'copy':
+        console.log('🔄 Processing copy action...');
+        const fileUrl = `/api/sharepoint-advanced/files/${file.id}/content`;
+        alert(`File URL:\n${fileUrl}`);
+        
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(fileUrl).then(() => {
+            console.log('✅ File URL copied to clipboard');
+          }).catch((err) => {
+            console.error('❌ Clipboard failed:', err);
+          });
+        }
+        break;
+        
+      case 'edit':
+        console.log('🔄 Processing edit action...');
+        if (file.webUrl) {
+          console.log('🌐 Opening SharePoint URL:', file.webUrl);
+          window.open(file.webUrl, '_blank');
+        } else {
+          alert('Edit functionality not available for this file.\nNo SharePoint URL found.');
+        }
+        break;
+        
+      case 'delete':
+        console.log('🔄 Processing delete action...');
+        const fileName = file.displayName || file.name || 'Unknown file';
+        const confirmed = confirm(`Are you sure you want to delete "${fileName}"?\n\nThis action cannot be undone.`);
+        if (confirmed) {
+          alert('Delete functionality would be implemented here.\nThis is currently a placeholder.');
+          console.log('🗑️ User confirmed deletion of:', fileName);
+        } else {
+          console.log('❌ User cancelled deletion');
+        }
+        break;
+        
+      default:
+        console.log('❓ Unknown action:', action);
+        alert(`Unknown action: ${action}`);
+        break;
+    }
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'preview':
-        return renderPreviewContent();
+        return renderContent();
       case 'details':
         return renderFileDetails();
       case 'versions':
         return renderVersionHistory();
       default:
-        return null;
+        return renderContent();
     }
   };
 
   return (
-    <Paper sx={{ height }} elevation={2}>
+    <Paper sx={{ 
+      height, 
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
       {/* Header */}
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          p: 1,
+          p: 2,
           borderBottom: 1,
           borderColor: 'divider',
+          backgroundColor: '#f8f9fa',
+          minHeight: 64
         }}
       >
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography variant="subtitle1" noWrap sx={{ maxWidth: 200 }}>
-            {file?.displayName || 'Loading...'}
-          </Typography>
-          
-          {selectedFiles.length > 1 && (
-            <Chip
-              label={`${currentFileIndex + 1} / ${selectedFiles.length}`}
-              size="small"
-              variant="outlined"
-            />
-          )}
-        </Box>
-
-        <Box display="flex" alignItems="center" gap={0.5}>
-          {/* Navigation buttons for multiple files */}
-          {selectedFiles.length > 1 && (
-            <>
-              <IconButton
-                size="small"
-                onClick={() => handleFileNavigation('prev')}
-                disabled={currentFileIndex === 0}
-              >
-                ←
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => handleFileNavigation('next')}
-                disabled={currentFileIndex === selectedFiles.length - 1}
-              >
-                →
-              </IconButton>
-              <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-            </>
-          )}
-
-          {/* Preview controls */}
-          {file?.mimeType.startsWith('image/') && (
-            <>
-              <IconButton size="small" onClick={() => handleZoom('out')} disabled={zoom <= 25}>
-                <ZoomOutIcon fontSize="small" />
-              </IconButton>
-              <Typography variant="caption" sx={{ minWidth: 40, textAlign: 'center' }}>
-                {zoom}%
-              </Typography>
-              <IconButton size="small" onClick={() => handleZoom('in')} disabled={zoom >= 200}>
-                <ZoomInIcon fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={handleRotate}>
-                <RotateIcon fontSize="small" />
-              </IconButton>
-              <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-            </>
-          )}
-
-          {/* Action buttons */}
-          <IconButton size="small" onClick={() => downloadFile()}>
-            <DownloadIcon fontSize="small" />
+        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          {String(file?.displayName || file?.name || 'File Preview')}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <IconButton
+            onClick={handleDownload}
+            sx={{ 
+              backgroundColor: '#e3f2fd',
+              border: '1px solid #1976d2',
+              '&:hover': { backgroundColor: '#bbdefb' },
+              color: '#1976d2',
+              minWidth: 40,
+              minHeight: 40
+            }}
+            title="Download file"
+          >
+            <DownloadIcon />
           </IconButton>
-          
-          <IconButton size="small" onClick={(e) => setAnchorEl(e.currentTarget)}>
-            <MoreIcon fontSize="small" />
+          <IconButton
+            onClick={(e) => setAnchorEl(e.currentTarget)}
+            sx={{ 
+              backgroundColor: '#e8f5e8',
+              border: '1px solid #4caf50',
+              '&:hover': { backgroundColor: '#c8e6c9' },
+              color: '#4caf50',
+              minWidth: 40,
+              minHeight: 40
+            }}
+            title="More actions"
+          >
+            <MoreVertIcon />
           </IconButton>
-          
-          <IconButton size="small" onClick={onClose}>
-            <CloseIcon fontSize="small" />
+          <IconButton
+            onClick={onClose}
+            sx={{ 
+              backgroundColor: '#ffebee',
+              border: '1px solid #f44336',
+              '&:hover': { backgroundColor: '#ffcdd2' },
+              color: '#f44336',
+              minWidth: 40,
+              minHeight: 40
+            }}
+            title="Close preview"
+          >
+            <CloseIcon />
           </IconButton>
         </Box>
       </Box>
@@ -442,51 +484,78 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
             value="preview"
             icon={<PreviewIcon fontSize="small" />}
             iconPosition="start"
-            sx={{ minHeight: 40, textTransform: 'none', fontSize: '0.875rem' }}
+            sx={{ minHeight: 48, textTransform: 'none', fontSize: '0.875rem' }}
           />
           <Tab
             label="Details"
             value="details"
             icon={<InfoIcon fontSize="small" />}
             iconPosition="start"
-            sx={{ minHeight: 40, textTransform: 'none', fontSize: '0.875rem' }}
+            sx={{ minHeight: 48, textTransform: 'none', fontSize: '0.875rem' }}
           />
           <Tab
             label="Versions"
             value="versions"
             icon={<VersionsIcon fontSize="small" />}
             iconPosition="start"
-            sx={{ minHeight: 40, textTransform: 'none', fontSize: '0.875rem' }}
+            sx={{ minHeight: 48, textTransform: 'none', fontSize: '0.875rem' }}
           />
         </Tabs>
       </Box>
 
-      {/* Content */}
-      <Box sx={{ height: 'calc(100% - 80px)', overflow: 'hidden' }}>
+      {/* Content Area - Takes up remaining space */}
+      <Box sx={{ 
+        flex: 1, 
+        overflow: 'hidden',
+        backgroundColor: '#fff'
+      }}>
         {renderTabContent()}
       </Box>
 
-      {/* Actions Menu */}
+      {/* More Actions Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
+        PaperProps={{
+          sx: { mt: 1 }
+        }}
       >
-        <MenuItem onClick={() => setAnchorEl(null)}>
-          <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
-          <ListItemText primary="Share" />
+        <MenuItem onClick={(e) => {
+          console.log('📤 Share clicked');
+          handleMenuAction('share');
+        }}>
+          <ListItemIcon>
+            <ShareIcon fontSize="small" />
+          </ListItemIcon>
+          Share
         </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(null)}>
-          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText primary="Edit" />
+        <MenuItem onClick={(e) => {
+          console.log('🔗 Copy link clicked');
+          handleMenuAction('copy');
+        }}>
+          <ListItemIcon>
+            <CopyIcon fontSize="small" />
+          </ListItemIcon>
+          Copy link
         </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(null)}>
-          <ListItemIcon><PrintIcon fontSize="small" /></ListItemIcon>
-          <ListItemText primary="Print" />
+        <MenuItem onClick={(e) => {
+          console.log('✏️ Edit clicked');
+          handleMenuAction('edit');
+        }}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          Edit
         </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(null)}>
-          <ListItemIcon><FullscreenIcon fontSize="small" /></ListItemIcon>
-          <ListItemText primary="Open in new tab" />
+        <MenuItem onClick={(e) => {
+          console.log('🗑️ Delete clicked');
+          handleMenuAction('delete');
+        }}>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" />
+          </ListItemIcon>
+          Delete
         </MenuItem>
       </Menu>
     </Paper>
