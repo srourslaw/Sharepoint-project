@@ -125,10 +125,18 @@ export const PeoplePage: React.FC = () => {
     { name: 'Meeting Notes.docx', sharedWith: 6, permissions: 'Can Edit', sharedBy: 'Alex Wilson', date: '3 days ago' },
   ];
 
-  const pendingInvitations = [
-    { email: 'john.doe@partner.com', role: 'External Collaborator', invitedBy: 'Sarah Johnson', date: '1 day ago' },
-    { email: 'jane.smith@client.com', role: 'Guest Reader', invitedBy: 'Lisa Brown', date: '3 days ago' },
-  ];
+  // Use real invitations data from the hook
+  const pendingInvitations = peopleData.pendingInvitations.map(invitation => ({
+    id: invitation.id,
+    email: invitation.email,
+    role: invitation.role,
+    invitedBy: invitation.invitedBy,
+    date: new Date(invitation.invitedDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short', 
+      day: 'numeric'
+    })
+  }));
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -478,8 +486,8 @@ export const PeoplePage: React.FC = () => {
           <CardContent>
             {pendingInvitations.length > 0 ? (
               <List>
-                {pendingInvitations.map((invitation, index) => (
-                  <ListItem key={index} sx={{ py: 2 }}>
+                {pendingInvitations.map((invitation) => (
+                  <ListItem key={invitation.id} sx={{ py: 2 }}>
                     <ListItemAvatar>
                       <Avatar sx={{ bgcolor: 'warning.main' }}>
                         <EmailIcon />

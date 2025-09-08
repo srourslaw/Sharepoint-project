@@ -24,12 +24,22 @@ interface SharedItem {
   webUrl: string;
 }
 
+interface PendingInvitation {
+  id: string;
+  email: string;
+  role: string;
+  invitedBy: string;
+  invitedDate: string;
+  status: 'pending' | 'accepted' | 'declined';
+}
+
 interface PeopleData {
   currentUser: SharePointUser | null;
   recentContacts: SharePointUser[];
   sharedFiles: SharedItem[];
   totalSharedItems: number;
   recentShares: SharedItem[];
+  pendingInvitations: PendingInvitation[];
 }
 
 interface UseSharePointPeopleReturn {
@@ -45,7 +55,8 @@ export const useSharePointPeople = (): UseSharePointPeopleReturn => {
     recentContacts: [],
     sharedFiles: [],
     totalSharedItems: 0,
-    recentShares: []
+    recentShares: [],
+    pendingInvitations: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -157,12 +168,27 @@ export const useSharePointPeople = (): UseSharePointPeopleReturn => {
         }
       }
 
+      // Try to get real pending invitations
+      let pendingInvitations: PendingInvitation[] = [];
+      try {
+        console.log('🔍 Fetching pending invitations from SharePoint API...');
+        const invitationsResponse = await api.get('/api/sharepoint-advanced/me/invitations');
+        if (invitationsResponse.data.success && invitationsResponse.data.data) {
+          pendingInvitations = invitationsResponse.data.data;
+          console.log(`✅ Successfully fetched ${pendingInvitations.length} pending invitations`);
+        }
+      } catch (invErr) {
+        console.warn('⚠️ Could not fetch invitations, showing empty list:', invErr);
+        pendingInvitations = [];
+      }
+
       setPeopleData({
         currentUser,
         recentContacts,
         sharedFiles: recentShares,
         totalSharedItems: allFiles.length,
-        recentShares
+        recentShares,
+        pendingInvitations
       });
 
     } catch (err: any) {
@@ -180,7 +206,8 @@ export const useSharePointPeople = (): UseSharePointPeopleReturn => {
         recentContacts: [],
         sharedFiles: [],
         totalSharedItems: 0,
-        recentShares: []
+        recentShares: [],
+        pendingInvitations: []
       });
     } finally {
       setLoading(false);
