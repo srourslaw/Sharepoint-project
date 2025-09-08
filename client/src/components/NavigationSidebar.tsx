@@ -27,10 +27,15 @@ import {
   Star as StarIcon,
   Schedule as RecentIcon,
   CloudQueue as OneDriveIcon,
+  Analytics as AnalyticsIcon,
+  Settings as SettingsIcon,
+  People as PeopleIcon,
+  Dashboard as DashboardIcon,
 } from '@mui/icons-material';
 
 import { SharePointSite, SharePointLibrary, NavigationItem } from '../types';
 import { useSharePointData } from '../hooks/useSharePointData';
+import { useRecentFiles } from '../hooks/useRecentFiles';
 
 interface NavigationSidebarProps {
   onNavigate: (path: string) => void;
@@ -41,9 +46,10 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   onNavigate,
   currentPath,
 }) => {
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['sites', 'quick-access']));
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['sites', 'main-navigation']));
   const [searchQuery, setSearchQuery] = useState('');
   const { sites, libraries, loading, error, refreshData } = useSharePointData();
+  const { recentCount, loading: recentLoading } = useRecentFiles();
 
   const handleItemClick = (item: NavigationItem) => {
     if (item.path) {
@@ -63,33 +69,50 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const buildNavigationTree = (): NavigationItem[] => {
     const tree: NavigationItem[] = [
+      // Main Navigation (no parent container)
       {
-        id: 'quick-access',
-        label: 'Quick Access',
-        icon: 'star',
-        children: [
-          {
-            id: 'home',
-            label: 'Home',
-            icon: 'home',
-            path: '/',
-          },
-          {
-            id: 'recent',
-            label: 'Recent Files',
-            icon: 'recent',
-            path: '/recent',
-            badge: '12',
-          },
-          {
-            id: 'onedrive',
-            label: 'OneDrive',
-            icon: 'onedrive',
-            path: '/onedrive',
-          },
-        ],
+        id: 'home',
+        label: 'Home',
+        icon: 'home',
+        path: '/',
+      },
+      {
+        id: 'recent',
+        label: 'Recent Files',
+        icon: 'recent',
+        path: '/recent',
+        badge: recentLoading ? '...' : recentCount.toString(),
+      },
+      {
+        id: 'onedrive',
+        label: 'OneDrive',
+        icon: 'onedrive',
+        path: '/onedrive',
       },
     ];
+
+    // Add a separator and secondary navigation
+    tree.push({
+      id: 'separator-1',
+      label: '',
+      icon: 'separator',
+    });
+
+    // Add Analytics and Tools section
+    tree.push(
+      {
+        id: 'analytics',
+        label: 'Analytics',
+        icon: 'analytics',
+        path: '/analytics',
+      },
+      {
+        id: 'people',
+        label: 'People & Sharing',
+        icon: 'people',
+        path: '/people',
+      }
+    );
 
     if (sites.length > 0) {
       const sitesNode: NavigationItem = {
@@ -124,6 +147,20 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       tree.push(sitesNode);
     }
 
+    // Add another separator and settings at the bottom
+    tree.push({
+      id: 'separator-2',
+      label: '',
+      icon: 'separator',
+    });
+
+    tree.push({
+      id: 'settings',
+      label: 'Settings',
+      icon: 'settings',
+      path: '/settings',
+    });
+
     return tree;
   };
 
@@ -157,15 +194,25 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       case 'star': return <StarIcon />;
       case 'recent': return <RecentIcon />;
       case 'onedrive': return <OneDriveIcon />;
+      case 'analytics': return <AnalyticsIcon />;
+      case 'settings': return <SettingsIcon />;
+      case 'people': return <PeopleIcon />;
+      case 'dashboard': return <DashboardIcon />;
       case 'site': return <SiteIcon />;
       case 'library': return <LibraryIcon />;
       case 'folder': return <FolderIcon />;
       case 'folder-open': return <FolderOpenIcon />;
+      case 'separator': return null;
       default: return <FolderIcon />;
     }
   };
 
   const renderNavigationItem = (item: NavigationItem, level = 0): React.ReactNode => {
+    // Handle separator items
+    if (item.icon === 'separator') {
+      return <Divider key={item.id} sx={{ my: 1 }} />;
+    }
+
     const isExpanded = expandedItems.has(item.id);
     const isActive = currentPath === item.path;
     const hasChildren = item.children && item.children.length > 0;
@@ -296,7 +343,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       <Divider />
       <Box sx={{ p: 2 }}>
         <Typography variant="caption" color="text.secondary" align="center" display="block">
-          {sites.length} sites • {libraries.length} libraries
+          {sites.length} sites • {libraries.length} libraries • {recentCount} recent files
         </Typography>
       </Box>
     </Box>
