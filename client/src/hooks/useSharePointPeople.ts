@@ -115,7 +115,10 @@ export const useSharePointPeople = (): UseSharePointPeopleReturn => {
       // Try to get real people from SharePoint
       let recentContacts: SharePointUser[] = [];
       try {
+        console.log('🔍 Fetching people from SharePoint API...');
         const peopleResponse = await api.get('/api/sharepoint-advanced/me/people');
+        console.log('📊 People API Response:', peopleResponse.data);
+        
         if (peopleResponse.data.success && peopleResponse.data.data) {
           recentContacts = peopleResponse.data.data.map((person: any) => ({
             id: person.id,
@@ -127,41 +130,31 @@ export const useSharePointPeople = (): UseSharePointPeopleReturn => {
             userPrincipalName: person.userPrincipalName,
             permissions: person.permissions || 'Read'
           }));
+          console.log(`✅ Successfully mapped ${recentContacts.length} people from API`);
+        } else {
+          console.warn('⚠️ People API returned no data, using fallback');
         }
       } catch (err) {
-        console.warn('Could not fetch people, using fallback contacts:', err);
+        console.error('❌ Could not fetch people from API:', err);
         
-        // Generate some mock contacts based on the current user's domain as fallback
-        const domain = currentUser?.email.split('@')[1] || 'company.com';
-        recentContacts = [
-          {
-            id: 'contact-1',
-            displayName: 'Sarah Johnson',
-            email: `sarah.johnson@${domain}`,
-            jobTitle: 'Project Manager',
-            department: 'Operations',
-            userPrincipalName: `sarah.johnson@${domain}`,
-            permissions: 'Full Control'
-          },
-          {
-            id: 'contact-2', 
-            displayName: 'Mike Chen',
-            email: `mike.chen@${domain}`,
-            jobTitle: 'Developer',
-            department: 'IT',
-            userPrincipalName: `mike.chen@${domain}`,
-            permissions: 'Contribute'
-          },
-          {
-            id: 'contact-3',
-            displayName: 'Emily Davis',
-            email: `emily.davis@${domain}`,
-            jobTitle: 'Designer',
-            department: 'Marketing',
-            userPrincipalName: `emily.davis@${domain}`,
-            permissions: 'Read'
+        // Only show real data - no more fake fallback contacts
+        if (recentContacts.length === 0) {
+          console.log('⚠️ No people data available from API - showing only current user');
+          // If we have current user, show at least that
+          if (currentUser) {
+            recentContacts = [
+              {
+                id: currentUser.id,
+                displayName: currentUser.displayName,
+                email: currentUser.email,
+                jobTitle: currentUser.jobTitle || 'Current User',
+                department: currentUser.department || 'Your Organization',
+                userPrincipalName: currentUser.userPrincipalName,
+                permissions: 'Full Control'
+              }
+            ];
           }
-        ];
+        }
       }
 
       setPeopleData({

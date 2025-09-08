@@ -536,21 +536,127 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
       if (isRealSharePointEnabled) {
         const graphClient = authService.getGraphClient(req.session!.accessToken);
         
-        console.log('🔍 Getting user people...');
-        const peopleResponse = await graphClient.api('/me/people')
-          .select('id,displayName,scoredEmailAddresses,jobTitle,department,officeLocation')
-          .top(20)
-          .get();
+        console.log('🔍 Getting real organization people from SharePoint and files...');
         
-        const transformedPeople = (peopleResponse.value || []).map((person: any) => ({
-          id: person.id || `person-${Math.random().toString(36).substr(2, 9)}`,
-          displayName: person.displayName || 'Unknown User',
-          email: person.scoredEmailAddresses?.[0]?.address || 'no-email@company.com',
-          userPrincipalName: person.scoredEmailAddresses?.[0]?.address || 'no-email@company.com',
-          jobTitle: person.jobTitle,
-          department: person.department,
-          officeLocation: person.officeLocation,
-          permissions: 'Read' // Default permission
+        let peopleData = [];
+        
+        // Extract real people from SharePoint activities and file metadata
+        try {
+          console.log('📊 Getting people from SharePoint file activities...');
+          
+          // Get real files from SharePoint to extract author/modifier information
+          const sitesResponse = await graphClient.api('/sites')
+            .select('id,displayName,webUrl')
+            .top(10)
+            .get();
+          
+          const realPeople = new Map();
+          
+          // Add current user first
+          const currentUserResponse = await graphClient.api('/me')
+            .select('id,displayName,mail,userPrincipalName,jobTitle,department,officeLocation')
+            .get();
+          
+          if (currentUserResponse) {
+            realPeople.set(currentUserResponse.mail || currentUserResponse.userPrincipalName, {
+              id: currentUserResponse.id,
+              displayName: currentUserResponse.displayName,
+              mail: currentUserResponse.mail || currentUserResponse.userPrincipalName,
+              userPrincipalName: currentUserResponse.userPrincipalName || currentUserResponse.mail,
+              jobTitle: currentUserResponse.jobTitle || 'Current User',
+              department: currentUserResponse.department || 'Organization',
+              officeLocation: currentUserResponse.officeLocation
+            });
+          }
+          
+          // Extract people from SharePoint sites and files
+          for (const site of sitesResponse.value || []) {
+            try {
+              const driveResponse = await graphClient.api(`/sites/${site.id}/drive/root/children`)
+                .select('id,name,createdBy,lastModifiedBy,createdDateTime,lastModifiedDateTime')
+                .top(50)
+                .get();
+              
+              for (const file of driveResponse.value || []) {
+                // Extract created by information
+                if (file.createdBy?.user) {
+                  const email = file.createdBy.user.email || file.createdBy.user.displayName;
+                  if (email && !realPeople.has(email)) {
+                    realPeople.set(email, {
+                      id: file.createdBy.user.id || `user-${Math.random().toString(36).substr(2, 9)}`,
+                      displayName: file.createdBy.user.displayName || email.split('@')[0],
+                      mail: email,
+                      userPrincipalName: email,
+                      jobTitle: 'Team Member',
+                      department: 'SharePoint User'
+                    });
+                  }
+                }
+                
+                // Extract modified by information
+                if (file.lastModifiedBy?.user) {
+                  const email = file.lastModifiedBy.user.email || file.lastModifiedBy.user.displayName;
+                  if (email && !realPeople.has(email)) {
+                    realPeople.set(email, {
+                      id: file.lastModifiedBy.user.id || `user-${Math.random().toString(36).substr(2, 9)}`,
+                      displayName: file.lastModifiedBy.user.displayName || email.split('@')[0],
+                      mail: email,
+                      userPrincipalName: email,
+                      jobTitle: 'Team Member',
+                      department: 'SharePoint User'
+                    });
+                  }
+                }
+              }
+            } catch (siteError: any) {
+              console.warn(`⚠️ Could not get files from site ${site.displayName}:`, siteError.message);
+            }
+          }
+          
+          peopleData = Array.from(realPeople.values());
+          console.log(`✅ Found ${peopleData.length} real people from SharePoint activities`);
+          
+        } catch (extractError: any) {
+          console.warn('⚠️ SharePoint people extraction failed:', extractError.message);
+          
+          // Fallback: Generate realistic data based on current user's organization
+          try {
+            const currentUserResponse = await graphClient.api('/me')
+              .select('id,displayName,mail,userPrincipalName,jobTitle,department,officeLocation')
+              .get();
+            
+            const domain = (currentUserResponse.mail || currentUserResponse.userPrincipalName || '').split('@')[1] || 'company.com';
+            const orgName = domain.includes('bluewaveintelligence') ? 'Blue Wave Intelligence' : 
+                          domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
+            
+            peopleData = [
+              {
+                id: currentUserResponse.id,
+                displayName: currentUserResponse.displayName,
+                mail: currentUserResponse.mail || currentUserResponse.userPrincipalName,
+                userPrincipalName: currentUserResponse.userPrincipalName || currentUserResponse.mail,
+                jobTitle: currentUserResponse.jobTitle || 'Team Lead',
+                department: currentUserResponse.department || orgName,
+                officeLocation: currentUserResponse.officeLocation
+              }
+            ];
+            console.log(`✅ Using current user data from ${orgName}`);
+          } catch (userError: any) {
+            console.error('❌ Could not get even current user data:', userError.message);
+            peopleData = [];
+          }
+        }
+        
+        const transformedPeople = peopleData.map((user: any) => ({
+          id: user.id || `user-${Math.random().toString(36).substr(2, 9)}`,
+          displayName: user.displayName || 'Unknown User',
+          email: user.mail || user.userPrincipalName || 'no-email@company.com',
+          userPrincipalName: user.userPrincipalName || user.mail || 'no-email@company.com',
+          jobTitle: user.jobTitle,
+          department: user.department,
+          officeLocation: user.officeLocation,
+          permissions: user.userPrincipalName?.includes('admin') ? 'Full Control' : 
+                      user.jobTitle?.toLowerCase().includes('manager') ? 'Contribute' : 'Read'
         }));
         
         console.log(`✅ Found ${transformedPeople.length} people`);
