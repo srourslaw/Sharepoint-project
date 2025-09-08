@@ -469,6 +469,149 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
   });
 
   /**
+   * GET /api/sharepoint-advanced/me/profile
+   * Get current user's profile information
+   */
+  router.get('/me/profile', async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (isRealSharePointEnabled) {
+        const graphClient = authService.getGraphClient(req.session!.accessToken);
+        
+        console.log('🔍 Getting user profile...');
+        const userResponse = await graphClient.api('/me')
+          .select('id,displayName,mail,userPrincipalName,jobTitle,department,officeLocation,mobilePhone,businessPhones')
+          .get();
+        
+        console.log('✅ Found user profile:', userResponse.displayName);
+        
+        res.json({
+          success: true,
+          data: {
+            id: userResponse.id,
+            displayName: userResponse.displayName,
+            mail: userResponse.mail,
+            userPrincipalName: userResponse.userPrincipalName,
+            jobTitle: userResponse.jobTitle,
+            department: userResponse.department,
+            officeLocation: userResponse.officeLocation,
+            mobilePhone: userResponse.mobilePhone,
+            businessPhones: userResponse.businessPhones || []
+          },
+          message: 'User profile retrieved successfully'
+        });
+        return;
+      }
+
+      // Mock user data as fallback
+      res.json({
+        success: true,
+        data: {
+          id: 'current-user',
+          displayName: 'Current User',
+          mail: 'user@company.com',
+          userPrincipalName: 'user@company.com',
+          jobTitle: 'SharePoint User',
+          department: 'Organization'
+        },
+        message: 'Mock user profile'
+      });
+    } catch (error: any) {
+      console.error('Get user profile error:', error);
+      res.status(500).json({
+        error: {
+          code: 'GET_USER_PROFILE_ERROR',
+          message: 'Failed to retrieve user profile',
+          details: error.message
+        }
+      });
+    }
+  });
+
+  /**
+   * GET /api/sharepoint-advanced/me/people
+   * Get user's frequently contacted people and organization contacts
+   */
+  router.get('/me/people', async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (isRealSharePointEnabled) {
+        const graphClient = authService.getGraphClient(req.session!.accessToken);
+        
+        console.log('🔍 Getting user people...');
+        const peopleResponse = await graphClient.api('/me/people')
+          .select('id,displayName,scoredEmailAddresses,jobTitle,department,officeLocation')
+          .top(20)
+          .get();
+        
+        const transformedPeople = (peopleResponse.value || []).map((person: any) => ({
+          id: person.id || `person-${Math.random().toString(36).substr(2, 9)}`,
+          displayName: person.displayName || 'Unknown User',
+          email: person.scoredEmailAddresses?.[0]?.address || 'no-email@company.com',
+          userPrincipalName: person.scoredEmailAddresses?.[0]?.address || 'no-email@company.com',
+          jobTitle: person.jobTitle,
+          department: person.department,
+          officeLocation: person.officeLocation,
+          permissions: 'Read' // Default permission
+        }));
+        
+        console.log(`✅ Found ${transformedPeople.length} people`);
+        
+        res.json({
+          success: true,
+          data: transformedPeople,
+          message: `Retrieved ${transformedPeople.length} people from organization`
+        });
+        return;
+      }
+
+      // Mock people data as fallback
+      const mockPeople = [
+        {
+          id: 'person-1',
+          displayName: 'Sarah Johnson',
+          email: 'sarah.johnson@company.com',
+          userPrincipalName: 'sarah.johnson@company.com',
+          jobTitle: 'Project Manager',
+          department: 'Operations',
+          permissions: 'Full Control'
+        },
+        {
+          id: 'person-2',
+          displayName: 'Mike Chen',
+          email: 'mike.chen@company.com',
+          userPrincipalName: 'mike.chen@company.com',
+          jobTitle: 'Developer',
+          department: 'IT',
+          permissions: 'Contribute'
+        },
+        {
+          id: 'person-3',
+          displayName: 'Emily Davis',
+          email: 'emily.davis@company.com',
+          userPrincipalName: 'emily.davis@company.com',
+          jobTitle: 'Designer',
+          department: 'Marketing',
+          permissions: 'Read'
+        }
+      ];
+      
+      res.json({
+        success: true,
+        data: mockPeople,
+        message: 'Mock people data'
+      });
+    } catch (error: any) {
+      console.error('Get user people error:', error);
+      res.status(500).json({
+        error: {
+          code: 'GET_USER_PEOPLE_ERROR',
+          message: 'Failed to retrieve people',
+          details: error.message
+        }
+      });
+    }
+  });
+
+  /**
    * GET /api/sharepoint-advanced/me/drive
    * Get user's OneDrive
    */

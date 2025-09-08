@@ -10,6 +10,7 @@ interface SharePointUser {
   officeLocation?: string;
   photoUrl?: string;
   userPrincipalName: string;
+  permissions?: string;
 }
 
 interface SharedItem {
@@ -57,7 +58,7 @@ export const useSharePointPeople = (): UseSharePointPeopleReturn => {
       // Try to get current user info
       let currentUser: SharePointUser | null = null;
       try {
-        const userResponse = await api.get('/api/sharepoint/user/profile');
+        const userResponse = await api.get('/api/sharepoint-advanced/me/profile');
         if (userResponse.data.success && userResponse.data.data) {
           currentUser = {
             id: userResponse.data.data.id || 'current-user',
@@ -111,34 +112,57 @@ export const useSharePointPeople = (): UseSharePointPeopleReturn => {
         webUrl: file.webUrl || '#'
       }));
 
-      // Generate some mock contacts based on the current user's domain
-      const domain = currentUser?.email.split('@')[1] || 'company.com';
-      const recentContacts: SharePointUser[] = [
-        {
-          id: 'contact-1',
-          displayName: 'Sarah Johnson',
-          email: `sarah.johnson@${domain}`,
-          jobTitle: 'Project Manager',
-          department: 'Operations',
-          userPrincipalName: `sarah.johnson@${domain}`
-        },
-        {
-          id: 'contact-2', 
-          displayName: 'Mike Chen',
-          email: `mike.chen@${domain}`,
-          jobTitle: 'Developer',
-          department: 'IT',
-          userPrincipalName: `mike.chen@${domain}`
-        },
-        {
-          id: 'contact-3',
-          displayName: 'Emily Davis',
-          email: `emily.davis@${domain}`,
-          jobTitle: 'Designer',
-          department: 'Marketing',
-          userPrincipalName: `emily.davis@${domain}`
+      // Try to get real people from SharePoint
+      let recentContacts: SharePointUser[] = [];
+      try {
+        const peopleResponse = await api.get('/api/sharepoint-advanced/me/people');
+        if (peopleResponse.data.success && peopleResponse.data.data) {
+          recentContacts = peopleResponse.data.data.map((person: any) => ({
+            id: person.id,
+            displayName: person.displayName,
+            email: person.email,
+            jobTitle: person.jobTitle,
+            department: person.department,
+            officeLocation: person.officeLocation,
+            userPrincipalName: person.userPrincipalName,
+            permissions: person.permissions || 'Read'
+          }));
         }
-      ];
+      } catch (err) {
+        console.warn('Could not fetch people, using fallback contacts:', err);
+        
+        // Generate some mock contacts based on the current user's domain as fallback
+        const domain = currentUser?.email.split('@')[1] || 'company.com';
+        recentContacts = [
+          {
+            id: 'contact-1',
+            displayName: 'Sarah Johnson',
+            email: `sarah.johnson@${domain}`,
+            jobTitle: 'Project Manager',
+            department: 'Operations',
+            userPrincipalName: `sarah.johnson@${domain}`,
+            permissions: 'Full Control'
+          },
+          {
+            id: 'contact-2', 
+            displayName: 'Mike Chen',
+            email: `mike.chen@${domain}`,
+            jobTitle: 'Developer',
+            department: 'IT',
+            userPrincipalName: `mike.chen@${domain}`,
+            permissions: 'Contribute'
+          },
+          {
+            id: 'contact-3',
+            displayName: 'Emily Davis',
+            email: `emily.davis@${domain}`,
+            jobTitle: 'Designer',
+            department: 'Marketing',
+            userPrincipalName: `emily.davis@${domain}`,
+            permissions: 'Read'
+          }
+        ];
+      }
 
       setPeopleData({
         currentUser,
