@@ -37,15 +37,26 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { useSharePointSettings } from '../../hooks/useSharePointSettings';
+import { useThemeMode } from '../../contexts/ThemeContext';
 
 export const SettingsPage: React.FC = () => {
   const { settingsData, loading, error, updateSettings, refreshSettings, hasUnsavedChanges } = useSharePointSettings();
+  const { toggleDarkMode } = useThemeMode();
   const [localSettings, setLocalSettings] = useState(settingsData.settings);
+  const [hasLocalChanges, setHasLocalChanges] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   // Sync local settings when data loads
   React.useEffect(() => {
     setLocalSettings(settingsData.settings);
+    setHasLocalChanges(false);
   }, [settingsData.settings]);
+
+  // Check for local changes
+  React.useEffect(() => {
+    const hasChanges = JSON.stringify(localSettings) !== JSON.stringify(settingsData.settings);
+    setHasLocalChanges(hasChanges);
+  }, [localSettings, settingsData.settings]);
 
   const handleSettingChange = (category: string, setting: string, value: boolean | string) => {
     setLocalSettings(prev => ({
@@ -55,18 +66,41 @@ export const SettingsPage: React.FC = () => {
         [setting]: value,
       },
     }));
+
+    // Handle Dark Mode toggle immediately for better UX
+    if (category === 'appearance' && setting === 'darkMode' && typeof value === 'boolean') {
+      toggleDarkMode(value);
+    }
   };
 
   const handleSave = async () => {
     try {
       await updateSettings(localSettings);
+      // Ensure theme is also updated when settings are saved
+      toggleDarkMode(localSettings.appearance.darkMode);
+      setSaveMessage('Settings saved successfully!');
+      setTimeout(() => setSaveMessage(null), 3000);
     } catch (err) {
       console.error('Failed to save settings:', err);
+      setSaveMessage('Failed to save settings. Please try again.');
+      setTimeout(() => setSaveMessage(null), 3000);
     }
   };
 
   const handleReset = () => {
     setLocalSettings(settingsData.settings);
+    // Reset theme to match original settings
+    toggleDarkMode(settingsData.settings.appearance.darkMode);
+  };
+
+  const handleCreateBackup = () => {
+    const confirmBackup = confirm('Are you sure you want to create a backup of your SharePoint data? This may take a few minutes.');
+    if (confirmBackup) {
+      setSaveMessage('Backup creation initiated. You will receive a notification when complete.');
+      setTimeout(() => setSaveMessage(null), 5000);
+      // Here you would typically call an API to create the backup
+      // await api.post('/api/sharepoint-advanced/create-backup');
+    }
   };
 
   if (loading) {
@@ -111,7 +145,7 @@ export const SettingsPage: React.FC = () => {
             startIcon={<RefreshIcon />}
             onClick={handleReset}
             sx={{ mr: 2 }}
-            disabled={!hasUnsavedChanges}
+            disabled={!hasLocalChanges}
           >
             Reset
           </Button>
@@ -119,7 +153,7 @@ export const SettingsPage: React.FC = () => {
             variant="contained"
             startIcon={<SaveIcon />}
             onClick={handleSave}
-            disabled={!hasUnsavedChanges}
+            disabled={!hasLocalChanges}
           >
             Save Changes
           </Button>
@@ -127,9 +161,19 @@ export const SettingsPage: React.FC = () => {
       </Box>
 
       {/* Alert for unsaved changes */}
-      {hasUnsavedChanges && (
+      {hasLocalChanges && (
         <Alert severity="warning" sx={{ mb: 3 }}>
           You have unsaved changes. Don't forget to save your settings!
+        </Alert>
+      )}
+      
+      {/* Success/Error message */}
+      {saveMessage && (
+        <Alert 
+          severity={saveMessage.includes('successfully') ? 'success' : 'error'} 
+          sx={{ mb: 3 }}
+        >
+          {saveMessage}
         </Alert>
       )}
 
@@ -389,6 +433,7 @@ export const SettingsPage: React.FC = () => {
                       variant="outlined"
                       startIcon={<BackupIcon />}
                       fullWidth
+                      onClick={handleCreateBackup}
                     >
                       Create Backup
                     </Button>

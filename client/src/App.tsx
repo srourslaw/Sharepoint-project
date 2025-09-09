@@ -2,11 +2,12 @@
 import './utils/disableConsole';
 
 import React from 'react';
-import { ThemeProvider, createTheme, CssBaseline, Box, Typography, Button, CircularProgress } from '@mui/material';
+import { CssBaseline, Box, Typography, Button, CircularProgress } from '@mui/material';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import { Dashboard } from './components/Dashboard.debug';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeContextProvider } from './contexts/ThemeContext';
 import { AuthLoadingSpinner } from './components/auth/AuthLoadingSpinner';
 import { AuthError } from './components/auth/AuthError';
 import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
@@ -339,14 +340,14 @@ const AppRoutes: React.FC = () => {
 function App() {
   return (
     <GlobalErrorBoundary>
-      <ThemeProvider theme={responsiveTheme}>
+      <ThemeContextProvider>
         <CssBaseline />
         <AuthProvider>
           <Router>
             <AppRoutes />
           </Router>
         </AuthProvider>
-      </ThemeProvider>
+      </ThemeContextProvider>
     </GlobalErrorBoundary>
   );
 }
