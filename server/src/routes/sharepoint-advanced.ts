@@ -1105,54 +1105,25 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           return;
         } catch (error: any) {
           console.error(`❌ SharePoint site ${driveId} error:`, error);
-          console.log(`🔄 Falling back to mock data for ${driveId}`);
+          // Return error instead of mock data
+          res.status(404).json({
+            success: false,
+            error: {
+              message: `Unable to access SharePoint site: ${driveId}. ${error.message || 'Please try again later.'}`,
+              code: 'SHAREPOINT_SITE_ACCESS_ERROR'
+            }
+          });
+          return;
         }
       }
       
-      // Fallback mock data for SharePoint sites
-      const mockSiteFiles = [
-        {
-          id: 'mock-file-1',
-          name: 'Project Proposal.docx',
-          displayName: 'Project Proposal.docx',
-          size: 156743,
-          webUrl: `https://${driveId}/Shared%20Documents/Project%20Proposal.docx`,
-          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          extension: 'docx',
-          createdDateTime: '2024-12-15T10:30:00Z',
-          lastModifiedDateTime: '2024-12-20T14:45:00Z',
-          parentPath: driveId === 'netorgft18344752.sharepoint.com' ? '/Communication site' : '/All Company',
-          isFolder: false,
-          lastModifiedBy: { displayName: 'Hussein Srour', email: 'hussein.srour@bluewaveintelligence.com.au' },
-          createdBy: { displayName: 'Hussein Srour', email: 'hussein.srour@bluewaveintelligence.com.au' }
-        },
-        {
-          id: 'mock-file-2',
-          name: 'Financial Analysis.xlsx',
-          displayName: 'Financial Analysis.xlsx',
-          size: 287456,
-          webUrl: `https://${driveId}/Shared%20Documents/Financial%20Analysis.xlsx`,
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          extension: 'xlsx',
-          createdDateTime: '2024-12-18T09:15:00Z',
-          lastModifiedDateTime: '2024-12-22T16:20:00Z',
-          parentPath: driveId === 'netorgft18344752.sharepoint.com' ? '/Communication site' : '/All Company',
-          isFolder: false,
-          lastModifiedBy: { displayName: 'Hussein Srour', email: 'hussein.srour@bluewaveintelligence.com.au' },
-          createdBy: { displayName: 'Sarah Johnson', email: 'sarah.johnson@bluewaveintelligence.com.au' }
+      // If we get here, the driveId was not found
+      res.status(404).json({
+        success: false,
+        error: {
+          message: `SharePoint site not found: ${driveId}`,
+          code: 'SHAREPOINT_SITE_NOT_FOUND'
         }
-      ];
-      
-      res.json({
-        success: true,
-        data: {
-          items: mockSiteFiles,
-          totalCount: mockSiteFiles.length,
-          currentPage: 1,
-          totalPages: 1
-        },
-        message: `Mock data for ${driveId}`,
-        isRealData: false
       });
       return;
     }
