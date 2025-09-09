@@ -38,6 +38,8 @@ import {
   Group as GroupIcon,
   Public as PublicIcon,
   Lock as LockIcon,
+  Refresh as RefreshIcon,
+  Send as SendIcon,
 } from '@mui/icons-material';
 import { useSharePointPeople } from '../../hooks/useSharePointPeople';
 
@@ -59,6 +61,34 @@ export const PeoplePage: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const { peopleData, loading, error, refreshPeopleData } = useSharePointPeople();
+
+  // Handler functions
+  const handleInvitePeople = () => {
+    const email = prompt('Enter email address to invite:');
+    if (email && email.includes('@')) {
+      alert(`Invitation will be sent to ${email}. This feature requires SharePoint admin permissions.`);
+    } else if (email) {
+      alert('Please enter a valid email address.');
+    }
+  };
+
+  const handleEmailContact = (email: string, name: string) => {
+    window.open(`mailto:${email}?subject=SharePoint Collaboration&body=Hi ${name},%0D%0A%0D%0AI would like to collaborate with you on SharePoint.%0D%0A%0D%0ABest regards`);
+  };
+
+  const handleMoreActions = (person: any) => {
+    const actions = [
+      'View Profile',
+      'Send Message',
+      'View Shared Files',
+      'Manage Permissions'
+    ];
+    const choice = prompt(`Choose action for ${person.displayName}:\n${actions.map((action, i) => `${i + 1}. ${action}`).join('\n')}\n\nEnter number (1-4):`);
+    
+    if (choice && parseInt(choice) >= 1 && parseInt(choice) <= 4) {
+      alert(`${actions[parseInt(choice) - 1]} selected for ${person.displayName}. This would open the corresponding SharePoint dialog.`);
+    }
+  };
 
   const teamMembers = [
     { 
@@ -197,13 +227,14 @@ export const PeoplePage: React.FC = () => {
         <Box>
           <Tooltip title="Refresh Data">
             <IconButton color="primary" onClick={refreshPeopleData} sx={{ mr: 1 }}>
-              <ShareIcon />
+              <RefreshIcon />
             </IconButton>
           </Tooltip>
           <Button
             variant="contained"
             startIcon={<PersonAddIcon />}
             sx={{ ml: 1 }}
+            onClick={() => handleInvitePeople()}
           >
           Invite People
         </Button>
@@ -217,7 +248,7 @@ export const PeoplePage: React.FC = () => {
             <CardContent>
               <PeopleIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
               <Typography variant="h5" fontWeight="bold">
-                {peopleData.recentContacts.length + (peopleData.currentUser ? 1 : 0)}
+                {peopleData.recentContacts.length}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Team Members
@@ -300,7 +331,7 @@ export const PeoplePage: React.FC = () => {
       {/* Tab Panels */}
       <TabPanel value={tabValue} index={0}>
         <Card>
-          <CardHeader title="Team Members" subheader={`${peopleData.recentContacts.length + (peopleData.currentUser ? 1 : 0)} team members`} />
+          <CardHeader title="Team Members" subheader={`${peopleData.recentContacts.length} team members`} />
           <CardContent>
             <List>
               {peopleData.recentContacts.map((member) => (
@@ -339,11 +370,11 @@ export const PeoplePage: React.FC = () => {
                   </Box>
                   <ListItemSecondaryAction>
                     <Tooltip title="Contact">
-                      <IconButton>
+                      <IconButton onClick={() => handleEmailContact(member.email, member.displayName)}>
                         <EmailIcon />
                       </IconButton>
                     </Tooltip>
-                    <IconButton>
+                    <IconButton onClick={() => handleMoreActions(member)}>
                       <MoreVertIcon />
                     </IconButton>
                   </ListItemSecondaryAction>
@@ -408,13 +439,9 @@ export const PeoplePage: React.FC = () => {
                   Complete access to manage content, permissions, and site settings.
                 </Typography>
                 <Typography variant="h6">
-                  {peopleData.recentContacts.filter(person => person.permissions === 'Full Control').length + 
-                   (peopleData.currentUser?.permissions === 'Full Control' ? 1 : 0)} Users
+                  {peopleData.recentContacts.filter(person => person.permissions === 'Full Control').length} Users
                 </Typography>
                 <Box sx={{ mt: 2 }}>
-                  {peopleData.currentUser?.permissions === 'Full Control' && (
-                    <Chip label={peopleData.currentUser.displayName} size="small" sx={{ mr: 1, mb: 1 }} />
-                  )}
                   {peopleData.recentContacts
                     .filter(person => person.permissions === 'Full Control')
                     .map(person => (
@@ -433,13 +460,9 @@ export const PeoplePage: React.FC = () => {
                   Can add, edit, and delete files and folders.
                 </Typography>
                 <Typography variant="h6">
-                  {peopleData.recentContacts.filter(person => person.permissions === 'Contribute').length +
-                   (peopleData.currentUser?.permissions === 'Contribute' ? 1 : 0)} Users
+                  {peopleData.recentContacts.filter(person => person.permissions === 'Contribute').length} Users
                 </Typography>
                 <Box sx={{ mt: 2 }}>
-                  {peopleData.currentUser?.permissions === 'Contribute' && (
-                    <Chip label={peopleData.currentUser.displayName} size="small" sx={{ mr: 1, mb: 1 }} />
-                  )}
                   {peopleData.recentContacts
                     .filter(person => person.permissions === 'Contribute')
                     .map(person => (
@@ -458,13 +481,9 @@ export const PeoplePage: React.FC = () => {
                   Can view and download files but cannot make changes.
                 </Typography>
                 <Typography variant="h6">
-                  {peopleData.recentContacts.filter(person => person.permissions === 'Read').length +
-                   (peopleData.currentUser?.permissions === 'Read' ? 1 : 0)} Users
+                  {peopleData.recentContacts.filter(person => person.permissions === 'Read').length} Users
                 </Typography>
                 <Box sx={{ mt: 2 }}>
-                  {peopleData.currentUser?.permissions === 'Read' && (
-                    <Chip label={peopleData.currentUser.displayName} size="small" sx={{ mr: 1, mb: 1 }} />
-                  )}
                   {peopleData.recentContacts
                     .filter(person => person.permissions === 'Read')
                     .map(person => (
