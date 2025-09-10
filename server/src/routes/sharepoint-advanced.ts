@@ -1055,8 +1055,8 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
             apiEndpoint = '/sites/netorgft18344752.sharepoint.com/drive/root/children';
             siteName = 'Communication site';
           } else if (driveId === 'netorgft18344752.sharepoint.com.allcompany') {
-            // All Company subsite - get the default document library (same pattern as Communication site)
-            apiEndpoint = '/sites/netorgft18344752.sharepoint.com:/sites/allcompany/drive/root/children';
+            // All Company subsite - use EXACT same pattern as Communication site
+            apiEndpoint = '/sites/netorgft18344752.sharepoint.com/sites/allcompany/drive/root/children';
             siteName = 'All Company';
           }
           
@@ -1397,7 +1397,7 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
             
             // Use same approach as Communication site but for All Company subsite
             try {
-              const itemsResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany/drive/root/children').get();
+              const itemsResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/sites/allcompany/drive/root/children').get();
               console.log(`✅ Found ${itemsResponse.value?.length || 0} items in All Company subsite`);
               
               // Map SharePoint items to expected frontend format
