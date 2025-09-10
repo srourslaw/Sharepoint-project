@@ -1055,24 +1055,51 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
             apiEndpoint = '/sites/netorgft18344752.sharepoint.com/drive/root/children';
             siteName = 'Communication site';
           } else if (driveId === 'netorgft18344752.sharepoint.com.allcompany') {
-            // All Company subsite - use working drive resolution approach
-            console.log('🔍 Getting All Company subsite using working approach...');
+            // All Company subsite - try multiple working approaches  
+            console.log('🔍 Getting All Company subsite - trying multiple endpoint formats...');
             
-            // Get the subsite first, then get its default drive
-            const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany').get();
-            console.log('✅ Found All Company site:', siteResponse.displayName, 'Site ID:', siteResponse.id);
-            
-            // Get drives for this site
-            const drivesResponse = await graphClient.api(`/sites/${siteResponse.id}/drives`).get();
-            console.log(`📂 Found ${drivesResponse.value?.length || 0} drives in All Company site`);
-            
-            if (drivesResponse.value && drivesResponse.value.length > 0) {
-              const defaultDrive = drivesResponse.value[0];
-              console.log(`🔍 Using drive: ${defaultDrive.id} (${defaultDrive.name})`);
-              apiEndpoint = `/drives/${defaultDrive.id}/root/children`;
+            try {
+              // Method 1: Try direct subsite path (most common format)
+              console.log('🔍 Attempt 1: Direct subsite path...');
+              const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/sites/allcompany').get();
+              console.log('✅ Found All Company site via direct path:', siteResponse.displayName, 'Site ID:', siteResponse.id);
+              apiEndpoint = `/sites/${siteResponse.id}/drive/root/children`;
               siteName = 'All Company';
-            } else {
-              throw new Error('No drives found in All Company site');
+            } catch (directError) {
+              console.log('❌ Direct path failed, trying colon format...');
+              
+              try {
+                // Method 2: Try colon format
+                console.log('🔍 Attempt 2: Colon format...');
+                const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany').get();
+                console.log('✅ Found All Company site via colon format:', siteResponse.displayName, 'Site ID:', siteResponse.id);
+                apiEndpoint = `/sites/${siteResponse.id}/drive/root/children`;
+                siteName = 'All Company';
+              } catch (colonError) {
+                console.log('❌ Colon format failed, trying hostname approach...');
+                
+                // Method 3: Try as separate hostname
+                console.log('🔍 Attempt 3: Separate hostname approach...');
+                const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com').get();
+                console.log('✅ Found main site, looking for All Company subsite...');
+                
+                // Get subsites
+                const subsitesResponse = await graphClient.api(`/sites/${siteResponse.id}/sites`).get();
+                console.log(`📂 Found ${subsitesResponse.value?.length || 0} subsites`);
+                
+                const allCompanySubsite = subsitesResponse.value?.find((site: any) => 
+                  site.displayName?.toLowerCase().includes('all company') || 
+                  site.name?.toLowerCase().includes('allcompany')
+                );
+                
+                if (allCompanySubsite) {
+                  console.log('✅ Found All Company subsite:', allCompanySubsite.displayName);
+                  apiEndpoint = `/sites/${allCompanySubsite.id}/drive/root/children`;
+                  siteName = 'All Company';
+                } else {
+                  throw new Error('All Company subsite not found in any format');
+                }
+              }
             }
           }
           

@@ -111,7 +111,7 @@ export const useSharePointSettings = (): UseSharePointSettingsReturn => {
       // Try to get current user info
       let userInfo: UserInfo | null = null;
       try {
-        const userResponse = await api.get('/api/sharepoint/user/profile');
+        const userResponse = await api.get('/api/sharepoint-advanced/me/profile');
         if (userResponse.data.success && userResponse.data.data) {
           const data = userResponse.data.data;
           userInfo = {
