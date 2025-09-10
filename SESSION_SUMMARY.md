@@ -29,16 +29,24 @@
 - Frontend was sending: `netorgft18344752.sharepoint.com` (missing subsite part)
 
 **Solution Implemented:**
-- **Fixed endpoint in** `client/src/hooks/useSharePointFiles.ts` line 128
-- **Changed driveId from:** `netorgft18344752.sharepoint.com`
-- **Changed driveId to:** `netorgft18344752.sharepoint.com:sites:allcompany`
+- **Root cause:** Microsoft Graph API rejected the subsite URL format `/sites/host:/sites/subsite:/drives`
+- **New approach:** Use site ID resolution instead of direct subsite URL
+- **Frontend:** Changed driveId to `site-allcompany` (cleaner identifier)
+- **Backend:** Added proper site resolution logic (get site → get drives → use drive ID)
 - **Preserved Communication site functionality** (no changes to working endpoint)
-- **Confirmed backend already supports** the correct endpoint format
 
 **Files Modified:**
-- `client/src/hooks/useSharePointFiles.ts` (line 128 - corrected All Company driveId)
+- `client/src/hooks/useSharePointFiles.ts` (line 128 - changed to `site-allcompany`)
+- `server/src/routes/sharepoint-advanced.ts` (lines 1044, 1461 - added site resolution logic)
 
-**Result:** All Company folder now loads correctly without breaking Communication site
+**Technical Fix:**
+1. Frontend sends `site-allcompany` as driveId
+2. Backend recognizes this and calls `/sites/netorgft18344752.sharepoint.com:/sites/allcompany` to get site details
+3. Gets actual site.id from response
+4. Calls `/sites/{site.id}/drives` to get available drives  
+5. Uses first drive (default document library) to access files with `/drives/{drive.id}/root/children`
+
+**Result:** All Company folder now works with proper Microsoft Graph API compliance
 
 ### 2. **PREVIOUS SESSION: PEOPLE & SHARING PAGE - COMPLETE TRANSFORMATION**
 **Problem:** Page showed fake team members (Sarah Johnson, Mike Chen, Emily Davis) instead of real organization data
@@ -146,10 +154,14 @@ docker-compose logs --tail=20 frontend
 ## 💾 GITHUB REPOSITORY STATUS
 
 ### **Latest Commits:**
-1. **58fb458** - "FIX: All Company folder 404 error - Correct SharePoint subsite endpoint"
-   - Fixed All Company folder 404 error by correcting driveId format
-   - Changed from `netorgft18344752.sharepoint.com` to `netorgft18344752.sharepoint.com:sites:allcompany`
-   - Preserved Communication site functionality (no changes to working endpoint)
+1. **8482c86** - "FIX: All Company folder 404 - Correct approach with proper site resolution"
+   - ✅ FINAL FIX: All Company folder now works with proper Microsoft Graph API approach
+   - Frontend: Changed driveId to `site-allcompany` (cleaner identifier)
+   - Backend: Implements proper site resolution (get site → get drives → use drive ID)
+   - Avoids problematic subsite URL format that Graph API was rejecting
+
+2. **d1615f1** - "DOCS: Update session summary for All Company folder 404 fix"
+3. **58fb458** - "FIX: All Company folder 404 error - Correct SharePoint subsite endpoint" (First attempt - didn't work)
 
 2. **747e856** - "CRITICAL FIX: Remove all mock data fallback from backend routes"
 3. **6dd484d** - "ENTERPRISE FIX: People & Sharing now shows real organization data"
