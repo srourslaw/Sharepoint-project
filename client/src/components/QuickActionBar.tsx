@@ -147,12 +147,23 @@ export const QuickActionBar: React.FC<QuickActionBarProps> = ({
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'analysis': return 'primary';
-      case 'summary': return 'secondary';
-      case 'extraction': return 'success';
-      case 'translation': return 'warning';
-      case 'comparison': return 'info';
-      default: return 'default';
+      case 'analysis': return '#6366f1'; // Modern indigo
+      case 'summary': return '#8b5cf6'; // Modern purple
+      case 'extraction': return '#10b981'; // Modern emerald
+      case 'translation': return '#f59e0b'; // Modern amber
+      case 'comparison': return '#06b6d4'; // Modern cyan
+      default: return '#6b7280'; // Modern gray
+    }
+  };
+
+  const getCategoryGradient = (category: string) => {
+    switch (category) {
+      case 'analysis': return 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)';
+      case 'summary': return 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)';
+      case 'extraction': return 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+      case 'translation': return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+      case 'comparison': return 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)';
+      default: return 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
     }
   };
 
@@ -255,10 +266,30 @@ export const QuickActionBar: React.FC<QuickActionBarProps> = ({
               sx={{
                 cursor: action.requiresDocuments && selectedFilesCount === 0 ? 'not-allowed' : 'pointer',
                 opacity: action.requiresDocuments && selectedFilesCount === 0 ? 0.5 : 1,
-                transition: 'all 0.2s ease',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+                border: '1px solid rgba(148, 163, 184, 0.1)',
+                borderRadius: '16px',
+                position: 'relative',
+                overflow: 'hidden',
                 '&:hover': {
-                  transform: action.requiresDocuments && selectedFilesCount === 0 ? 'none' : 'translateY(-2px)',
-                  boxShadow: action.requiresDocuments && selectedFilesCount === 0 ? 'none' : 4,
+                  transform: action.requiresDocuments && selectedFilesCount === 0 ? 'none' : 'translateY(-4px)',
+                  boxShadow: action.requiresDocuments && selectedFilesCount === 0 ? 'none' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                  borderColor: getCategoryColor(action.category),
+                  '&::before': {
+                    opacity: 1,
+                  }
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '4px',
+                  background: getCategoryGradient(action.category),
+                  opacity: 0.7,
+                  transition: 'opacity 0.3s ease',
                 },
                 height: '100%',
               }}
@@ -267,26 +298,45 @@ export const QuickActionBar: React.FC<QuickActionBarProps> = ({
               <CardContent sx={{ p: 3, textAlign: 'left', height: '100%', display: 'flex', alignItems: 'center', minHeight: 80 }}>
                 <Box
                   sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '50%',
-                    bgcolor: `${getCategoryColor(action.category)}.light`,
+                    width: 56,
+                    height: 56,
+                    borderRadius: '16px',
+                    background: getCategoryGradient(action.category),
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    mr: 2,
+                    mr: 2.5,
                     flexShrink: 0,
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                    '& svg': {
+                      color: '#ffffff',
+                      fontSize: '1.5rem',
+                    }
                   }}
                 >
                   {getActionIcon(action.icon)}
                 </Box>
                 
                 <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ fontSize: '1rem', mb: 0.5, lineHeight: 1.2 }}>
+                  <Typography variant="h6" fontWeight={600} gutterBottom sx={{ 
+                    fontSize: '1.125rem', 
+                    mb: 0.5, 
+                    lineHeight: 1.2,
+                    background: getCategoryGradient(action.category),
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+                  }}>
                     {action.label}
                   </Typography>
                   
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', lineHeight: 1.4 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ 
+                    fontSize: '0.875rem', 
+                    lineHeight: 1.5,
+                    opacity: 0.8,
+                    fontWeight: 400
+                  }}>
                     {action.description || (action.prompt ? action.prompt : 'Click to execute this action')}
                   </Typography>
                 </Box>

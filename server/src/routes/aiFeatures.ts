@@ -450,7 +450,7 @@ export function createAIFeaturesRoutes(
         });
       }
 
-      // Create the prompt with document content
+      // Create the prompt with document content - implement smart chunking
       const documentContext = session.documentContent || '';
       console.log('💬 AI Chat: Document context -', {
         hasDocumentContext: !!documentContext,
@@ -458,12 +458,59 @@ export function createAIFeaturesRoutes(
         documentContextPreview: documentContext.substring(0, 200) + '...'
       });
       
+      // Implement intelligent content chunking to stay within token limits
+      const MAX_CONTEXT_TOKENS = 6000; // Leave room for system prompt and response
+      let processedDocumentContext = documentContext;
+      
+      if (documentContext.length > MAX_CONTEXT_TOKENS) {
+        console.log('📄 AI Chat: Document too large, implementing smart chunking...');
+        
+        // Extract key sections and create summary
+        const paragraphs = documentContext.split('\n\n').filter((p: string) => p.trim().length > 50);
+        let selectedContent = '';
+        let currentLength = 0;
+        
+        // Prioritize content based on question keywords
+        const questionKeywords = sanitizedResult.sanitizedValue.toLowerCase().split(' ')
+          .filter((word: string) => word.length > 3);
+        
+        // Score paragraphs by relevance to question
+        const scoredParagraphs = paragraphs.map((paragraph: string) => {
+          const lowerParagraph = paragraph.toLowerCase();
+          const score = questionKeywords.reduce((acc: number, keyword: string) => {
+            return acc + (lowerParagraph.includes(keyword) ? 2 : 0);
+          }, 0);
+          return { paragraph, score, length: paragraph.length };
+        }).sort((a: any, b: any) => b.score - a.score);
+        
+        // Select most relevant content within token limit
+        for (const item of scoredParagraphs) {
+          if (currentLength + item.length <= MAX_CONTEXT_TOKENS) {
+            selectedContent += item.paragraph + '\n\n';
+            currentLength += item.length;
+          }
+        }
+        
+        // If still too much content, take first portion and add summary note
+        if (selectedContent.length === 0) {
+          selectedContent = documentContext.substring(0, MAX_CONTEXT_TOKENS) + 
+            '\n\n[Note: Content truncated due to length. This represents the beginning of the document.]';
+        }
+        
+        processedDocumentContext = selectedContent;
+        console.log('📄 AI Chat: Content chunked -', {
+          originalLength: documentContext.length,
+          processedLength: processedDocumentContext.length,
+          reductionRatio: Math.round((1 - processedDocumentContext.length / documentContext.length) * 100) + '%'
+        });
+      }
+      
       const prompt = `You are a helpful AI assistant specialized in analyzing and answering questions about documents. 
 
-${documentContext ? `Based on the following document content, please answer the user's question:
+${processedDocumentContext ? `Based on the following document content, please answer the user's question:
 
 DOCUMENT CONTENT:
-${documentContext}
+${processedDocumentContext}
 
 USER QUESTION: ${sanitizedResult.sanitizedValue}
 
