@@ -1055,9 +1055,25 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
             apiEndpoint = '/sites/netorgft18344752.sharepoint.com/drive/root/children';
             siteName = 'Communication site';
           } else if (driveId === 'netorgft18344752.sharepoint.com.allcompany') {
-            // All Company subsite - use EXACT same pattern as Communication site
-            apiEndpoint = '/sites/netorgft18344752.sharepoint.com/sites/allcompany/drive/root/children';
-            siteName = 'All Company';
+            // All Company subsite - use working drive resolution approach
+            console.log('🔍 Getting All Company subsite using working approach...');
+            
+            // Get the subsite first, then get its default drive
+            const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany').get();
+            console.log('✅ Found All Company site:', siteResponse.displayName, 'Site ID:', siteResponse.id);
+            
+            // Get drives for this site
+            const drivesResponse = await graphClient.api(`/sites/${siteResponse.id}/drives`).get();
+            console.log(`📂 Found ${drivesResponse.value?.length || 0} drives in All Company site`);
+            
+            if (drivesResponse.value && drivesResponse.value.length > 0) {
+              const defaultDrive = drivesResponse.value[0];
+              console.log(`🔍 Using drive: ${defaultDrive.id} (${defaultDrive.name})`);
+              apiEndpoint = `/drives/${defaultDrive.id}/root/children`;
+              siteName = 'All Company';
+            } else {
+              throw new Error('No drives found in All Company site');
+            }
           }
           
           const response = await graphClient.api(apiEndpoint)
