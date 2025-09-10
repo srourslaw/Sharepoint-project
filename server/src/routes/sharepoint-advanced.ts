@@ -1041,7 +1041,7 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
     }
 
     // Handle SharePoint site drives
-    if (driveId === 'netorgft18344752.sharepoint.com' || driveId === 'netorgft18344752.sharepoint.com:sites:allcompany') {
+    if (driveId === 'netorgft18344752.sharepoint.com' || driveId === 'netorgft18344752.sharepoint.com:sites:allcompany' || driveId === 'site-allcompany') {
       if (isRealSharePointEnabled) {
         try {
           console.log(`🔍 Getting real SharePoint files from ${driveId}...`);
@@ -1057,6 +1057,24 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           } else if (driveId === 'netorgft18344752.sharepoint.com:sites:allcompany') {
             // All Company subsite - get the default document library  
             apiEndpoint = '/sites/netorgft18344752.sharepoint.com:/sites/allcompany/drive/root/children';
+            siteName = 'All Company';
+          } else if (driveId === 'site-allcompany') {
+            // All Company subsite - first get the site to find the correct drive ID
+            console.log('🔍 Getting All Company site details for drive access...');
+            const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany').get();
+            console.log('✅ Found All Company site:', siteResponse.displayName, 'Site ID:', siteResponse.id);
+            
+            // Now get the default drive for this site
+            const drivesResponse = await graphClient.api(`/sites/${siteResponse.id}/drives`).get();
+            console.log(`📂 Found ${drivesResponse.value?.length || 0} drives in All Company site`);
+            
+            if (drivesResponse.value && drivesResponse.value.length > 0) {
+              const defaultDrive = drivesResponse.value[0];
+              console.log(`🔍 Using drive: ${defaultDrive.id} (${defaultDrive.name})`);
+              apiEndpoint = `/drives/${defaultDrive.id}/root/children`;
+            } else {
+              throw new Error('No drives found in All Company site');
+            }
             siteName = 'All Company';
           }
           
@@ -1439,6 +1457,57 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
               }
             } catch (driveError: any) {
               console.error('❌ Error getting All Company subsite drives:', driveError.message);
+            }
+          } else if (driveId === 'site-allcompany') {
+            console.log('🔍 Accessing All Company subsite via site-allcompany ID...');
+            
+            // Get the site first, then its drives
+            try {
+              const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany').get();
+              console.log('✅ Found All Company site:', siteResponse.displayName, 'Site ID:', siteResponse.id);
+              
+              const drivesResponse = await graphClient.api(`/sites/${siteResponse.id}/drives`).get();
+              console.log(`📂 Found ${drivesResponse.value?.length || 0} drives in All Company site`);
+              
+              if (drivesResponse.value && drivesResponse.value.length > 0) {
+                const defaultDrive = drivesResponse.value[0];
+                console.log(`🔍 Using drive: ${defaultDrive.id} (${defaultDrive.name})`);
+                
+                const itemsResponse = await graphClient.api(`/drives/${defaultDrive.id}/root/children`).get();
+                console.log(`✅ Found ${itemsResponse.value?.length || 0} items in All Company drive`);
+                
+                // Map SharePoint items to expected frontend format
+                const mappedItems = (itemsResponse.value || []).map((item: any) => ({
+                  id: item.id,
+                  name: item.name,
+                  displayName: item.name,
+                  size: item.size || 0,
+                  webUrl: item.webUrl,
+                  mimeType: item.file?.mimeType || (item.folder ? 'folder' : 'application/octet-stream'),
+                  extension: item.file ? (item.name.split('.').pop() || '') : '',
+                  createdDateTime: item.createdDateTime,
+                  lastModifiedDateTime: item.lastModifiedDateTime,
+                  parentPath: item.parentReference?.path || '/',
+                  isFolder: !!item.folder,
+                  lastModifiedBy: item.lastModifiedBy?.user || { displayName: 'Unknown', email: '' },
+                  createdBy: item.createdBy?.user || { displayName: 'Unknown', email: '' }
+                }));
+                
+                res.json({
+                  success: true,
+                  data: {
+                    items: mappedItems,
+                    totalCount: mappedItems.length,
+                    currentPage: 1,
+                    totalPages: 1
+                  },
+                  message: `Retrieved ${mappedItems.length} items from All Company subsite`,
+                  isRealData: true
+                });
+                return;
+              }
+            } catch (driveError: any) {
+              console.error('❌ Error getting All Company site drives:', driveError.message);
             }
           }
           
