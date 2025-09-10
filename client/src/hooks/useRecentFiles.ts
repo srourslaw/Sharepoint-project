@@ -97,7 +97,7 @@ export const useRecentFiles = (): UseRecentFilesReturn => {
         }
         
         // Try to get files from All Company site
-        const allCompanyResponse = await api.get('/api/sharepoint-advanced/drives/netorgft18344752.sharepoint.com:sites:allcompany/items/root/children', {
+        const allCompanyResponse = await api.get('/api/sharepoint-advanced/drives/netorgft18344752.sharepoint.com.allcompany/items/root/children', {
           sortBy: 'lastModifiedDateTime', 
           sortOrder: 'desc',
           limit: 25

@@ -94,7 +94,7 @@ export const useSharePointPeople = (): UseSharePointPeopleReturn => {
         const sources = [
           '/api/sharepoint-advanced/drives/root/items/root/children',
           '/api/sharepoint-advanced/drives/netorgft18344752.sharepoint.com/items/root/children',
-          '/api/sharepoint-advanced/drives/netorgft18344752.sharepoint.com:sites:allcompany/items/root/children'
+          '/api/sharepoint-advanced/drives/netorgft18344752.sharepoint.com.allcompany/items/root/children'
         ];
 
         for (const source of sources) {
