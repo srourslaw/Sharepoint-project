@@ -232,10 +232,12 @@ export const AnalyticsPage: React.FC = () => {
             {analytics.recentActivity.map((activity, index) => (
               <Paper key={index} sx={{ p: 2, mb: 1, display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="body1">
+                  <Box component="div" sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                     <Chip label={activity.fileName} size="small" variant="outlined" sx={{ mr: 1 }} />
-                    was {activity.action}
-                  </Typography>
+                    <Typography component="span" variant="body1">
+                      was {activity.action}
+                    </Typography>
+                  </Box>
                   <Typography variant="body2" color="text.secondary">
                     {activity.timestamp} • {activity.site}
                   </Typography>

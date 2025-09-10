@@ -351,14 +351,14 @@ export const PeoplePage: React.FC = () => {
                   <ListItemText
                     primary={member.displayName}
                     secondary={
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
+                      <React.Fragment>
+                        <span style={{ display: 'block' }}>
                           {member.jobTitle || 'Team Member'} • {member.department || 'SharePoint'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        </span>
+                        <span style={{ display: 'block' }}>
                           {member.email}
-                        </Typography>
-                      </Box>
+                        </span>
+                      </React.Fragment>
                     }
                   />
                   <Box sx={{ mr: 2 }}>
@@ -400,14 +400,14 @@ export const PeoplePage: React.FC = () => {
                   <ListItemText
                     primary={file.name}
                     secondary={
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
+                      <React.Fragment>
+                        <span style={{ display: 'block' }}>
                           Shared with {file.sharedWith.length} people • {file.sharedBy}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        </span>
+                        <span style={{ display: 'block' }}>
                           {new Date(file.sharedDate).toLocaleDateString()}
-                        </Typography>
-                      </Box>
+                        </span>
+                      </React.Fragment>
                     }
                   />
                   <Box sx={{ mr: 2 }}>
@@ -515,14 +515,14 @@ export const PeoplePage: React.FC = () => {
                     <ListItemText
                       primary={invitation.email}
                       secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
+                        <React.Fragment>
+                          <span style={{ display: 'block' }}>
                             {invitation.role} • Invited by {invitation.invitedBy}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          </span>
+                          <span style={{ display: 'block' }}>
                             {invitation.date}
-                          </Typography>
-                        </Box>
+                          </span>
+                        </React.Fragment>
                       }
                     />
                     <Box sx={{ mr: 2 }}>

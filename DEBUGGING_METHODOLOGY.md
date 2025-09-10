@@ -102,13 +102,31 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - **Fix Method**: Complete Docker system rebuild with cache clearing
 - **Status**: ✅ Resolved - Settings page now loads correctly
 
-### People & Sharing Page Fix (Completed ✅)
+### People & Sharing Page API Fix (Completed ✅)
 - **Date**: 2025-09-10  
 - **Problem**: Expected 404 errors similar to Settings page
 - **Investigation**: Real-time log monitoring during page access
 - **Result**: No issues found - page working correctly with existing endpoints
 - **Backend Logs**: Successfully showing "✅ Found user profile: Hussein Srour" and people data
 - **Status**: ✅ Already Working - No fix required
+
+### HTML Validation Errors Fix (Completed ✅)
+- **Date**: 2025-09-10
+- **Problem**: React HTML validation errors: `<div>` cannot be a descendant of `<p>` causing hydration errors
+- **Root Cause**: MUI components creating invalid HTML nesting structure
+- **Affected Pages**: Analytics and People & Sharing pages  
+- **Files Modified**:
+  - `/client/src/components/pages/AnalyticsPage.tsx:235-237`
+  - `/client/src/components/pages/PeoplePage.tsx:353-361, 403-411, 515-525`
+- **Technical Details**:
+  - **Issue 1**: `<Typography variant="body1">` (renders as `<p>`) containing `<Chip>` (renders as `<div>`)
+  - **Issue 2**: `<ListItemText secondary={<Box><Typography>...}>` creating nested `<p>` inside `<p>`
+- **Solutions Applied**:
+  - **AnalyticsPage**: Replaced `<Typography>` + `<Chip>` with `<Box>` layout using flexbox
+  - **PeoplePage**: Replaced `<Box>` + `<Typography>` with `<React.Fragment>` + `<span>` elements
+- **Fix Method**: Complete Docker system rebuild to ensure changes were deployed
+- **Build Verification**: New JavaScript file `index-DihhVZCP.js` confirmed successful rebuild
+- **Status**: ✅ Resolved - All HTML validation errors eliminated from browser console
 
 ## Key Lessons Learned
 
