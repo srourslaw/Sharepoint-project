@@ -249,14 +249,40 @@ export const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({ chil
           root: {
             '& .MuiOutlinedInput-root': {
               borderRadius: 12,
+              backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '& input': {
+                color: isDarkMode ? '#f8fafc' : '#1e293b',
+                '&::placeholder': {
+                  color: isDarkMode ? 'rgba(148, 163, 184, 0.7)' : 'rgba(100, 116, 139, 0.7)',
+                  opacity: 1,
+                },
+              },
+              '& textarea': {
+                color: isDarkMode ? '#f8fafc' : '#1e293b',
+                '&::placeholder': {
+                  color: isDarkMode ? 'rgba(148, 163, 184, 0.7)' : 'rgba(100, 116, 139, 0.7)',
+                  opacity: 1,
+                },
+              },
+              '& fieldset': {
+                borderColor: isDarkMode ? 'rgba(148, 163, 184, 0.3)' : 'rgba(148, 163, 184, 0.2)',
+              },
               '&:hover': {
                 transform: 'translateY(-1px)',
                 boxShadow: '0 4px 12px rgba(99, 102, 241, 0.15)',
+                '& fieldset': {
+                  borderColor: '#6366f1',
+                },
               },
               '&.Mui-focused': {
                 transform: 'translateY(-2px)',
                 boxShadow: '0 8px 25px rgba(99, 102, 241, 0.25)',
+                backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 1)',
+                '& fieldset': {
+                  borderColor: '#6366f1',
+                  borderWidth: '2px',
+                },
               },
             },
           },

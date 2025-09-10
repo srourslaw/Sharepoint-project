@@ -158,12 +158,12 @@ export const QuickActionBar: React.FC<QuickActionBarProps> = ({
 
   const getCategoryGradient = (category: string) => {
     switch (category) {
-      case 'analysis': return 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)';
-      case 'summary': return 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)';
-      case 'extraction': return 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-      case 'translation': return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-      case 'comparison': return 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)';
-      default: return 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+      case 'analysis': return 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)'; // Deeper indigo to purple
+      case 'summary': return 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)'; // Deep purple to pink
+      case 'extraction': return 'linear-gradient(135deg, #059669 0%, #047857 100%)'; // Rich emerald gradients
+      case 'translation': return 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'; // Rich amber gradients
+      case 'comparison': return 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)'; // Deep cyan gradients
+      default: return 'linear-gradient(135deg, #4b5563 0%, #374151 100%)'; // Rich gray gradients
     }
   };
 
@@ -198,12 +198,41 @@ export const QuickActionBar: React.FC<QuickActionBarProps> = ({
                 },
               }}
             >
-              <Box sx={{ ml: 1, textAlign: 'left' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+              <Box sx={{ 
+                ml: 1, 
+                textAlign: 'left', 
+                flexGrow: 1, 
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }}>
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    fontSize: '0.875rem',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    lineHeight: 1.2
+                  }}
+                >
                   {action.label}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                  {action.description || (action.prompt ? action.prompt.substring(0, 50) : '')}...
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    lineHeight: 1.2,
+                    opacity: 0.8
+                  }}
+                >
+                  {action.description || (action.prompt ? action.prompt.substring(0, 40) : '')}
                 </Typography>
               </Box>
             </Button>
@@ -309,8 +338,9 @@ export const QuickActionBar: React.FC<QuickActionBarProps> = ({
                     flexShrink: 0,
                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                     '& svg': {
-                      color: '#ffffff',
+                      color: '#ffffff !important',
                       fontSize: '1.5rem',
+                      filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))',
                     }
                   }}
                 >
