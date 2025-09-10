@@ -124,7 +124,7 @@ export const useSharePointFiles = (options: UseSharePointFilesOptions): UseShare
           // Navigate to Communication site contents
           return '/api/sharepoint-advanced/drives/netorgft18344752.sharepoint.com/items/root/children';
         } else if (folderName === 'All Company' || folderName === 'All%20Company') {
-          // Navigate to All Company subsite contents - use the correct driveId format with colons
+          // Navigate to All Company subsite contents - use correct subsite driveId format
           return '/api/sharepoint-advanced/drives/netorgft18344752.sharepoint.com:sites:allcompany/items/root/children';
         }
       }
