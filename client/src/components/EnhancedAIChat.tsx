@@ -423,6 +423,12 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
             sx={{
               '& .MuiOutlinedInput-root': {
                 backgroundColor: 'background.paper',
+                '& input': {
+                  color: 'text.primary',
+                },
+                '& textarea': {
+                  color: 'text.primary',
+                },
               },
             }}
           />
