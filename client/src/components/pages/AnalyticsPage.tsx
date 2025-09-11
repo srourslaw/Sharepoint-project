@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -24,9 +24,73 @@ import {
   Download as DownloadIcon,
 } from '@mui/icons-material';
 import { useSharePointAnalytics } from '../../hooks/useSharePointAnalytics';
+import { DocumentUsageChart, StorageUsageChart } from '../AnalyticsCharts';
+import { ChartSeries } from '../../types';
 
 export const AnalyticsPage: React.FC = () => {
   const { analytics, loading, error, refreshAnalytics } = useSharePointAnalytics();
+
+  // Generate chart data from analytics
+  const usageTrendsData = useMemo((): ChartSeries[] => {
+    if (!analytics.recentActivity.length) return [];
+    
+    // Create a time-based usage trend chart from actual recent activity
+    const last7Days = [];
+    const now = new Date();
+    
+    // Group activities by day using date objects for proper sorting
+    const activityByDay = new Map<string, number>();
+    
+    // Count actual activities from SharePoint data
+    analytics.recentActivity.forEach(activity => {
+      const activityDate = new Date(activity.timestamp);
+      // Use ISO date string (YYYY-MM-DD) as key for accurate grouping
+      const dayKey = activityDate.toISOString().split('T')[0];
+      activityByDay.set(dayKey, (activityByDay.get(dayKey) || 0) + 1);
+    });
+    
+    // Create the last 7 days with real data in proper chronological order
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      
+      // Use ISO date for lookup
+      const isoDateKey = date.toISOString().split('T')[0];
+      // Use formatted date for display
+      const displayDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      // Use actual activity count, or 0 if no activity on that day
+      const dayActivity = activityByDay.get(isoDateKey) || 0;
+      
+      last7Days.push({
+        x: displayDate,
+        y: dayActivity,
+        label: displayDate
+      });
+    }
+    
+    return [{
+      name: 'File Activity',
+      data: last7Days,
+      color: '#1976d2',
+      type: 'line' as const
+    }];
+  }, [analytics.recentActivity]);
+
+  const storageData = useMemo((): ChartSeries[] => {
+    if (!analytics.fileTypes.length) return [];
+    
+    return [{
+      name: 'Storage by Type',
+      data: analytics.fileTypes.map(fileType => ({
+        x: fileType.type,
+        y: fileType.count,
+        label: fileType.type,
+        color: undefined
+      })),
+      type: 'pie' as const
+    }];
+  }, [analytics.fileTypes]);
 
   if (loading) {
     return (
@@ -168,59 +232,17 @@ export const AnalyticsPage: React.FC = () => {
       {/* Charts Section */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} md={8}>
-          <Card>
-            <CardHeader title="Usage Trends" subheader="File activity over time" />
-            <CardContent>
-              <Box sx={{ 
-                height: 300, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                backgroundColor: 'grey.50',
-                borderRadius: 1,
-                border: '2px dashed',
-                borderColor: 'grey.300'
-              }}>
-                <Typography variant="h6" color="text.secondary">
-                  📈 Interactive Usage Chart
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+          <DocumentUsageChart 
+            data={usageTrendsData}
+            timeframe="Last 7 days"
+          />
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <Card>
-            <CardHeader title="File Types Distribution" subheader="By document count" />
-            <CardContent>
-              <Box sx={{ mb: 2 }}>
-                {analytics.fileTypes.map((fileType, index) => (
-                  <Box key={index} sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="body2">{fileType.type}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {fileType.count}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ 
-                      width: '100%', 
-                      height: 8, 
-                      backgroundColor: 'grey.200', 
-                      borderRadius: 4,
-                      overflow: 'hidden'
-                    }}>
-                      <Box sx={{ 
-                        width: `${fileType.percentage}%`, 
-                        height: '100%', 
-                        backgroundColor: `hsl(${index * 72}, 70%, 50%)`,
-                        transition: 'width 1s ease-in-out'
-                      }} />
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            </CardContent>
-          </Card>
+          <StorageUsageChart 
+            data={storageData}
+            type="pie"
+          />
         </Grid>
       </Grid>
 

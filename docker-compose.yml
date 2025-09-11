@@ -141,7 +141,7 @@ services:
       REACT_APP_AI_API_ENDPOINT: http://localhost/api/ai
       REACT_APP_ENVIRONMENT: ${NODE_ENV:-production}
     ports:
-      - "${FRONTEND_PORT:-80}:80"
+      - "${FRONTEND_PORT:-8080}:80"
     networks:
       - app-network
     healthcheck:

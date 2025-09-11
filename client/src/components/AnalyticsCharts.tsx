@@ -335,9 +335,10 @@ export const AnalyticsChart: React.FC<AnalyticsChartProps> = ({
               data={chartData}
               cx="50%"
               cy="50%"
-              outerRadius={120}
+              outerRadius={80}
               dataKey="value"
               label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              labelStyle={{ fontSize: '11px', fontWeight: '500' }}
               onClick={onDataPointClick}
             >
               {chartData.map((entry, index) => (

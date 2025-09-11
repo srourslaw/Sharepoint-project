@@ -315,7 +315,6 @@ export const MainContent: React.FC<MainContentProps> = ({
                 size="small"
                 color={viewMode.type === 'list' ? 'primary' : 'default'}
                 onClick={() => handleViewModeChange('list')}
-                sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
               >
                 <ListViewIcon fontSize="small" />
               </IconButton>

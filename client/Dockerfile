@@ -48,20 +48,32 @@ COPY env-template.js /usr/share/nginx/html/env-template.js
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
+# Create env-config.js with default values
+RUN cat > /usr/share/nginx/html/env-config.js << 'EOF'
+window.env = {
+  REACT_APP_API_BASE_URL: 'http://localhost:3001',
+  REACT_APP_SHAREPOINT_CLIENT_ID: '',
+  REACT_APP_SHAREPOINT_TENANT_ID: '',
+  REACT_APP_AI_API_ENDPOINT: 'http://localhost:3001/api/ai',
+  REACT_APP_ENVIRONMENT: 'production'
+};
+EOF
+
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
-# Set ownership
+# Set ownership and permissions
 RUN chown -R nextjs:nodejs /usr/share/nginx/html
+RUN chmod -R 755 /usr/share/nginx/html
 RUN chown -R nextjs:nodejs /var/cache/nginx
 RUN chown -R nextjs:nodejs /var/log/nginx
 RUN chown -R nextjs:nodejs /etc/nginx/conf.d
 RUN touch /var/run/nginx.pid
 RUN chown -R nextjs:nodejs /var/run/nginx.pid
 
-# Switch to non-root user
-USER nextjs
+# Run as root for nginx to work properly
+# USER nextjs
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

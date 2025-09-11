@@ -125,18 +125,35 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+          background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 30%, #7c3aed 70%, #a855f7 100%);
+          position: relative;
           padding: 2rem;
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .auth-container::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: radial-gradient(circle at 30% 20%, rgba(124, 58, 237, 0.3) 0%, transparent 50%),
+                      radial-gradient(circle at 70% 80%, rgba(168, 85, 247, 0.2) 0%, transparent 50%);
+          pointer-events: none;
         }
 
         .auth-card {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          border-radius: 20px;
+          box-shadow: 0 20px 50px rgba(124, 58, 237, 0.2), 0 8px 32px rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
           padding: 2.5rem;
           max-width: 440px;
           width: 100%;
+          position: relative;
+          z-index: 1;
         }
 
         .auth-header {
@@ -230,25 +247,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
         .auth-button {
           width: 100%;
-          background: #0078d4;
+          background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
           color: white;
           border: none;
-          border-radius: 6px;
+          border-radius: 12px;
           padding: 0.875rem 1.5rem;
           font-size: 0.9rem;
-          font-weight: 500;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
           min-height: 48px;
           display: flex;
           align-items: center;
           justify-content: center;
+          box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
         }
 
         .auth-button:hover:not(:disabled) {
-          background: #106ebe;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+          background: linear-gradient(135deg, #8b5cf6 0%, #c084fc 100%);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
         }
 
         .auth-button:active:not(:disabled) {

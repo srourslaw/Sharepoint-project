@@ -45,9 +45,9 @@ export const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({ chil
     palette: {
       mode: isDarkMode ? 'dark' : 'light',
       primary: {
-        main: '#6366f1', // Modern indigo
-        light: '#8b5cf6', // Modern purple
-        dark: '#4f46e5', // Deeper indigo
+        main: '#7c3aed', // Vibrant purple like in screenshots
+        light: '#a855f7', // Lighter vibrant purple
+        dark: '#5b21b6', // Deep purple
         contrastText: '#ffffff',
       },
       secondary: {
@@ -57,12 +57,8 @@ export const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({ chil
         contrastText: '#ffffff',
       },
       background: {
-        default: isDarkMode ? 
-          'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)' : 
-          'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
-        paper: isDarkMode ? 
-          'linear-gradient(145deg, #1e293b 0%, #334155 100%)' : 
-          'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+        default: isDarkMode ? '#0f0f1e' : '#fafbff',
+        paper: isDarkMode ? '#1e1b4b' : '#ffffff',
       },
       text: {
         primary: isDarkMode ? '#f8fafc' : '#1e293b',
@@ -99,7 +95,7 @@ export const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({ chil
       h1: {
         fontSize: '2.5rem',
         fontWeight: 700,
-        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+        background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #c084fc 100%)',
         backgroundClip: 'text',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
@@ -108,7 +104,7 @@ export const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({ chil
       h2: {
         fontSize: '2rem',
         fontWeight: 600,
-        background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+        background: 'linear-gradient(135deg, #a855f7 0%, #c084fc 50%, #e879f9 100%)',
         backgroundClip: 'text',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
@@ -179,20 +175,20 @@ export const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({ chil
             },
           },
           contained: {
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-            boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)',
+            background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #c084fc 100%)',
+            boxShadow: '0 10px 15px -3px rgba(124, 58, 237, 0.4)',
             '&:hover': {
-              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-              boxShadow: '0 20px 25px -5px rgba(99, 102, 241, 0.4)',
+              background: 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #a855f7 100%)',
+              boxShadow: '0 20px 25px -5px rgba(124, 58, 237, 0.6)',
             },
           },
           outlined: {
             borderWidth: '2px',
-            borderColor: '#6366f1',
+            borderColor: '#7c3aed',
             background: 'transparent',
             '&:hover': {
-              borderColor: '#4f46e5',
-              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+              borderColor: '#5b21b6',
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)',
             },
           },
         },
@@ -200,17 +196,11 @@ export const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({ chil
       MuiAppBar: {
         styleOverrides: {
           root: {
-            background: isDarkMode 
-              ? 'linear-gradient(145deg, #1e293b 0%, #334155 100%)' 
-              : 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
-            color: isDarkMode ? '#f8fafc' : '#1e293b',
-            boxShadow: isDarkMode 
-              ? '0 10px 15px -3px rgba(0, 0, 0, 0.3)' 
-              : '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-            backdropFilter: 'blur(10px)',
-            borderBottom: isDarkMode 
-              ? '1px solid rgba(148, 163, 184, 0.2)' 
-              : '1px solid rgba(148, 163, 184, 0.1)',
+            background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 30%, #7c3aed 70%, #a855f7 100%)', // Purple header fix v2
+            color: '#ffffff',
+            boxShadow: '0 8px 32px rgba(124, 58, 237, 0.15)',
+            backdropFilter: 'blur(20px)',
+            borderBottom: '1px solid rgba(124, 58, 237, 0.2)',
           },
         },
       },
@@ -221,7 +211,7 @@ export const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({ chil
             fontWeight: 500,
             fontSize: '0.75rem',
             '&.MuiChip-colorPrimary': {
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
               color: '#ffffff',
             },
             '&.MuiChip-colorSecondary': {

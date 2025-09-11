@@ -37,6 +37,7 @@ const getAIPanelWidth = (theme: any, isMobile: boolean) => {
   return theme.breakpoints.up('lg') ? 380 : 350;
 };
 
+// Stunning modern design: 13:06 - Dark navy to purple header + rich footer
 export const Dashboard: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -104,7 +105,10 @@ export const Dashboard: React.FC = () => {
           width: { sm: layout.sidebarOpen ? `calc(100% - ${layout.sidebarWidth}px)` : '100%' },
           ml: { sm: layout.sidebarOpen ? `${layout.sidebarWidth}px` : 0 },
           zIndex: theme.zIndex.drawer + 1,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 30%, #7c3aed 70%, #a855f7 100%)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(124, 58, 237, 0.2)',
+          boxShadow: '0 8px 32px rgba(124, 58, 237, 0.15)',
           transition: theme.transitions.create(['width', 'margin'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
@@ -113,26 +117,36 @@ export const Dashboard: React.FC = () => {
       >
         <Toolbar sx={{ minHeight: '64px', py: 1 }}>
           <IconButton
-            color="inherit"
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2 }}
+            sx={{ mr: 2, color: '#ffffff' }}
           >
             <MenuIcon />
           </IconButton>
           
           {/* Thakral One Logo and Branding */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, mr: 2 }}>
-            <img
-              src="https://www.thakralone.com/wp-content/uploads/2020/08/Thakral-One-Logo.png"
-              alt="Thakral One Logo"
-              style={{
-                height: '32px',
-                marginRight: '12px',
-                filter: 'brightness(0) invert(1)'
-              }}
-            />
+            <Box sx={{ 
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+              borderRadius: '12px',
+              padding: '8px',
+              marginRight: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <img
+                src="https://www.thakralone.com/wp-content/uploads/2020/08/Thakral-One-Logo.png"
+                alt="Thakral One Logo"
+                style={{
+                  height: '24px',
+                  filter: 'brightness(0) invert(1)'
+                }}
+              />
+            </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <Typography
                 variant="h6"
@@ -141,23 +155,32 @@ export const Dashboard: React.FC = () => {
                 sx={{ 
                   fontWeight: 700,
                   letterSpacing: '0.5px',
-                  color: 'white',
-                  fontSize: { xs: '1rem', sm: '1.1rem' },
-                  lineHeight: 1.2
+                  background: 'linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontSize: { xs: '1rem', sm: '1.2rem' },
+                  lineHeight: 1.2,
+                  textShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
               >
-                📊 SharePoint AI Dashboard
+                🚀 SharePoint AI Dashboard
               </Typography>
               <Typography
                 variant="caption"
                 sx={{ 
-                  color: 'rgba(255,255,255,0.85)',
-                  fontSize: '0.7rem',
-                  fontWeight: 500,
-                  display: { xs: 'none', sm: 'block' }
+                  color: 'rgba(255,255,255,0.9)',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  display: { xs: 'none', sm: 'block' },
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                  borderRadius: '6px',
+                  padding: '2px 8px',
+                  marginTop: '2px',
+                  backdropFilter: 'blur(5px)'
                 }}
               >
-                Prototype by Thakral One
+                Powered by Thakral One
               </Typography>
             </Box>
           </Box>
@@ -166,20 +189,26 @@ export const Dashboard: React.FC = () => {
           <Typography
             variant="caption"
             sx={{ 
-              color: 'rgba(255,255,255,0.9)',
-              fontSize: '0.7rem',
-              fontWeight: 500,
+              color: 'rgba(255,255,255,0.95)',
+              fontSize: '0.75rem',
+              fontWeight: 600,
               mr: 2,
-              display: { xs: 'none', md: 'block' }
+              display: { xs: 'none', md: 'block' },
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+              borderRadius: '8px',
+              padding: '4px 12px',
+              backdropFilter: 'blur(5px)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              border: '1px solid rgba(255,255,255,0.1)'
             }}
           >
-            © 2025 Proprietary AI Solution
+            ✨ 2025 Premium AI Solution
           </Typography>
           
           <IconButton
-            color="inherit"
             aria-label="toggle ai panel"
             onClick={handleAIPanelToggle}
+            sx={{ color: '#ffffff' }}
           >
             {layout.aiPanelOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />}
           </IconButton>

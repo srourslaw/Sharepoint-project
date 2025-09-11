@@ -139,7 +139,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({
   readOnly = false,
 }) => {
   const [state, setState] = useState<FileBrowserState>({
-    viewMode: 'table',
+    viewMode: 'grid',
     sortField: 'name',
     sortOrder: 'asc',
     searchQuery: '',

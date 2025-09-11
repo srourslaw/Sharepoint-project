@@ -315,17 +315,25 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
           elevation={1}
           sx={{
             p: 2,
-            bgcolor: isUser ? '#1976d2' : 'background.paper',
-            color: isUser ? '#ffffff !important' : 'text.primary',
-            borderRadius: 2,
-            borderTopLeftRadius: !isUser ? 0 : 2,
-            borderTopRightRadius: isUser ? 0 : 2,
+            bgcolor: isUser ? '#1976d2' : '#7c4dff',
+            color: '#ffffff !important',
+            borderRadius: '20px',
             position: 'relative',
             '& *': {
-              color: isUser ? '#ffffff !important' : 'inherit',
+              color: '#ffffff !important',
             },
             '& .MuiTypography-root': {
-              color: isUser ? '#ffffff !important' : 'inherit',
+              color: '#ffffff !important',
+            },
+            '& .MuiChip-root': {
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: '#ffffff !important',
+              '& .MuiChip-label': {
+                color: '#ffffff !important',
+              }
+            },
+            '& .MuiButton-root': {
+              color: '#ffffff !important',
             }
           }}
         >
@@ -336,10 +344,10 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
             sx={{
               '& p': { mb: 1, '&:last-child': { mb: 0 } },
               '& ul, & ol': { pl: 2, mb: 1 },
-              '& blockquote': { borderLeft: 2, borderColor: 'divider', pl: 2, my: 1 },
-              color: isUser ? '#ffffff !important' : 'inherit',
+              '& blockquote': { borderLeft: 2, borderColor: 'rgba(255, 255, 255, 0.3)', pl: 2, my: 1 },
+              color: '#ffffff !important',
               '& *': {
-                color: isUser ? '#ffffff !important' : 'inherit',
+                color: '#ffffff !important',
               }
             }}
           >
@@ -372,13 +380,13 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
             mt={1}
             pt={1}
             borderTop={1}
-            borderColor="divider"
-            sx={{ opacity: 0.7 }}
+            borderColor="rgba(255, 255, 255, 0.3)"
+            sx={{ opacity: 0.8 }}
           >
             <Typography 
               variant="caption" 
               sx={{ 
-                color: isUser ? '#ffffff !important' : 'text.secondary'
+                color: '#ffffff !important'
               }}
             >
               {formatDate(message.timestamp)}
@@ -389,7 +397,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
                 <IconButton
                   size="small"
                   onClick={() => setShowMetadata(!showMetadata)}
-                  sx={{ color: isUser ? '#ffffff !important' : 'text.secondary' }}
+                  sx={{ color: '#ffffff !important' }}
                 >
                   <InfoIcon fontSize="small" />
                 </IconButton>
@@ -398,17 +406,17 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
               <IconButton
                 size="small"
                 onClick={() => onCopy(message.content)}
-                sx={{ color: isUser ? '#ffffff !important' : 'text.secondary' }}
+                sx={{ color: '#ffffff !important' }}
               >
                 <CopyIcon fontSize="small" />
               </IconButton>
 
               {!isUser && (
                 <>
-                  <IconButton size="small" sx={{ color: 'text.secondary' }}>
+                  <IconButton size="small" sx={{ color: '#ffffff !important' }}>
                     <ThumbUpIcon fontSize="small" />
                   </IconButton>
-                  <IconButton size="small" sx={{ color: 'text.secondary' }}>
+                  <IconButton size="small" sx={{ color: '#ffffff !important' }}>
                     <ThumbDownIcon fontSize="small" />
                   </IconButton>
                 </>

@@ -6,11 +6,22 @@ export const ThakralFooter: React.FC = () => {
     <Box
       component="footer"
       sx={{
-        background: 'linear-gradient(135deg, #0078d4 0%, #8764b8 100%)',
+        background: 'linear-gradient(135deg, #4c1d95 0%, #6d28d9 30%, #7c3aed 70%, #8b5cf6 100%)',
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(45deg, rgba(124, 58, 237, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+          backdropFilter: 'blur(10px)',
+        },
         padding: { xs: '12px', md: '16px' },
         textAlign: 'center',
         color: 'white',
-        boxShadow: '0 -4px 8px rgba(0, 0, 0, 0.1)',
+        boxShadow: '0 -4px 20px rgba(124, 58, 237, 0.3)',
         width: '100%'
       }}
     >
@@ -19,7 +30,9 @@ export const ThakralFooter: React.FC = () => {
         justifyContent: 'space-between', 
         alignItems: 'center',
         flexDirection: { xs: 'column', md: 'row' },
-        gap: { xs: 2, md: 4 }
+        gap: { xs: 2, md: 4 },
+        position: 'relative',
+        zIndex: 1
       }}>
         {/* Left side - Logo and Company */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -72,7 +85,7 @@ export const ThakralFooter: React.FC = () => {
             href="https://www.thakralone.com" 
             target="_blank" 
             sx={{ 
-              color: '#87ceeb', 
+              color: '#e0e7ff', 
               textDecoration: 'none',
               fontSize: '0.8rem',
               fontWeight: 500,

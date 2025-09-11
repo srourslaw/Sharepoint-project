@@ -166,7 +166,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: 'SET_ERROR', payload: null });
 
       // Redirect to the OAuth login endpoint
-      const apiBaseUrl = window.__RUNTIME_CONFIG__?.REACT_APP_API_BASE_URL || 'http://localhost';
+      const apiBaseUrl = window.__RUNTIME_CONFIG__?.REACT_APP_API_BASE_URL || 'http://localhost:3001';
       window.location.href = `${apiBaseUrl}/auth/login`;
       
     } catch (error) {
@@ -266,7 +266,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         dispatch({ type: 'SET_LOADING', payload: true });
         
         // Use the correct API base URL for Docker deployment
-        const apiBaseUrl = (window as any).__RUNTIME_CONFIG__?.REACT_APP_API_BASE_URL || 'http://localhost';
+        const apiBaseUrl = (window as any).__RUNTIME_CONFIG__?.REACT_APP_API_BASE_URL || 'http://localhost:3001';
         
         // Add timeout and better error handling
         const controller = new AbortController();
