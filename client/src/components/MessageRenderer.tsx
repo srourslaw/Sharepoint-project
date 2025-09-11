@@ -331,6 +331,10 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
               '& p': { mb: 1, '&:last-child': { mb: 0 } },
               '& ul, & ol': { pl: 2, mb: 1 },
               '& blockquote': { borderLeft: 2, borderColor: 'divider', pl: 2, my: 1 },
+              color: isUser ? '#ffffff !important' : 'inherit',
+              '& *': {
+                color: isUser ? '#ffffff !important' : 'inherit',
+              }
             }}
           >
             {formatContent(message.content)}
@@ -365,7 +369,12 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
             borderColor="divider"
             sx={{ opacity: 0.7 }}
           >
-            <Typography variant="caption" color={isUser ? 'inherit' : 'text.secondary'}>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: isUser ? '#ffffff !important' : 'text.secondary'
+              }}
+            >
               {formatDate(message.timestamp)}
             </Typography>
 
@@ -374,7 +383,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
                 <IconButton
                   size="small"
                   onClick={() => setShowMetadata(!showMetadata)}
-                  sx={{ color: isUser ? 'inherit' : 'text.secondary' }}
+                  sx={{ color: isUser ? '#ffffff !important' : 'text.secondary' }}
                 >
                   <InfoIcon fontSize="small" />
                 </IconButton>
@@ -383,7 +392,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
               <IconButton
                 size="small"
                 onClick={() => onCopy(message.content)}
-                sx={{ color: isUser ? 'inherit' : 'text.secondary' }}
+                sx={{ color: isUser ? '#ffffff !important' : 'text.secondary' }}
               >
                 <CopyIcon fontSize="small" />
               </IconButton>
