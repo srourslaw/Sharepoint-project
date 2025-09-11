@@ -422,13 +422,25 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
             size="small"
             sx={{
               '& .MuiOutlinedInput-root': {
-                backgroundColor: 'background.paper',
+                backgroundColor: '#ffffff !important',
                 '& input': {
-                  color: 'text.primary !important',
+                  color: '#000000 !important',
+                  WebkitTextFillColor: '#000000 !important',
+                  backgroundColor: '#ffffff !important',
+                  '-webkit-text-fill-color': '#000000 !important',
                 },
                 '& textarea': {
-                  color: 'text.primary !important',
+                  color: '#000000 !important', 
+                  WebkitTextFillColor: '#000000 !important',
+                  backgroundColor: '#ffffff !important',
+                  '-webkit-text-fill-color': '#000000 !important',
                 },
+                '& .MuiInputBase-input': {
+                  color: '#000000 !important',
+                  WebkitTextFillColor: '#000000 !important',
+                  backgroundColor: '#ffffff !important',
+                  '-webkit-text-fill-color': '#000000 !important',
+                }
               },
             }}
           />

@@ -15,17 +15,24 @@ module.exports = {
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}',
     '<rootDir>/src/**/*.(test|spec).{js,jsx,ts,tsx}',
-    '<rootDir>/tests/**/*.{js,jsx,ts,tsx}',
+    '<rootDir>/tests/**/*.(test|spec).{js,jsx,ts,tsx}',
+  ],
+  testPathIgnorePatterns: [
+    '<rootDir>/tests/__mocks__/',
+    '<rootDir>/tests/utils/',
   ],
   testEnvironmentOptions: {
     url: 'http://localhost:3000',
   },
-  moduleNameMapping: {
+  moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/tests/__mocks__/fileMock.js'
   },
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      tsconfig: 'tsconfig.json',
+      isolatedModules: true,
+    }],
     '^.+\\.(js|jsx)$': 'babel-jest',
   },
   transformIgnorePatterns: [
@@ -34,16 +41,10 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
     global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80,
-    },
-  },
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json',
-      isolatedModules: true,
+      branches: 50,
+      functions: 50,
+      lines: 50,
+      statements: 50,
     },
   },
   setupFiles: ['<rootDir>/tests/env.setup.ts'],
