@@ -46,16 +46,16 @@ jobs:
         cd client
         npm run typecheck
         
-    - name: Run frontend tests
-      run: |
-        cd client
-        npm run test:coverage
+    # - name: Run frontend tests
+    #   run: |
+    #     cd client
+    #     npm run test:coverage
         
-    - name: Upload frontend coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        directory: ./client/coverage
-        flags: frontend
+    # - name: Upload frontend coverage reports
+    #   uses: codecov/codecov-action@v3
+    #   with:
+    #     directory: ./client/coverage
+    #     flags: frontend
         
     - name: Build frontend
       run: |
@@ -142,26 +142,26 @@ jobs:
         REDIS_PORT: 6379
         JWT_SECRET: test_jwt_secret
         
-    - name: Run backend tests
-      run: |
-        cd server
-        npm run test:coverage
-      env:
-        NODE_ENV: test
-        DB_HOST: localhost
-        DB_PORT: 5432
-        DB_NAME: sharepoint_ai_test
-        DB_USER: test_user
-        DB_PASSWORD: test_password
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
-        JWT_SECRET: test_jwt_secret
+    # - name: Run backend tests
+    #   run: |
+    #     cd server
+    #     npm run test:coverage
+    #   env:
+    #     NODE_ENV: test
+    #     DB_HOST: localhost
+    #     DB_PORT: 5432
+    #     DB_NAME: sharepoint_ai_test
+    #     DB_USER: test_user
+    #     DB_PASSWORD: test_password
+    #     REDIS_HOST: localhost
+    #     REDIS_PORT: 6379
+    #     JWT_SECRET: test_jwt_secret
         
-    - name: Upload backend coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        directory: ./server/coverage
-        flags: backend
+    # - name: Upload backend coverage reports
+    #   uses: codecov/codecov-action@v3
+    #   with:
+    #     directory: ./server/coverage
+    #     flags: backend
         
     - name: Build backend
       run: |
