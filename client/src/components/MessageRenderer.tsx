@@ -315,12 +315,18 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
           elevation={1}
           sx={{
             p: 2,
-            bgcolor: isUser ? 'primary.main' : 'background.paper',
-            color: isUser ? 'primary.contrastText' : 'text.primary',
+            bgcolor: isUser ? '#1976d2' : 'background.paper',
+            color: isUser ? '#ffffff !important' : 'text.primary',
             borderRadius: 2,
             borderTopLeftRadius: !isUser ? 0 : 2,
             borderTopRightRadius: isUser ? 0 : 2,
             position: 'relative',
+            '& *': {
+              color: isUser ? '#ffffff !important' : 'inherit',
+            },
+            '& .MuiTypography-root': {
+              color: isUser ? '#ffffff !important' : 'inherit',
+            }
           }}
         >
           {/* Message Content */}
