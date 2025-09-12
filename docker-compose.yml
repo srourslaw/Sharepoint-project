@@ -84,6 +84,7 @@ services:
       AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
       AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
       AZURE_TENANT_ID: ${AZURE_TENANT_ID}
+      AZURE_REDIRECT_URI: https://3b960bea5185.ngrok-free.app/auth/callback
       
       # AI Services
       OPENAI_API_KEY: ${OPENAI_API_KEY}
@@ -93,7 +94,7 @@ services:
       
       # Security
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       
       # Monitoring
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -135,10 +136,10 @@ services:
         condition: service_healthy
     environment:
       # Runtime environment variables (injected by entrypoint script)
-      REACT_APP_API_BASE_URL: http://localhost
+      REACT_APP_API_BASE_URL: https://3b960bea5185.ngrok-free.app
       REACT_APP_SHAREPOINT_CLIENT_ID: ${SHAREPOINT_CLIENT_ID}
       REACT_APP_SHAREPOINT_TENANT_ID: ${SHAREPOINT_TENANT_ID}
-      REACT_APP_AI_API_ENDPOINT: http://localhost/api/ai
+      REACT_APP_AI_API_ENDPOINT: https://3b960bea5185.ngrok-free.app/api/ai
       REACT_APP_ENVIRONMENT: ${NODE_ENV:-production}
     ports:
       - "${FRONTEND_PORT:-8080}:80"

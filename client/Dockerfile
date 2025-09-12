@@ -50,7 +50,7 @@ RUN chmod +x /docker-entrypoint.sh
 
 # Create env-config.js with default values
 RUN cat > /usr/share/nginx/html/env-config.js << 'EOF'
-window.env = {
+window.__RUNTIME_CONFIG__ = {
   REACT_APP_API_BASE_URL: 'http://localhost:3001',
   REACT_APP_SHAREPOINT_CLIENT_ID: '',
   REACT_APP_SHAREPOINT_TENANT_ID: '',

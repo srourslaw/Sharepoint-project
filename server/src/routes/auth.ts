@@ -42,6 +42,7 @@ export const createAuthRoutes = (authService: AuthService, authMiddleware: AuthM
    * Handle OAuth 2.0 callback
    */
   router.get('/callback', async (req: Request, res: Response): Promise<void> => {
+    console.log('🔄 OAuth callback received:', req.query);
     try {
       const { code, state, error, error_description } = req.query;
 
@@ -75,18 +76,24 @@ export const createAuthRoutes = (authService: AuthService, authMiddleware: AuthM
       
       // Set session cookie (secure in production)
       const isProduction = process.env.NODE_ENV === 'production';
-      res.cookie('session_id', sessionId, {
+      const redirectUri = process.env.AZURE_REDIRECT_URI || '';
+      const isNgrok = redirectUri.includes('ngrok-free.app');
+      
+      res.cookie('session-id', sessionId, {
         httpOnly: true,
-        secure: false, // Allow HTTP for localhost development
-        sameSite: 'lax',
+        secure: isNgrok, // Use secure cookies for HTTPS ngrok
+        sameSite: isNgrok ? 'none' : 'lax', // Allow cross-site cookies for ngrok
         path: '/',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        // Remove domain restriction to allow cookies to work across localhost and ngrok
       });
 
-      // Redirect back to frontend after successful authentication
-      res.redirect('http://localhost/');
+      // Redirect back to frontend after successful authentication with session ID
+      console.log('🎉 OAuth callback successful, redirecting to frontend');
+      const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:8080';
+      res.redirect(`${frontendUrl}/?sessionId=${sessionId}&auth=success`);
     } catch (error: any) {
-      console.error('OAuth callback error:', error);
+      console.error('❌ OAuth callback error:', error);
       res.status(400).json({
         error: {
           code: 'CALLBACK_ERROR',
@@ -309,12 +316,16 @@ export const createAuthRoutes = (authService: AuthService, authMiddleware: AuthM
       
       // Set session cookie
       const isProduction = process.env.NODE_ENV === 'production';
+      const redirectUri = process.env.AZURE_REDIRECT_URI || '';
+      const isNgrok = redirectUri.includes('ngrok-free.app');
+      
       res.cookie('session-id', sessionId, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax',
-        domain: 'localhost',
+        secure: isNgrok, // Use secure cookies for HTTPS ngrok
+        sameSite: isNgrok ? 'none' : 'lax', // Allow cross-site cookies for ngrok
+        path: '/',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        // Remove domain restriction to allow cookies to work across localhost and ngrok
       });
       
       res.json({

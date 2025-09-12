@@ -212,6 +212,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       const urlParams = new URLSearchParams(searchString);
       const code = urlParams.get('code');
+      const sessionId = urlParams.get('sessionId');
+      const authSuccess = urlParams.get('auth');
       const error = urlParams.get('error');
       const errorDescription = urlParams.get('error_description');
 
@@ -231,6 +233,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           message: errorDescription || 'OAuth authentication failed'
         }});
         return;
+      }
+
+      // Handle direct session ID from backend (new flow)
+      if (sessionId && authSuccess === 'success') {
+        try {
+          dispatch({ type: 'SET_LOADING', payload: true });
+          
+          // Store the session ID directly
+          localStorage.setItem('session_id', sessionId);
+          
+          // Check auth status with the new session
+          await checkAuthStatus();
+          
+          dispatch({ type: 'SET_LOADING', payload: false });
+          return;
+        } catch (error) {
+          console.error('Session ID authentication failed:', error);
+          dispatch({ type: 'SET_ERROR', payload: error as AuthError });
+          dispatch({ type: 'SET_LOADING', payload: false });
+          return;
+        }
       }
 
       // If we have a code, the backend has already processed it and redirected us here
@@ -259,39 +282,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [checkAuthStatus]);
 
-  // Initialize authentication on mount
+  // Handle OAuth callback automatically on mount if URL parameters are present
   useEffect(() => {
-    const initialize = async () => {
+    const checkForOAuthCallback = async () => {
       try {
+        const searchString = window?.location?.search;
+        if (searchString && (searchString.includes('sessionId=') || searchString.includes('code='))) {
+          console.log('OAuth callback detected, processing...');
+          await handleOAuthCallback();
+          return; // Don't run normal initialization if handling callback
+        }
+        
+        // Normal initialization if no callback parameters
         dispatch({ type: 'SET_LOADING', payload: true });
         
-        // Use the correct API base URL for Docker deployment
-        const apiBaseUrl = (window as any).__RUNTIME_CONFIG__?.REACT_APP_API_BASE_URL || 'http://localhost:3001';
+        // Use AuthApi.getAuthStatus() which includes session ID headers
+        const result = await AuthApi.getAuthStatus();
         
-        // Add timeout and better error handling
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        const response = await fetch(`${apiBaseUrl}/auth/status`, {
-          method: 'GET',
-          credentials: 'include',
-          signal: controller.signal,
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-          const result = await response.json();
-          
-          if (result && typeof result === 'object' && result.authenticated && result.user) {
-            dispatch({ type: 'SET_USER', payload: result.user });
-          } else {
-            dispatch({ type: 'CLEAR_AUTH' });
-          }
+        if (result && result.authenticated && result.user) {
+          dispatch({ type: 'SET_USER', payload: result.user });
         } else {
           dispatch({ type: 'CLEAR_AUTH' });
         }
@@ -303,9 +312,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     // Add a small delay to ensure everything is loaded
-    const timer = setTimeout(initialize, 100);
+    const timer = setTimeout(checkForOAuthCallback, 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [handleOAuthCallback]);
 
   // Periodic token refresh
   useEffect(() => {
