@@ -5,7 +5,7 @@ import React from 'react';
 import { CssBaseline, Box, Typography, Button, CircularProgress } from '@mui/material';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-import { Dashboard } from './components/Dashboard';
+import { Dashboard } from './components/Dashboard.debug';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeContextProvider } from './contexts/ThemeContext';
 import { AuthLoadingSpinner } from './components/auth/AuthLoadingSpinner';
