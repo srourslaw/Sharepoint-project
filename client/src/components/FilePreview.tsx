@@ -64,124 +64,135 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   const renderContent = () => {
     const isPdf = file.mimeType === 'application/pdf';
     const isImage = file.mimeType.startsWith('image/');
-    const isOffice = file.extension === 'docx' || file.extension === 'xlsx' || file.extension === 'pptx';
+    const isExcel = file.extension === 'xlsx' || file.extension === 'xls';
+    const isWord = file.extension === 'docx' || file.extension === 'doc';
+    const isPowerPoint = file.extension === 'pptx' || file.extension === 'ppt';
+    const isOffice = isWord || isExcel || isPowerPoint;
 
-    console.log('🎯 FilePreview: Rendering content type:', { isPdf, isImage, isOffice, mimeType: file.mimeType, extension: file.extension });
+    console.log('🎯 FilePreview: Rendering content type:', { isPdf, isImage, isExcel, isWord, isPowerPoint, mimeType: file.mimeType, extension: file.extension });
 
     if (isPdf) {
+      console.log('📕 FilePreview: Rendering PDF document');
+
+      // Try multiple PDF preview methods for better compatibility
       const pdfUrl = content.startsWith('blob:') ? content : `/api/sharepoint-advanced/files/${file.id}/content`;
-      console.log('📕 FilePreview: Using PDF URL:', pdfUrl);
+      const embedUrl = `${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`;
+
+      console.log('📕 FilePreview: Using PDF URL:', embedUrl);
       console.log('📕 FilePreview: Content type:', typeof content, 'Length:', content?.length);
-      
-      if (!content) {
-        return (
-          <Box sx={{ 
-            width: '100%', 
-            height: '100%', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            flexDirection: 'column',
-            backgroundColor: '#f5f5f5'
-          }}>
-            <Typography variant="h6" color="text.secondary">
-              PDF Loading...
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Please wait while the PDF is being prepared
-            </Typography>
-          </Box>
-        );
-      }
-      
+
       return (
-        <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
+        <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
           <iframe
-            src={pdfUrl}
+            src={embedUrl}
             width="100%"
             height="100%"
             style={{
               border: 'none',
               display: 'block',
-              minHeight: '800px',
-              height: '100%'
+              minHeight: '600px'
             }}
             title={`PDF: ${String(file.name || file.displayName || 'Document')}`}
             onLoad={() => console.log('📕 PDF iframe loaded successfully')}
-            onError={(e) => console.error('📕 PDF iframe error:', e)}
+            onError={(e) => {
+              console.error('📕 PDF iframe error:', e);
+              // Fallback: try direct download link
+              const iframe = e.target as HTMLIFrameElement;
+              iframe.src = `/api/sharepoint-advanced/files/${file.id}/content`;
+            }}
           />
         </Box>
       );
     }
 
     if (isImage) {
+      console.log('🖼️ FilePreview: Rendering image/screenshot');
+
+      // Handle both blob URLs and direct API URLs for images
       const imageUrl = content.startsWith('blob:') ? content : `/api/sharepoint-advanced/files/${file.id}/content`;
       console.log('🖼️ FilePreview: Using Image URL:', imageUrl);
       console.log('🖼️ FilePreview: Content type:', typeof content, 'Length:', content?.length);
       
-      if (!content) {
-        return (
-          <Box sx={{ 
-            width: '100%', 
-            height: '100%', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            flexDirection: 'column',
-            backgroundColor: '#f5f5f5'
-          }}>
-            <Typography variant="h6" color="text.secondary">
-              Image Loading...
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Please wait while the image is being prepared
-            </Typography>
-          </Box>
-        );
-      }
-      
       return (
-        <Box sx={{ 
-          width: '100%', 
-          height: '100%', 
-          display: 'flex', 
-          alignItems: 'center', 
+        <Box sx={{
+          width: '100%',
+          height: '100%',
+          overflow: 'auto',
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: '#f5f5f5',
-          position: 'relative'
+          position: 'relative',
+          p: 2
         }}>
           <img
             src={imageUrl}
             alt={String(file.name || file.displayName || 'Image preview')}
             style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
+              maxWidth: '95%',
+              maxHeight: '95%',
               objectFit: 'contain',
               display: 'block',
-              borderRadius: '4px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              borderRadius: '8px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+              cursor: 'zoom-in'
             }}
             onLoad={() => console.log('🖼️ Image loaded successfully:', imageUrl)}
             onError={(e) => {
               console.error('🖼️ Image load error:', e);
               console.error('🖼️ Failed image URL:', imageUrl);
+              // Try alternative URL on error
+              const img = e.target as HTMLImageElement;
+              if (!img.src.includes('blob:')) {
+                img.src = `/api/sharepoint-advanced/files/${file.id}/content?alt=media`;
+              }
+            }}
+            onClick={(e) => {
+              // Allow click to zoom or open in new tab
+              const img = e.target as HTMLImageElement;
+              window.open(img.src, '_blank');
             }}
           />
         </Box>
       );
     }
 
-    // Office documents - display as text content
-    if (isOffice && content && !content.startsWith('blob:')) {
-      console.log('📄 FilePreview: Rendering Office document as text');
+    // Excel/Spreadsheet files - use SharePoint preview
+    if (isExcel) {
+      console.log('📊 FilePreview: Rendering Excel with SharePoint preview');
+      const previewUrl = file.webUrl ?
+        `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file.webUrl)}` :
+        `/api/sharepoint-advanced/files/${file.id}/content`;
+
+      return (
+        <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          <iframe
+            src={previewUrl}
+            width="100%"
+            height="100%"
+            style={{
+              border: 'none',
+              display: 'block',
+              minHeight: '600px'
+            }}
+            title={`Excel: ${String(file.name || file.displayName || 'Spreadsheet')}`}
+            onLoad={() => console.log('📊 Excel iframe loaded successfully')}
+            onError={(e) => console.error('📊 Excel iframe error:', e)}
+          />
+        </Box>
+      );
+    }
+
+    // Word documents - display as text with proper scrolling
+    if (isWord && content && !content.startsWith('blob:')) {
+      console.log('📄 FilePreview: Rendering Word document as text');
       return (
         <Box sx={{
           width: '100%',
-          minHeight: '100%',
+          height: '100%',
           overflow: 'auto',
           p: 4,
-          backgroundColor: '#fff',
-          lineHeight: 1.8
+          backgroundColor: '#fff'
         }}>
           <Typography variant="body1" sx={{
             whiteSpace: 'pre-wrap',
@@ -194,6 +205,32 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
           }}>
             {String(content)}
           </Typography>
+        </Box>
+      );
+    }
+
+    // PowerPoint files - use SharePoint preview
+    if (isPowerPoint) {
+      console.log('📽️ FilePreview: Rendering PowerPoint with SharePoint preview');
+      const previewUrl = file.webUrl ?
+        `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file.webUrl)}` :
+        `/api/sharepoint-advanced/files/${file.id}/content`;
+
+      return (
+        <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          <iframe
+            src={previewUrl}
+            width="100%"
+            height="100%"
+            style={{
+              border: 'none',
+              display: 'block',
+              minHeight: '600px'
+            }}
+            title={`PowerPoint: ${String(file.name || file.displayName || 'Presentation')}`}
+            onLoad={() => console.log('📽️ PowerPoint iframe loaded successfully')}
+            onError={(e) => console.error('📽️ PowerPoint iframe error:', e)}
+          />
         </Box>
       );
     }
@@ -527,9 +564,10 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       {/* Content Area - Takes up remaining space */}
       <Box sx={{
         flex: 1,
-        overflow: 'auto',
+        overflow: 'hidden',
         backgroundColor: '#fff',
-        minHeight: 0
+        display: 'flex',
+        flexDirection: 'column'
       }}>
         {renderTabContent()}
       </Box>
