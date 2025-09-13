@@ -242,7 +242,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Store the session ID directly
           localStorage.setItem('session_id', sessionId);
-          
+
+          // Add small delay to ensure session is available
+          await new Promise(resolve => setTimeout(resolve, 500));
+
           // Check auth status with the new session
           await checkAuthStatus();
           

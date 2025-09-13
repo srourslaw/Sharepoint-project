@@ -78,11 +78,11 @@ export const createAuthRoutes = (authService: AuthService, authMiddleware: AuthM
       const isProduction = process.env.NODE_ENV === 'production';
       const redirectUri = process.env.AZURE_REDIRECT_URI || '';
       const isNgrok = redirectUri.includes('ngrok-free.app');
-      
+
       res.cookie('session-id', sessionId, {
         httpOnly: true,
         secure: isNgrok, // Use secure cookies for HTTPS ngrok
-        sameSite: isNgrok ? 'none' : 'lax', // Allow cross-site cookies for ngrok
+        sameSite: 'lax', // Fixed: Use 'lax' for both localhost and ngrok to fix auth loops
         path: '/',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
         // Remove domain restriction to allow cookies to work across localhost and ngrok
@@ -318,11 +318,11 @@ export const createAuthRoutes = (authService: AuthService, authMiddleware: AuthM
       const isProduction = process.env.NODE_ENV === 'production';
       const redirectUri = process.env.AZURE_REDIRECT_URI || '';
       const isNgrok = redirectUri.includes('ngrok-free.app');
-      
+
       res.cookie('session-id', sessionId, {
         httpOnly: true,
         secure: isNgrok, // Use secure cookies for HTTPS ngrok
-        sameSite: isNgrok ? 'none' : 'lax', // Allow cross-site cookies for ngrok
+        sameSite: 'lax', // Fixed: Use 'lax' for both localhost and ngrok to fix auth loops
         path: '/',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
         // Remove domain restriction to allow cookies to work across localhost and ngrok
