@@ -112,12 +112,14 @@ export const Dashboard: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              gap: layout.previewOpen ? 0.5 : 0
+              gap: layout.previewOpen ? 2 : 0,
+              height: '100%'
             }}>
               <Box sx={{
-                flexGrow: layout.previewOpen ? 0.6 : 1,
-                minHeight: layout.previewOpen ? '40%' : 'auto',
-                overflow: 'hidden'
+                flexShrink: 0,
+                height: layout.previewOpen ? '400px' : 'auto',
+                maxHeight: layout.previewOpen ? '400px' : 'none',
+                overflow: 'auto'
               }}>
                 <MainContent
                   currentPath={currentPath}
@@ -131,12 +133,11 @@ export const Dashboard: React.FC = () => {
               {/* File Preview Panel */}
               {layout.previewOpen && selectedFiles.length > 0 && (
                 <Box sx={{
-                  flexGrow: 0.4,
-                  minHeight: '50%',
-                  maxHeight: '60%',
+                  flex: 1,
                   borderTop: 1,
                   borderColor: 'divider',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  minHeight: '400px'
                 }}>
                   <FilePreview
                     selectedFiles={selectedFiles}
@@ -279,7 +280,7 @@ export const Dashboard: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: 1,
           width: { 
             sm: layout.aiPanelOpen 
               ? `calc(100% - ${layout.sidebarOpen ? layout.sidebarWidth : 0}px - ${layout.aiPanelWidth}px)`
@@ -301,7 +302,7 @@ export const Dashboard: React.FC = () => {
         )}
         
         {/* Dynamic Content Based on Route */}
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', paddingBottom: '200px' }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', paddingBottom: '60px', height: 'calc(100vh - 120px)' }}>
           {renderMainContent()}
         </Box>
       </Box>

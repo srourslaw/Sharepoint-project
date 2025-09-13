@@ -41,18 +41,56 @@ import { useRecentFiles } from '../hooks/useRecentFiles';
 interface NavigationSidebarProps {
   onNavigate: (path: string) => void;
   currentPath: string;
+  onWidthChange?: (width: number) => void;
 }
 
 export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   onNavigate,
   currentPath,
+  onWidthChange,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['sites', 'main-navigation']));
   const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarWidth, setSidebarWidth] = useState(280);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const { sites, libraries, loading, error, refreshData } = useSharePointData();
   const { recentCount, loading: recentLoading } = useRecentFiles();
+
+  // Handle sidebar resize
+  useEffect(() => {
+    if (sidebarWidth < 150) {
+      setIsCollapsed(true);
+    } else if (sidebarWidth > 200) {
+      setIsCollapsed(false);
+    }
+    // Notify parent of width change
+    onWidthChange?.(sidebarWidth);
+  }, [sidebarWidth, onWidthChange]);
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.min(Math.max(startWidth + (e.clientX - startX), 60), 400);
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   const handleItemClick = (item: NavigationItem) => {
     if (item.path) {
@@ -254,38 +292,40 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
               },
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40 }}>
+            <ListItemIcon sx={{ minWidth: isCollapsed ? 'auto' : 40, justifyContent: 'center' }}>
               {renderIcon(item.icon, isActive)}
             </ListItemIcon>
+
+            {!isCollapsed && (
+              <ListItemText
+                primary={item.label}
+                primaryTypographyProps={{
+                  variant: 'body2',
+                  noWrap: true,
+                }}
+              />
+            )}
             
-            <ListItemText
-              primary={item.label}
-              primaryTypographyProps={{
-                variant: 'body2',
-                noWrap: true,
-              }}
-            />
-            
-            {item.badge && (
+            {!isCollapsed && item.badge && (
               <Chip
                 label={item.badge}
                 size="small"
                 variant="outlined"
-                sx={{ 
-                  height: 20, 
+                sx={{
+                  height: 20,
                   fontSize: '0.7rem',
                   ml: 1,
                 }}
               />
             )}
-            
-            {hasChildren && (
+
+            {!isCollapsed && hasChildren && (
               isExpanded ? <ExpandLess /> : <ExpandMore />
             )}
           </ListItemButton>
         </ListItem>
         
-        {hasChildren && (
+        {!isCollapsed && hasChildren && (
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
               {item.children!.map(child => renderNavigationItem(child, level + 1))}
@@ -300,67 +340,190 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const filteredTree = filterNavigationTree(navigationTree, searchQuery);
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box
+      sx={{
+        position: 'fixed',
+        left: 0,
+        top: 64, // Account for app bar height
+        width: sidebarWidth,
+        minWidth: isCollapsed ? 60 : 200,
+        height: 'calc(100vh - 64px)',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#fafafa',
+        borderRight: '1px solid #e0e0e0',
+        borderRadius: '0 12px 0 0',
+        overflow: 'hidden',
+        boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
+        transition: 'width 0.2s ease-in-out',
+        zIndex: 1200, // Below app bar but above content
+      }}
+    >
       {/* Search */}
-      <Box sx={{ p: 2 }}>
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Search sites and libraries..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
-      
-      <Divider />
+      {!isCollapsed && (
+        <Box sx={{ p: 1.5, pb: 1 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search sites and libraries..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+                backgroundColor: 'white',
+                '&:hover': {
+                  '& > fieldset': {
+                    borderColor: '#7c3aed',
+                  },
+                },
+                '&.Mui-focused': {
+                  '& > fieldset': {
+                    borderColor: '#7c3aed',
+                  },
+                },
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" sx={{ color: '#666' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+      )}
 
       {/* Navigation Tree */}
-      <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-        {error && (
-          <Alert severity="error" sx={{ m: 2 }}>
+      <Box sx={{ flexGrow: 1, overflow: 'auto', px: isCollapsed ? 0.5 : 0 }}>
+        {error && !isCollapsed && (
+          <Alert severity="error" sx={{ m: 1.5, borderRadius: '8px' }}>
             Failed to load SharePoint data
           </Alert>
         )}
-        
+
         {loading ? (
-          <Box sx={{ p: 2 }}>
+          <Box sx={{ p: isCollapsed ? 0.5 : 1.5 }}>
             {[...Array(6)].map((_, index) => (
               <Skeleton
                 key={index}
                 variant="rectangular"
-                height={40}
-                sx={{ mb: 1, borderRadius: 1 }}
+                height={isCollapsed ? 32 : 40}
+                sx={{
+                  mb: 1,
+                  borderRadius: '8px',
+                  mx: isCollapsed ? 'auto' : 0,
+                  width: isCollapsed ? 32 : '100%'
+                }}
               />
             ))}
           </Box>
         ) : (
-          <List component="nav" sx={{ pt: 1 }}>
+          <List
+            component="nav"
+            sx={{
+              pt: 1,
+              pb: 1,
+              '& .MuiListItemButton-root': {
+                borderRadius: '8px',
+                mx: isCollapsed ? 0.5 : 1,
+                mb: 0.5,
+                minHeight: 40,
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  backgroundColor: 'rgba(124, 58, 237, 0.08)',
+                  transform: 'translateX(2px)',
+                },
+                '&.Mui-selected': {
+                  backgroundColor: '#7c3aed',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#6d28d9',
+                  },
+                  '& .MuiListItemIcon-root': {
+                    color: 'white',
+                  },
+                },
+              },
+            }}
+          >
             {filteredTree.map(item => renderNavigationItem(item))}
           </List>
         )}
-        
-        {!loading && sites.length === 0 && (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              No SharePoint sites found
-            </Typography>
-          </Box>
-        )}
       </Box>
-      
-      {/* Footer */}
-      <Divider />
-      <Box sx={{ p: 2 }}>
-        <Typography variant="caption" color="text.secondary" align="center" display="block">
-          {sites.length} sites • {libraries.length} libraries • {recentCount} recent files
-        </Typography>
+
+      {/* Resize Handle */}
+      <Box
+        onMouseDown={startResize}
+        sx={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: 4,
+          height: '100%',
+          cursor: 'col-resize',
+          backgroundColor: isResizing ? '#7c3aed' : 'transparent',
+          transition: 'background-color 0.2s ease-in-out',
+          '&:hover': {
+            backgroundColor: '#7c3aed',
+            opacity: 0.7,
+          },
+          zIndex: 10,
+        }}
+      >
+        {/* Resize indicator */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 2,
+            height: 20,
+            backgroundColor: isResizing ? 'white' : '#7c3aed',
+            borderRadius: 1,
+            opacity: isResizing ? 1 : 0,
+            transition: 'opacity 0.2s ease-in-out',
+          }}
+        />
+      </Box>
+
+      {/* Collapse Toggle Button */}
+      <Box
+        onClick={() => {
+          if (isCollapsed) {
+            setSidebarWidth(280);
+          } else {
+            setSidebarWidth(60);
+          }
+        }}
+        sx={{
+          position: 'absolute',
+          top: 12,
+          right: isCollapsed ? -16 : -12,
+          width: 28,
+          height: 28,
+          backgroundColor: '#7c3aed',
+          color: 'white',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          border: '2px solid white',
+          boxShadow: '0 4px 12px rgba(124, 58, 237, 0.4)',
+          transition: 'all 0.2s ease-in-out',
+          zIndex: 1300, // Higher than sidebar
+          '&:hover': {
+            backgroundColor: '#6d28d9',
+            transform: 'scale(1.15)',
+          },
+        }}
+      >
+        {isCollapsed ? '▶' : '◀'}
       </Box>
     </Box>
   );

@@ -23,6 +23,8 @@ import {
   Tooltip,
   CircularProgress,
   Alert,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import {
   ViewModule as GridViewIcon,
@@ -85,6 +87,8 @@ export const MainContent: React.FC<MainContentProps> = ({
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedFileForMenu, setSelectedFileForMenu] = useState<SharePointFile | null>(null);
 
   // Use the safe version of the hook
   const { files, loading, error, totalCount, refreshFiles } = useSharePointFiles({
@@ -92,6 +96,11 @@ export const MainContent: React.FC<MainContentProps> = ({
     filters: searchFilters,
     viewMode,
   });
+
+  // Filter files based on search query
+  const filteredFiles = files.filter(file =>
+    file.displayName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleFileSelect = (fileId: string, isSelected: boolean) => {
     if (isSelected) {
@@ -102,10 +111,10 @@ export const MainContent: React.FC<MainContentProps> = ({
   };
 
   const handleSelectAll = () => {
-    if (selectedFiles.length === files.length) {
+    if (selectedFiles.length === filteredFiles.length) {
       onFileSelect([]);
     } else {
-      onFileSelect(files.map(file => file.id));
+      onFileSelect(filteredFiles.map(file => file.id));
     }
   };
 
@@ -135,6 +144,42 @@ export const MainContent: React.FC<MainContentProps> = ({
     setViewMode(prev => ({ ...prev, type }));
   };
 
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+    setSelectedFileForMenu(null);
+  };
+
+  const handleMenuAction = (action: string) => {
+    if (selectedFileForMenu) {
+      switch (action) {
+        case 'preview':
+          if (!selectedFileForMenu.isFolder) {
+            onFileSelect([selectedFileForMenu.id]);
+            onPreviewToggle();
+          }
+          break;
+        case 'select':
+          handleFileSelect(selectedFileForMenu.id, true);
+          break;
+        case 'download':
+          console.log('Download:', selectedFileForMenu.displayName);
+          // Implement download functionality
+          break;
+        case 'share':
+          console.log('Share:', selectedFileForMenu.displayName);
+          // Implement share functionality
+          break;
+        case 'delete':
+          console.log('Delete:', selectedFileForMenu.displayName);
+          // Implement delete functionality
+          break;
+        default:
+          break;
+      }
+    }
+    handleCloseMenu();
+  };
+
   const renderFileIcon = (file: SharePointFile) => {
     const IconComponent = getFileIcon(file.extension);
     
@@ -154,9 +199,9 @@ export const MainContent: React.FC<MainContentProps> = ({
   };
 
   const renderGridView = () => (
-    <Grid container spacing={3} sx={{ p: { xs: 1, sm: 2 } }}>
-      {files.map((file) => (
-        <Grid item xs={12} sm={6} md={4} lg={4} xl={3} key={file.id}>
+    <Grid container spacing={{ xs: 2, sm: 2, md: 3 }} sx={{ p: { xs: 1, sm: 2 } }}>
+      {filteredFiles.map((file) => (
+        <Grid item xs={6} sm={4} md={3} lg={2} xl={2} key={file.id}>
           <Card
             sx={{
               cursor: 'pointer',
@@ -164,22 +209,37 @@ export const MainContent: React.FC<MainContentProps> = ({
               borderColor: selectedFiles.includes(file.id) ? 'primary.main' : 'divider',
               backgroundColor: selectedFiles.includes(file.id) ? 'primary.50' : 'background.paper',
               transition: 'all 0.2s ease-in-out',
-              '&:hover': { 
-                boxShadow: 4,
-                transform: 'translateY(-2px)',
+              display: 'flex',
+              flexDirection: 'column',
+              height: 'auto',
+              minHeight: 160,
+              maxHeight: 200,
+              width: '100%',
+              '&:hover': {
+                boxShadow: 2,
+                transform: 'translateY(-1px)',
               },
             }}
             onClick={() => {
               if (file.isFolder) {
                 onNavigate(file.parentPath + '/' + file.name);
               } else {
-                // Select the file and trigger preview
-                onFileSelect([file.id]);
+                // Only trigger preview if file is not already selected
+                if (!selectedFiles.includes(file.id)) {
+                  onFileSelect([file.id]);
+                }
                 onPreviewToggle();
               }
             }}
           >
-            <CardContent sx={{ pb: 2, minHeight: 140 }}>
+            <CardContent sx={{
+              pb: 1,
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: 0
+            }}>
               <Box display="flex" alignItems="center" mb={2}>
                 <Checkbox
                   checked={selectedFiles.includes(file.id)}
@@ -195,23 +255,39 @@ export const MainContent: React.FC<MainContentProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     setAnchorEl(e.currentTarget);
+                    setSelectedFileForMenu(file);
                   }}
                 >
                   <MoreIcon fontSize="small" />
                 </IconButton>
               </Box>
               
-              <Box display="flex" flexDirection="column" alignItems="center" textAlign="center">
-                <Box mb={2}>
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                textAlign="center"
+                justifyContent="center"
+                flexGrow={1}
+              >
+                <Box
+                  mb={{ xs: 1, sm: 1.5 }}
+                  sx={{
+                    '& > *': {
+                      fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' } // Consistent icon sizes
+                    }
+                  }}
+                >
                   {renderFileIcon(file)}
                 </Box>
-                
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    width: '100%', 
-                    fontWeight: 500, 
-                    mb: 1,
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    width: '100%',
+                    fontWeight: 500,
+                    fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.8rem' },
+                    lineHeight: 1.1,
                     wordBreak: 'break-word',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -223,11 +299,26 @@ export const MainContent: React.FC<MainContentProps> = ({
                   {file.displayName}
                 </Typography>
                 
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{
+                    mb: 0.5,
+                    fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
+                    display: { xs: 'none', sm: 'block' }
+                  }}
+                >
                   {file.isFolder ? 'Folder' : formatFileSize(file.size)}
                 </Typography>
-                
-                <Typography variant="caption" color="text.secondary">
+
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{
+                    fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
+                    display: { xs: 'none', md: 'block' }
+                  }}
+                >
                   {formatDate(file.lastModifiedDateTime)}
                 </Typography>
               </Box>
@@ -240,7 +331,7 @@ export const MainContent: React.FC<MainContentProps> = ({
 
   const renderListView = () => (
     <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
-      {files.map((file, index) => (
+      {filteredFiles.map((file, index) => (
         <ListItem
           key={file.id}
           sx={{
@@ -256,8 +347,10 @@ export const MainContent: React.FC<MainContentProps> = ({
             if (file.isFolder) {
               onNavigate(file.parentPath + '/' + file.name);
             } else {
-              // Select the file and trigger preview
-              onFileSelect([file.id]);
+              // Only trigger preview if file is not already selected
+              if (!selectedFiles.includes(file.id)) {
+                onFileSelect([file.id]);
+              }
               onPreviewToggle();
             }
           }}
@@ -302,6 +395,7 @@ export const MainContent: React.FC<MainContentProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 setAnchorEl(e.currentTarget);
+                setSelectedFileForMenu(file);
               }}
             >
               <MoreIcon fontSize="small" />
@@ -319,8 +413,8 @@ export const MainContent: React.FC<MainContentProps> = ({
         <Toolbar variant="dense" sx={{ minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } }}>
           <Box display="flex" alignItems="center" flexGrow={1} gap={{ xs: 0.5, sm: 1 }}>
             <Checkbox
-              checked={selectedFiles.length === files.length && files.length > 0}
-              indeterminate={selectedFiles.length > 0 && selectedFiles.length < files.length}
+              checked={selectedFiles.length === filteredFiles.length && filteredFiles.length > 0}
+              indeterminate={selectedFiles.length > 0 && selectedFiles.length < filteredFiles.length}
               onChange={handleSelectAll}
               size="small"
             />
@@ -374,7 +468,29 @@ export const MainContent: React.FC<MainContentProps> = ({
                 sx={{ ml: { xs: 0.5, sm: 1 }, display: { xs: 'none', sm: 'flex' } }}
               />
             )}
-            
+
+            {/* Search Input */}
+            <TextField
+              size="small"
+              placeholder="Search files..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{
+                minWidth: { xs: 120, sm: 200 },
+                ml: { xs: 0.5, sm: 1 },
+                '& .MuiOutlinedInput-root': {
+                  height: 32,
+                }
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
             <Box flexGrow={1} />
             
             <Box display="flex" ml={{ xs: 0.5, sm: 1 }}>
@@ -399,20 +515,6 @@ export const MainContent: React.FC<MainContentProps> = ({
 
       {/* Content Area */}
       <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-        <Box sx={{ p: 2 }}>
-          <Typography variant="h5" gutterBottom>
-            SharePoint Files - Real API Version
-          </Typography>
-          <Typography variant="body2" gutterBottom>
-            Using real SharePoint files hook with direct Microsoft Graph API calls
-          </Typography>
-          <Typography variant="body2">
-            Files: {files.length}, Loading: {loading.toString()}, Error: {error || 'None'}
-          </Typography>
-          <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
-            Current Path: {currentPath} | Real SharePoint: {process.env.REACT_APP_ENVIRONMENT || 'development'}
-          </Typography>
-        </Box>
         
         {loading ? (
           <Box display="flex" justifyContent="center" alignItems="center" height="200px">
@@ -422,7 +524,7 @@ export const MainContent: React.FC<MainContentProps> = ({
           <Alert severity="error" sx={{ m: 2 }}>
             {error}
           </Alert>
-        ) : files.length === 0 ? (
+        ) : filteredFiles.length === 0 ? (
           <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="200px">
             <FolderIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
             <Typography variant="h6" color="text.secondary">
@@ -433,6 +535,51 @@ export const MainContent: React.FC<MainContentProps> = ({
           viewMode.type === 'list' ? renderListView() : renderGridView()
         )}
       </Box>
+
+      {/* Context Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleCloseMenu}
+        PaperProps={{
+          sx: { width: 200 }
+        }}
+      >
+        {selectedFileForMenu && !selectedFileForMenu.isFolder && (
+          <MenuItem onClick={() => handleMenuAction('preview')}>
+            <ListItemIcon>
+              <SearchIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Preview</ListItemText>
+          </MenuItem>
+        )}
+        <MenuItem onClick={() => handleMenuAction('select')}>
+          <ListItemIcon>
+            <Checkbox size="small" />
+          </ListItemIcon>
+          <ListItemText>Select</ListItemText>
+        </MenuItem>
+        {selectedFileForMenu && !selectedFileForMenu.isFolder && (
+          <MenuItem onClick={() => handleMenuAction('download')}>
+            <ListItemIcon>
+              <DownloadIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Download</ListItemText>
+          </MenuItem>
+        )}
+        <MenuItem onClick={() => handleMenuAction('share')}>
+          <ListItemIcon>
+            <ShareIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Share</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleMenuAction('delete')}>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Delete</ListItemText>
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };

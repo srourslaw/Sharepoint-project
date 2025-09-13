@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SharePointFile, ApiResponse } from '../types';
 import { api } from '../services/api';
 
@@ -16,10 +16,12 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const currentFileIdRef = useRef<string | null>(null);
 
   const fetchFile = async (id: string): Promise<void> => {
     try {
       console.log('🔍 useFilePreview: Starting fetch for file ID:', id);
+      currentFileIdRef.current = id;
       setLoading(true);
       setError(null);
 
@@ -27,8 +29,14 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
       const fileResponse = await api.get<ApiResponse<SharePointFile>>(
         `/api/sharepoint-advanced/files/${id}`
       );
-      
+
       console.log('📄 useFilePreview: File response:', JSON.stringify(fileResponse.data, null, 2));
+
+      // Check if this is still the current file request before updating state
+      if (currentFileIdRef.current !== id) {
+        console.log('🚫 useFilePreview: File changed during fetch, ignoring response for:', id);
+        return;
+      }
 
       if (fileResponse.data.success && fileResponse.data.data) {
         const fileData = fileResponse.data.data;
@@ -41,11 +49,18 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
       }
     } catch (err: any) {
       console.error('Error fetching file:', err);
-      setError(err.response?.data?.error?.message || 'Failed to fetch file');
-      setFile(null);
-      setContent(null);
+
+      // Only set error state if this is still the current file request
+      if (currentFileIdRef.current === id) {
+        setError(err.response?.data?.error?.message || 'Failed to fetch file');
+        setFile(null);
+        setContent(null);
+      }
     } finally {
-      setLoading(false);
+      // Only set loading false if this is still the current file request
+      if (currentFileIdRef.current === id) {
+        setLoading(false);
+      }
     }
   };
 
@@ -105,14 +120,19 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
           reader.onload = () => {
             const base64DataUrl = reader.result as string;
             console.log('🖼️ useFilePreview: Created base64 data URL, length:', base64DataUrl.length);
-            setContent(base64DataUrl);
+            // Only update content if this is still the current file request
+            if (currentFileIdRef.current === id) {
+              setContent(base64DataUrl);
+            }
           };
           reader.onerror = (error) => {
             console.error('🖼️ useFilePreview: FileReader error:', error);
             // Fallback to blob URL
             const blobUrl = URL.createObjectURL(blob);
             console.log('🖼️ useFilePreview: Fallback to blob URL:', blobUrl);
-            setContent(blobUrl);
+            if (currentFileIdRef.current === id) {
+              setContent(blobUrl);
+            }
           };
           reader.readAsDataURL(blob);
           return;
@@ -174,14 +194,18 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
           reader.onload = () => {
             const base64DataUrl = reader.result as string;
             console.log('📕 useFilePreview: Created PDF base64 data URL, length:', base64DataUrl.length);
-            setContent(base64DataUrl);
+            if (currentFileIdRef.current === id) {
+              setContent(base64DataUrl);
+            }
           };
           reader.onerror = (error) => {
             console.error('📕 useFilePreview: PDF FileReader error:', error);
             // Fallback to blob URL
             const blobUrl = URL.createObjectURL(blob);
             console.log('📕 useFilePreview: Fallback to PDF blob URL:', blobUrl);
-            setContent(blobUrl);
+            if (currentFileIdRef.current === id) {
+              setContent(blobUrl);
+            }
           };
           reader.readAsDataURL(blob);
           return;
@@ -201,12 +225,14 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
         fileData.mimeType.startsWith('video/') ||
         fileData.mimeType.startsWith('audio/')
       ) {
-        if (fileData.downloadUrl) {
-          setContent(fileData.downloadUrl);
-        } else {
-          // Fallback to content endpoint
-          const contentUrl = `/api/sharepoint-advanced/files/${id}/content`;
-          setContent(contentUrl);
+        if (currentFileIdRef.current === id) {
+          if (fileData.downloadUrl) {
+            setContent(fileData.downloadUrl);
+          } else {
+            // Fallback to content endpoint
+            const contentUrl = `/api/sharepoint-advanced/files/${id}/content`;
+            setContent(contentUrl);
+          }
         }
         return;
       }
@@ -220,7 +246,7 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
           `/api/sharepoint-advanced/files/${id}/text`
         );
 
-        if (contentResponse.data.success && contentResponse.data.data) {
+        if (contentResponse.data.success && contentResponse.data.data && currentFileIdRef.current === id) {
           setContent(contentResponse.data.data.content);
         }
         return;
@@ -241,10 +267,14 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
           );
           
           console.log('📄 useFilePreview: Got Office text response, length:', contentResponse.data?.length);
-          setContent(contentResponse.data || 'Document content available - please use AI features to analyze this file.');
+          if (currentFileIdRef.current === id) {
+            setContent(contentResponse.data || 'Document content available - please use AI features to analyze this file.');
+          }
         } catch (officeError) {
           console.log('📄 useFilePreview: Office content error:', JSON.stringify(officeError, null, 2));
-          setContent(`This ${fileData.extension.toUpperCase()} document is available for AI processing. Click on AI features to analyze, summarize, or edit this document.`);
+          if (currentFileIdRef.current === id) {
+            setContent(`This ${fileData.extension.toUpperCase()} document is available for AI processing. Click on AI features to analyze, summarize, or edit this document.`);
+          }
         }
         return;
       }
@@ -262,10 +292,14 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
           const blob = new Blob([contentResponse.data], { type: fileData.mimeType });
           const blobUrl = URL.createObjectURL(blob);
           console.log('🖼️ useFilePreview: Created fallback image blob URL:', blobUrl);
-          setContent(blobUrl);
+          if (currentFileIdRef.current === id) {
+            setContent(blobUrl);
+          }
         } catch (imageError) {
           console.log('🖼️ useFilePreview: Image error:', JSON.stringify(imageError, null, 2));
-          setContent('Image preview not available');
+          if (currentFileIdRef.current === id) {
+            setContent('Image preview not available');
+          }
         }
         return;
       }
@@ -277,7 +311,9 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
       }
 
       // For other file types, show not available message
-      setContent(null);
+      if (currentFileIdRef.current === id) {
+        setContent(null);
+      }
     } catch (err: any) {
       console.warn('Could not fetch file content for preview:', err);
       // Don't set error for content fetch failures - file metadata is still valid
@@ -345,18 +381,26 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
   };
 
   useEffect(() => {
+    // Immediately reset states when fileId changes to prevent showing old content
+    setFile(null);
+    setContent(null);
+    setError(null);
+
+    // Update current file ref to prevent race conditions
+    currentFileIdRef.current = fileId;
+
     if (fileId) {
+      console.log('🔄 useFilePreview: File ID changed, fetching new file:', fileId);
       fetchFile(fileId);
-    } else {
-      setFile(null);
-      setContent(null);
-      setError(null);
     }
 
     // Cleanup blob URLs when component unmounts or fileId changes
     return () => {
-      if (content && content.startsWith('blob:')) {
-        URL.revokeObjectURL(content);
+      // Use a ref or capture current content value to avoid stale closure
+      const currentContent = content;
+      if (currentContent && typeof currentContent === 'string' && currentContent.startsWith('blob:')) {
+        console.log('🧹 useFilePreview: Cleaning up blob URL:', currentContent);
+        URL.revokeObjectURL(currentContent);
       }
     };
   }, [fileId]);

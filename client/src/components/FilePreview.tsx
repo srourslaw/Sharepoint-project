@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Typography, IconButton, Paper, Tabs, Tab, Menu, MenuItem, ListItemIcon } from '@mui/material';
+import { DataGrid, GridColDef, GridRowsProp } from '@mui/x-data-grid';
 import { 
   Close as CloseIcon,
   Visibility as PreviewIcon,
@@ -61,6 +62,46 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       </Paper>
     );
   }
+
+  const parseExcelTextToGrid = (textContent: string) => {
+    const lines = textContent.split('\n').filter(line => line.trim());
+
+    // Find data table lines (skip summary info)
+    const dataStartIndex = lines.findIndex(line =>
+      line.includes('|') && (line.includes('Month') || line.includes('Rate') || line.includes('Total'))
+    );
+
+    if (dataStartIndex === -1) return null;
+
+    const dataLines = lines.slice(dataStartIndex).filter(line => line.includes('|'));
+    if (dataLines.length < 2) return null;
+
+    // Parse header row
+    const headerLine = dataLines[0];
+    const headers = headerLine.split('|').map(h => h.trim()).filter(h => h);
+
+    // Create columns
+    const columns: GridColDef[] = headers.map((header, index) => ({
+      field: `col${index}`,
+      headerName: header,
+      width: 150,
+      sortable: true,
+    }));
+
+    // Parse data rows
+    const rows: GridRowsProp = dataLines.slice(1).map((line, rowIndex) => {
+      const cells = line.split('|').map(c => c.trim()).filter(c => c);
+      const row: any = { id: rowIndex };
+
+      cells.forEach((cell, colIndex) => {
+        row[`col${colIndex}`] = cell;
+      });
+
+      return row;
+    }).filter(row => Object.keys(row).length > 1); // Filter out empty rows
+
+    return { columns, rows };
+  };
 
   const renderContent = () => {
     const isPdf = file.mimeType === 'application/pdf';
@@ -187,13 +228,59 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       );
     }
 
-    // Excel/Spreadsheet files - use multiple fallback strategies
+    // Excel/Spreadsheet files - enhanced with DataGrid for proper spreadsheet view
     if (isExcel) {
-      console.log('📊 FilePreview: Rendering Excel with fallback strategies');
-      console.log('📊 FilePreview: file.webUrl:', file.webUrl);
-      console.log('📊 FilePreview: file.id:', file.id);
+      console.log('📊 FilePreview: Rendering Excel with DataGrid');
+      console.log('📊 FilePreview: content available:', !!content, 'type:', typeof content);
 
-      // Try direct API first, then Office Online as fallback
+      // If we have text content, try to parse it as a spreadsheet
+      if (content && typeof content === 'string' && !content.startsWith('blob:') && content.trim().length > 0) {
+        const gridData = parseExcelTextToGrid(content);
+
+        if (gridData && gridData.rows.length > 0) {
+          console.log('📊 FilePreview: Parsed Excel data successfully, rows:', gridData.rows.length);
+
+          return (
+            <Box sx={{
+              width: '100%',
+              height: '100%',
+              overflow: 'hidden',
+              backgroundColor: '#fff',
+              p: 2
+            }}>
+              <Typography variant="h6" gutterBottom sx={{ color: '#1976d2', mb: 2 }}>
+                📊 {String(file.name || file.displayName || 'Spreadsheet')}
+              </Typography>
+              <Box sx={{ height: 'calc(100% - 60px)', width: '100%' }}>
+                <DataGrid
+                  rows={gridData.rows}
+                  columns={gridData.columns}
+                  initialState={{
+                    pagination: {
+                      paginationModel: { page: 0, pageSize: 25 },
+                    },
+                  }}
+                  pageSizeOptions={[10, 25, 50]}
+                  disableRowSelectionOnClick
+                  sx={{
+                    border: '1px solid #e0e0e0',
+                    '& .MuiDataGrid-cell': {
+                      borderRight: '1px solid #e0e0e0',
+                    },
+                    '& .MuiDataGrid-columnHeaders': {
+                      backgroundColor: '#f5f5f5',
+                      fontWeight: 'bold',
+                    },
+                  }}
+                />
+              </Box>
+            </Box>
+          );
+        }
+      }
+
+      // Fallback to iframe approach if parsing fails or no content
+      console.log('📊 FilePreview: Using iframe fallback for Excel');
       const directUrl = `/api/sharepoint-advanced/files/${file.id}/content`;
       const officeOnlineUrl = file.webUrl ?
         `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file.webUrl)}` :
@@ -220,7 +307,6 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
                 iframe.src = officeOnlineUrl;
               } else {
                 console.error('📊 No valid Office Online URL available');
-                // Show error message in iframe
                 const errorHtml = `
                   <html><body style="padding:20px;font-family:Arial;">
                     <h3>Spreadsheet Preview Unavailable</h3>
