@@ -103,7 +103,8 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
             style={{
               border: 'none',
               display: 'block',
-              minHeight: '500px'
+              minHeight: '800px',
+              height: '100%'
             }}
             title={`PDF: ${String(file.name || file.displayName || 'Document')}`}
             onLoad={() => console.log('📕 PDF iframe loaded successfully')}
@@ -174,18 +175,22 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     if (isOffice && content && !content.startsWith('blob:')) {
       console.log('📄 FilePreview: Rendering Office document as text');
       return (
-        <Box sx={{ 
-          width: '100%', 
-          height: '100%', 
-          overflow: 'auto', 
-          p: 3,
-          backgroundColor: '#fff'
+        <Box sx={{
+          width: '100%',
+          minHeight: '100%',
+          overflow: 'auto',
+          p: 4,
+          backgroundColor: '#fff',
+          lineHeight: 1.8
         }}>
-          <Typography variant="body1" sx={{ 
-            whiteSpace: 'pre-wrap', 
-            lineHeight: 1.6,
-            fontSize: '14px',
-            fontFamily: 'Arial, sans-serif'
+          <Typography variant="body1" sx={{
+            whiteSpace: 'pre-wrap',
+            lineHeight: 1.8,
+            fontSize: '16px',
+            fontFamily: '"Times New Roman", serif',
+            maxWidth: '800px',
+            margin: '0 auto',
+            textAlign: 'justify'
           }}>
             {String(content)}
           </Typography>
@@ -212,7 +217,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     if (!file) return null;
 
     return (
-      <Box sx={{ p: 3, height: '100%', overflow: 'auto', backgroundColor: '#fff' }}>
+      <Box sx={{ p: 4, minHeight: '100%', overflow: 'auto', backgroundColor: '#fff' }}>
         <Typography variant="h6" gutterBottom>
           File Details
         </Typography>
@@ -268,7 +273,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   };
 
   const renderVersionHistory = () => (
-    <Box sx={{ p: 3, height: '100%', overflow: 'auto', backgroundColor: '#fff' }}>
+    <Box sx={{ p: 4, minHeight: '100%', overflow: 'auto', backgroundColor: '#fff' }}>
       <Typography variant="h6" gutterBottom>
         Version History
       </Typography>
@@ -402,12 +407,13 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   };
 
   return (
-    <Paper sx={{ 
-      height, 
+    <Paper sx={{
+      height: '100vh',
       width: '100%',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      maxHeight: '100vh'
     }}>
       {/* Header */}
       <Box
@@ -428,45 +434,60 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <IconButton
             onClick={handleDownload}
-            sx={{ 
-              backgroundColor: '#e3f2fd',
-              border: '1px solid #1976d2',
-              '&:hover': { backgroundColor: '#bbdefb' },
-              color: '#1976d2',
-              minWidth: 40,
-              minHeight: 40
+            size="small"
+            sx={{
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)',
+              border: '1px solid #7c3aed',
+              '&:hover': {
+                background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
+              },
+              color: '#7c3aed',
+              width: 32,
+              height: 32
             }}
             title="Download file"
           >
-            <DownloadIcon />
+            <DownloadIcon fontSize="small" />
           </IconButton>
           <IconButton
             onClick={(e) => setAnchorEl(e.currentTarget)}
-            sx={{ 
-              backgroundColor: '#e8f5e8',
-              border: '1px solid #4caf50',
-              '&:hover': { backgroundColor: '#c8e6c9' },
-              color: '#4caf50',
-              minWidth: 40,
-              minHeight: 40
+            size="small"
+            sx={{
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)',
+              border: '1px solid #7c3aed',
+              '&:hover': {
+                background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
+              },
+              color: '#7c3aed',
+              width: 32,
+              height: 32
             }}
             title="More actions"
           >
-            <MoreVertIcon />
+            <MoreVertIcon fontSize="small" />
           </IconButton>
           <IconButton
             onClick={onClose}
-            sx={{ 
-              backgroundColor: '#ffebee',
-              border: '1px solid #f44336',
-              '&:hover': { backgroundColor: '#ffcdd2' },
-              color: '#f44336',
-              minWidth: 40,
-              minHeight: 40
+            size="small"
+            sx={{
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)',
+              border: '1px solid #7c3aed',
+              '&:hover': {
+                background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
+              },
+              color: '#7c3aed',
+              width: 32,
+              height: 32
             }}
             title="Close preview"
           >
-            <CloseIcon />
+            <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
       </Box>
@@ -504,10 +525,11 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       </Box>
 
       {/* Content Area - Takes up remaining space */}
-      <Box sx={{ 
-        flex: 1, 
-        overflow: 'hidden',
-        backgroundColor: '#fff'
+      <Box sx={{
+        flex: 1,
+        overflow: 'auto',
+        backgroundColor: '#fff',
+        minHeight: 0
       }}>
         {renderTabContent()}
       </Box>
