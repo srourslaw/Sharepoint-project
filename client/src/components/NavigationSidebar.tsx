@@ -55,7 +55,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isResizing, setIsResizing] = useState(false);
   const { sites, libraries, loading, error, refreshData } = useSharePointData();
   const { recentCount, loading: recentLoading } = useRecentFiles();
 
@@ -70,26 +69,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     onWidthChange?.(sidebarWidth);
   }, [sidebarWidth, onWidthChange]);
 
-  const startResize = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-
-    const startX = e.clientX;
-    const startWidth = sidebarWidth;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const newWidth = Math.min(Math.max(startWidth + (e.clientX - startX), 60), 400);
-      setSidebarWidth(newWidth);
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+  const toggleSidebar = () => {
+    if (isCollapsed) {
+      setSidebarWidth(280);
+    } else {
+      setSidebarWidth(60);
+    }
   };
 
   const handleItemClick = (item: NavigationItem) => {
@@ -352,16 +337,35 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         flexDirection: 'column',
         backgroundColor: '#fafafa',
         borderRight: '1px solid #e0e0e0',
-        borderRadius: '0 12px 0 0',
+        borderRadius: '0 0 0 0', // Remove top-right radius to eliminate gap
         overflow: 'hidden',
         boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
         transition: 'width 0.2s ease-in-out',
         zIndex: 1200, // Below app bar but above content
       }}
     >
-      {/* Search */}
-      {!isCollapsed && (
-        <Box sx={{ p: 1.5, pb: 1 }}>
+      {/* Search - Show full field when expanded, icon when collapsed */}
+      <Box sx={{ p: isCollapsed ? 1 : 1.5, pb: 1 }}>
+        {isCollapsed ? (
+          // Compact search icon when collapsed
+          <Box
+            onClick={() => setSidebarWidth(280)} // Expand on click
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              p: 1,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s ease-in-out',
+              '&:hover': {
+                backgroundColor: 'rgba(124, 58, 237, 0.1)',
+              }
+            }}
+          >
+            <SearchIcon sx={{ color: '#7c3aed', fontSize: '20px' }} />
+          </Box>
+        ) : (
+          // Full search field when expanded
           <TextField
             fullWidth
             size="small"
@@ -392,8 +396,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
               ),
             }}
           />
-        </Box>
-      )}
+        )}
+      </Box>
 
       {/* Navigation Tree */}
       <Box sx={{ flexGrow: 1, overflow: 'auto', px: isCollapsed ? 0.5 : 0 }}>
@@ -453,57 +457,55 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         )}
       </Box>
 
-      {/* Resize Handle */}
+      {/* Clickable Edge to Toggle */}
       <Box
-        onMouseDown={startResize}
+        onClick={toggleSidebar}
         sx={{
           position: 'absolute',
           top: 0,
           right: 0,
-          width: 4,
+          width: 8,
           height: '100%',
-          cursor: 'col-resize',
-          backgroundColor: isResizing ? '#7c3aed' : 'transparent',
-          transition: 'background-color 0.2s ease-in-out',
+          cursor: 'pointer',
+          backgroundColor: 'transparent',
+          borderLeft: '2px solid transparent',
+          transition: 'all 0.2s ease-in-out',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           '&:hover': {
-            backgroundColor: '#7c3aed',
-            opacity: 0.7,
+            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+            borderLeft: '2px solid #7c3aed',
           },
           zIndex: 10,
         }}
       >
-        {/* Resize indicator */}
+        {/* Always visible toggle indicator */}
         <Box
           sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 2,
-            height: 20,
-            backgroundColor: isResizing ? 'white' : '#7c3aed',
-            borderRadius: 1,
-            opacity: isResizing ? 1 : 0,
-            transition: 'opacity 0.2s ease-in-out',
+            width: 3,
+            height: 30,
+            backgroundColor: '#7c3aed',
+            borderRadius: 2,
+            opacity: 0.6,
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              opacity: 1,
+              width: 4,
+            },
           }}
         />
       </Box>
 
-      {/* Collapse Toggle Button */}
+      {/* Collapse Toggle Button - More Visible */}
       <Box
-        onClick={() => {
-          if (isCollapsed) {
-            setSidebarWidth(280);
-          } else {
-            setSidebarWidth(60);
-          }
-        }}
+        onClick={toggleSidebar}
         sx={{
           position: 'absolute',
-          top: 12,
-          right: isCollapsed ? -16 : -12,
-          width: 28,
-          height: 28,
+          top: 20,
+          right: isCollapsed ? -20 : -16,
+          width: 36,
+          height: 36,
           backgroundColor: '#7c3aed',
           color: 'white',
           borderRadius: '50%',
@@ -511,15 +513,29 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          fontSize: '16px',
+          fontSize: '20px',
           fontWeight: 'bold',
-          border: '2px solid white',
-          boxShadow: '0 4px 12px rgba(124, 58, 237, 0.4)',
-          transition: 'all 0.2s ease-in-out',
-          zIndex: 1300, // Higher than sidebar
+          border: '4px solid white',
+          boxShadow: '0 8px 20px rgba(124, 58, 237, 0.6)',
+          transition: 'all 0.3s ease-in-out',
+          zIndex: 1500, // Even higher z-index
           '&:hover': {
             backgroundColor: '#6d28d9',
-            transform: 'scale(1.15)',
+            transform: 'scale(1.25)',
+            boxShadow: '0 12px 32px rgba(124, 58, 237, 0.8)',
+          },
+          // Always visible with animation
+          animation: isCollapsed ? 'pulse 2s infinite' : 'none',
+          '@keyframes pulse': {
+            '0%': {
+              boxShadow: '0 8px 20px rgba(124, 58, 237, 0.6)',
+            },
+            '50%': {
+              boxShadow: '0 12px 32px rgba(124, 58, 237, 0.9)',
+            },
+            '100%': {
+              boxShadow: '0 8px 20px rgba(124, 58, 237, 0.6)',
+            },
           },
         }}
       >

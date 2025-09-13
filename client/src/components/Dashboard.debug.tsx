@@ -7,13 +7,11 @@ import {
   Toolbar,
   Typography,
   CssBaseline,
-  Divider,
   IconButton,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
@@ -46,10 +44,10 @@ export const Dashboard: React.FC = () => {
   const theme = useTheme();
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+
   const drawerWidth = getDrawerWidth(theme, isMobile);
   const aiPanelWidth = getAIPanelWidth(theme, isMobile);
-  
+
   const [layout, setLayout] = useState<LayoutState>({
     sidebarOpen: !isMobile,
     sidebarWidth: drawerWidth,
@@ -61,13 +59,8 @@ export const Dashboard: React.FC = () => {
 
   const [currentPath, setCurrentPath] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [actualSidebarWidth, setActualSidebarWidth] = useState<number>(drawerWidth);
 
-  const handleDrawerToggle = () => {
-    setLayout(prev => ({
-      ...prev,
-      sidebarOpen: !prev.sidebarOpen
-    }));
-  };
 
   const handleAIPanelToggle = () => {
     setLayout(prev => ({
@@ -81,6 +74,10 @@ export const Dashboard: React.FC = () => {
       ...prev,
       previewOpen: !prev.previewOpen
     }));
+  };
+
+  const handleSidebarWidthChange = (width: number) => {
+    setActualSidebarWidth(width);
   };
 
   // Render content based on current route
@@ -162,8 +159,8 @@ export const Dashboard: React.FC = () => {
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: layout.sidebarOpen ? `calc(100% - ${layout.sidebarWidth}px)` : '100%' },
-          ml: { sm: layout.sidebarOpen ? `${layout.sidebarWidth}px` : 0 },
+          width: `calc(100% - ${actualSidebarWidth}px)`,
+          ml: `${actualSidebarWidth}px`,
           zIndex: theme.zIndex.drawer + 1,
           background: 'linear-gradient(135deg, #4c1d95 0%, #6d28d9 30%, #7c3aed 70%, #8b5cf6 100%)',
           transition: theme.transitions.create(['width', 'margin'], {
@@ -173,15 +170,6 @@ export const Dashboard: React.FC = () => {
         }}
       >
         <Toolbar sx={{ minHeight: '64px', py: 1 }}>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton>
           
           {/* Thakral One Logo and Branding */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, mr: 2 }}>
@@ -247,46 +235,22 @@ export const Dashboard: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      {/* Navigation Sidebar */}
-      <Box
-        component="nav"
-        sx={{ width: { sm: layout.sidebarOpen ? layout.sidebarWidth : 0 }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant={isMobile ? 'temporary' : 'persistent'}
-          open={layout.sidebarOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true,
-          }}
-          sx={{
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: layout.sidebarWidth,
-              mt: '64px',
-              height: 'calc(100% - 64px)',
-            },
-          }}
-        >
-          <NavigationSidebar
-            onNavigate={setCurrentPath}
-            currentPath={currentPath}
-          />
-        </Drawer>
-      </Box>
+      {/* Navigation Sidebar - New Fixed Position */}
+      <NavigationSidebar
+        onNavigate={setCurrentPath}
+        currentPath={currentPath}
+        onWidthChange={handleSidebarWidthChange}
+      />
 
-      {/* Main Content Area - SIMPLIFIED FOR TESTING */}
+      {/* Main Content Area - Updated for Fixed Sidebar */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: 1,
-          width: { 
-            sm: layout.aiPanelOpen 
-              ? `calc(100% - ${layout.sidebarOpen ? layout.sidebarWidth : 0}px - ${layout.aiPanelWidth}px)`
-              : `calc(100% - ${layout.sidebarOpen ? layout.sidebarWidth : 0}px)`
-          },
-          transition: theme.transitions.create('width', {
+          p: 3, // Increased padding for more space
+          ml: `calc(${actualSidebarWidth}px + 16px)`, // Added extra 16px margin from sidebar
+          mr: layout.aiPanelOpen ? `${layout.aiPanelWidth}px` : 0,
+          transition: theme.transitions.create(['margin'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen,
           }),
@@ -308,11 +272,11 @@ export const Dashboard: React.FC = () => {
       </Box>
 
       {/* Fixed Thakral One Footer */}
-      <Box sx={{ 
+      <Box sx={{
         position: 'fixed',
         bottom: 0,
-        left: { sm: layout.sidebarOpen ? `${layout.sidebarWidth}px` : 0 },
-        right: { sm: layout.aiPanelOpen ? `${layout.aiPanelWidth}px` : 0 },
+        left: `calc(${actualSidebarWidth}px + 16px)`, // Match main content margin
+        right: layout.aiPanelOpen ? `${layout.aiPanelWidth}px` : 0,
         zIndex: 1000,
         transition: theme.transitions.create(['left', 'right'], {
           easing: theme.transitions.easing.sharp,
