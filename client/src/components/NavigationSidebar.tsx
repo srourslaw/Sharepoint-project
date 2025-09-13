@@ -457,90 +457,52 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         )}
       </Box>
 
-      {/* Clickable Edge to Toggle */}
+      {/* Elegant Clickable Edge */}
       <Box
         onClick={toggleSidebar}
         sx={{
           position: 'absolute',
           top: 0,
           right: 0,
-          width: 8,
+          width: 12,
           height: '100%',
           cursor: 'pointer',
           backgroundColor: 'transparent',
-          borderLeft: '2px solid transparent',
-          transition: 'all 0.2s ease-in-out',
+          transition: 'all 0.3s ease-in-out',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
+          gap: 0.5,
           '&:hover': {
-            backgroundColor: 'rgba(124, 58, 237, 0.1)',
-            borderLeft: '2px solid #7c3aed',
+            backgroundColor: 'rgba(124, 58, 237, 0.05)',
+            '& .edge-dots': {
+              opacity: 1,
+              transform: 'scale(1.2)',
+              backgroundColor: '#7c3aed',
+            }
           },
           zIndex: 10,
         }}
       >
-        {/* Always visible toggle indicator */}
-        <Box
-          sx={{
-            width: 3,
-            height: 30,
-            backgroundColor: '#7c3aed',
-            borderRadius: 2,
-            opacity: 0.6,
-            transition: 'all 0.2s ease-in-out',
-            '&:hover': {
-              opacity: 1,
+        {/* Elegant dot indicators */}
+        {[...Array(5)].map((_, index) => (
+          <Box
+            key={index}
+            className="edge-dots"
+            sx={{
               width: 4,
-            },
-          }}
-        />
+              height: 4,
+              backgroundColor: '#c4b5fd',
+              borderRadius: '50%',
+              opacity: 0.4,
+              transition: 'all 0.3s ease-in-out',
+              transform: 'scale(1)',
+            }}
+          />
+        ))}
       </Box>
 
-      {/* Collapse Toggle Button - More Visible */}
-      <Box
-        onClick={toggleSidebar}
-        sx={{
-          position: 'absolute',
-          top: 20,
-          right: isCollapsed ? -20 : -16,
-          width: 36,
-          height: 36,
-          backgroundColor: '#7c3aed',
-          color: 'white',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          fontSize: '20px',
-          fontWeight: 'bold',
-          border: '4px solid white',
-          boxShadow: '0 8px 20px rgba(124, 58, 237, 0.6)',
-          transition: 'all 0.3s ease-in-out',
-          zIndex: 1500, // Even higher z-index
-          '&:hover': {
-            backgroundColor: '#6d28d9',
-            transform: 'scale(1.25)',
-            boxShadow: '0 12px 32px rgba(124, 58, 237, 0.8)',
-          },
-          // Always visible with animation
-          animation: isCollapsed ? 'pulse 2s infinite' : 'none',
-          '@keyframes pulse': {
-            '0%': {
-              boxShadow: '0 8px 20px rgba(124, 58, 237, 0.6)',
-            },
-            '50%': {
-              boxShadow: '0 12px 32px rgba(124, 58, 237, 0.9)',
-            },
-            '100%': {
-              boxShadow: '0 8px 20px rgba(124, 58, 237, 0.6)',
-            },
-          },
-        }}
-      >
-        {isCollapsed ? '▶' : '◀'}
-      </Box>
     </Box>
   );
 };
