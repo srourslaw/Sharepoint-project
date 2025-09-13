@@ -238,6 +238,80 @@ export const MainContent: React.FC<MainContentProps> = ({
     </Grid>
   );
 
+  const renderListView = () => (
+    <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+      {files.map((file, index) => (
+        <ListItem
+          key={file.id}
+          sx={{
+            border: selectedFiles.includes(file.id) ? '2px solid' : '1px solid',
+            borderColor: selectedFiles.includes(file.id) ? 'primary.main' : 'divider',
+            backgroundColor: selectedFiles.includes(file.id) ? 'primary.50' : 'transparent',
+            mb: 1,
+            borderRadius: 1,
+            cursor: 'pointer',
+            '&:hover': { backgroundColor: 'action.hover' },
+          }}
+          onClick={() => {
+            if (file.isFolder) {
+              onNavigate(file.parentPath + '/' + file.name);
+            } else {
+              // Select the file and trigger preview
+              onFileSelect([file.id]);
+              onPreviewToggle();
+            }
+          }}
+        >
+          <ListItemIcon>
+            <Checkbox
+              edge="start"
+              checked={selectedFiles.includes(file.id)}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleFileSelect(file.id, e.target.checked);
+              }}
+              size="small"
+            />
+          </ListItemIcon>
+          <ListItemIcon sx={{ minWidth: 48 }}>
+            {renderFileIcon(file)}
+          </ListItemIcon>
+          <ListItemText
+            primary={
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 500,
+                  wordBreak: 'break-word',
+                }}
+              >
+                {file.displayName}
+              </Typography>
+            }
+            secondary={
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  {file.isFolder ? 'Folder' : formatFileSize(file.size)} • {formatDate(file.lastModifiedDateTime)}
+                </Typography>
+              </Box>
+            }
+          />
+          <ListItemSecondaryAction>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAnchorEl(e.currentTarget);
+              }}
+            >
+              <MoreIcon fontSize="small" />
+            </IconButton>
+          </ListItemSecondaryAction>
+        </ListItem>
+      ))}
+    </List>
+  );
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Toolbar */}
@@ -356,7 +430,7 @@ export const MainContent: React.FC<MainContentProps> = ({
             </Typography>
           </Box>
         ) : (
-          renderGridView()
+          viewMode.type === 'list' ? renderListView() : renderGridView()
         )}
       </Box>
     </Box>
