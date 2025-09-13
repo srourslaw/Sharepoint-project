@@ -29,6 +29,7 @@ import { RecentFilesPage } from './pages/RecentFilesPage';
 import { OneDrivePage } from './pages/OneDrivePage';
 import { BrandWatermark } from './BrandWatermark';
 import { UserProfileMenu } from './UserProfileMenu';
+import { useAuth } from '../contexts/AuthContext';
 import { LayoutState } from '../types';
 
 const getDrawerWidth = (theme: any, isMobile: boolean) => {
@@ -45,6 +46,7 @@ export const Dashboard: React.FC = () => {
   const theme = useTheme();
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user, logout } = useAuth();
 
   const drawerWidth = getDrawerWidth(theme, isMobile);
   const aiPanelWidth = getAIPanelWidth(theme, isMobile);
@@ -202,9 +204,9 @@ export const Dashboard: React.FC = () => {
           {/* Right side - User Profile and Actions */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <UserProfileMenu
-              userName="John Doe"
-              userEmail="john@company.com"
-              onLogout={() => console.log('Logout clicked')}
+              userName={user?.displayName || 'Unknown User'}
+              userEmail={user?.mail || user?.userPrincipalName || 'unknown@email.com'}
+              onLogout={logout}
               onSettings={() => console.log('Settings clicked')}
             />
 
