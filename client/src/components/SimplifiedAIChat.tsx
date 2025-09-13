@@ -164,17 +164,30 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
         )}
 
         <Box sx={{ maxWidth: '70%' }}>
-          <Paper
-            elevation={1}
+          <Box
             sx={{
               p: 2,
-              background: '#ffffff',
-              border: isUser 
-                ? '2px solid rgba(124, 58, 237, 0.4)' 
-                : '2px solid rgba(124, 58, 237, 0.4)',
-              borderRadius: 2,
-              borderTopLeftRadius: !isUser ? 0 : 2,
-              borderTopRightRadius: isUser ? 0 : 2,
+              background: isUser
+                ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%)'
+                : 'linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%)',
+              border: '2px solid',
+              borderColor: '#7c3aed',
+              borderRadius: '16px',
+              borderTopLeftRadius: !isUser ? '4px' : '16px',
+              borderTopRightRadius: isUser ? '4px' : '16px',
+              boxShadow: '0 2px 8px rgba(124, 58, 237, 0.1)',
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: '-1px',
+                left: '-1px',
+                right: '-1px',
+                bottom: '-1px',
+                background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+                borderRadius: '16px',
+                zIndex: -1,
+              },
             }}
           >
             <Typography
@@ -204,7 +217,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
             >
               {formatTime(message.timestamp)}
             </Typography>
-          </Paper>
+          </Box>
         </Box>
 
         {isUser && (
@@ -335,14 +348,27 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
                 }}>
                   <BotIcon sx={{ color: '#ffffff', fontSize: '18px' }} />
                 </Avatar>
-                <Paper
-                  elevation={1}
+                <Box
                   sx={{
                     p: 2,
-                    background: '#ffffff',
-                    border: '2px solid rgba(124, 58, 237, 0.4)',
-                    borderRadius: 2,
-                    borderTopLeftRadius: 0,
+                    background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%)',
+                    border: '2px solid',
+                    borderColor: '#7c3aed',
+                    borderRadius: '16px',
+                    borderTopLeftRadius: '4px',
+                    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.1)',
+                    position: 'relative',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: '-1px',
+                      left: '-1px',
+                      right: '-1px',
+                      bottom: '-1px',
+                      background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+                      borderRadius: '16px',
+                      zIndex: -1,
+                    },
                   }}
                 >
                   <Box display="flex" alignItems="center" gap={1}>
@@ -351,7 +377,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
                       AI is thinking...
                     </Typography>
                   </Box>
-                </Paper>
+                </Box>
               </Box>
             )}
             <div ref={messagesEndRef} />
