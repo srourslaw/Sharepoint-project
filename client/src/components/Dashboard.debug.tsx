@@ -150,7 +150,7 @@ export const Dashboard: React.FC = () => {
           width: { sm: layout.sidebarOpen ? `calc(100% - ${layout.sidebarWidth}px)` : '100%' },
           ml: { sm: layout.sidebarOpen ? `${layout.sidebarWidth}px` : 0 },
           zIndex: theme.zIndex.drawer + 1,
-          background: 'linear-gradient(135deg, #0078d4 0%, #8764b8 100%)',
+          background: 'linear-gradient(135deg, #4c1d95 0%, #6d28d9 30%, #7c3aed 70%, #8b5cf6 100%)',
           transition: theme.transitions.create(['width', 'margin'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
