@@ -56,7 +56,7 @@ export const Dashboard: React.FC = () => {
     aiPanelOpen: !isMobile,
     aiPanelWidth: aiPanelWidth,
     previewOpen: false,
-    previewHeight: 300,
+    previewHeight: 500,
   });
 
   const [currentPath, setCurrentPath] = useState<string>('');
@@ -107,26 +107,40 @@ export const Dashboard: React.FC = () => {
               Browse your SharePoint sites, libraries, and documents
             </Typography>
             
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <MainContent
-                currentPath={currentPath}
-                selectedFiles={selectedFiles}
-                onFileSelect={setSelectedFiles}
-                onNavigate={setCurrentPath}
-                onPreviewToggle={handlePreviewToggle}
-              />
-              
+            <Box sx={{
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              gap: layout.previewOpen ? 0.5 : 0
+            }}>
+              <Box sx={{
+                flexGrow: layout.previewOpen ? 0.6 : 1,
+                minHeight: layout.previewOpen ? '40%' : 'auto',
+                overflow: 'hidden'
+              }}>
+                <MainContent
+                  currentPath={currentPath}
+                  selectedFiles={selectedFiles}
+                  onFileSelect={setSelectedFiles}
+                  onNavigate={setCurrentPath}
+                  onPreviewToggle={handlePreviewToggle}
+                />
+              </Box>
+
               {/* File Preview Panel */}
               {layout.previewOpen && selectedFiles.length > 0 && (
-                <Box sx={{ 
-                  height: layout.previewHeight, 
-                  borderTop: 1, 
+                <Box sx={{
+                  flexGrow: 0.4,
+                  minHeight: '50%',
+                  maxHeight: '60%',
+                  borderTop: 1,
                   borderColor: 'divider',
-                  flexShrink: 0
+                  overflow: 'hidden'
                 }}>
                   <FilePreview
                     selectedFiles={selectedFiles}
-                    height={layout.previewHeight}
+                    height="100%"
                     onClose={handlePreviewToggle}
                   />
                 </Box>

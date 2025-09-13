@@ -18,7 +18,7 @@ import { formatFileSize, formatDate } from '../utils/formatters';
 
 interface FilePreviewProps {
   selectedFiles: string[];
-  height: number;
+  height: number | string;
   onClose: () => void;
 }
 
@@ -29,6 +29,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   height,
   onClose,
 }) => {
+  const actualHeight = typeof height === 'string' && height === '100%' ? '100%' : height;
   console.log('🚀 FilePreview: Rendering WITHIN dashboard with files:', selectedFiles, 'height:', height);
   
   const [activeTab, setActiveTab] = useState<PreviewTab>('preview');
@@ -74,35 +75,64 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     if (isPdf) {
       console.log('📕 FilePreview: Rendering PDF document');
 
-      // Try multiple PDF preview methods for better compatibility
+      // Multiple PDF rendering approaches for better compatibility
       const pdfUrl = content.startsWith('blob:') ? content : `/api/sharepoint-advanced/files/${file.id}/content`;
-      const embedUrl = `${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`;
 
-      console.log('📕 FilePreview: Using PDF URL:', embedUrl);
+      console.log('📕 FilePreview: Using PDF URL:', pdfUrl);
       console.log('📕 FilePreview: Content type:', typeof content, 'Length:', content?.length);
 
-      return (
-        <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-          <iframe
-            src={embedUrl}
-            width="100%"
-            height="100%"
-            style={{
-              border: 'none',
-              display: 'block',
-              minHeight: '600px'
-            }}
-            title={`PDF: ${String(file.name || file.displayName || 'Document')}`}
-            onLoad={() => console.log('📕 PDF iframe loaded successfully')}
-            onError={(e) => {
-              console.error('📕 PDF iframe error:', e);
-              // Fallback: try direct download link
-              const iframe = e.target as HTMLIFrameElement;
-              iframe.src = `/api/sharepoint-advanced/files/${file.id}/content`;
-            }}
-          />
-        </Box>
-      );
+      // Try different PDF embedding methods based on content type
+      if (content && content.startsWith('blob:')) {
+        // For blob URLs, use direct embedding
+        return (
+          <Box sx={{ width: '100%', height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <embed
+              src={pdfUrl}
+              type="application/pdf"
+              width="100%"
+              height="100%"
+              style={{
+                minHeight: '600px',
+                border: 'none',
+                flex: 1
+              }}
+            />
+          </Box>
+        );
+      } else {
+        // For API URLs, try iframe with different parameters
+        const embedUrl = `${pdfUrl}#view=FitH&toolbar=1&navpanes=0&scrollbar=1&page=1&zoom=100`;
+
+        return (
+          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+            <iframe
+              src={embedUrl}
+              width="100%"
+              height="100%"
+              style={{
+                border: 'none',
+                display: 'block',
+                minHeight: '600px'
+              }}
+              title={`PDF: ${String(file.name || file.displayName || 'Document')}`}
+              onLoad={() => console.log('📕 PDF iframe loaded successfully')}
+              onError={(e) => {
+                console.error('📕 PDF iframe error, trying embed fallback:', e);
+                // Replace iframe with embed fallback
+                const iframe = e.target as HTMLIFrameElement;
+                const embedElement = document.createElement('embed');
+                embedElement.src = pdfUrl;
+                embedElement.type = 'application/pdf';
+                embedElement.width = '100%';
+                embedElement.height = '100%';
+                embedElement.style.border = 'none';
+                embedElement.style.minHeight = '600px';
+                iframe.parentNode?.replaceChild(embedElement, iframe);
+              }}
+            />
+          </Box>
+        );
+      }
     }
 
     if (isImage) {
@@ -445,12 +475,11 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
 
   return (
     <Paper sx={{
-      height: '100vh',
+      height: actualHeight,
       width: '100%',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden',
-      maxHeight: '100vh'
+      overflow: 'hidden'
     }}>
       {/* Header */}
       <Box
