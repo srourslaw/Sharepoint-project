@@ -187,17 +187,22 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       );
     }
 
-    // Excel/Spreadsheet files - use SharePoint preview
+    // Excel/Spreadsheet files - use multiple fallback strategies
     if (isExcel) {
-      console.log('📊 FilePreview: Rendering Excel with SharePoint preview');
-      const previewUrl = file.webUrl ?
+      console.log('📊 FilePreview: Rendering Excel with fallback strategies');
+      console.log('📊 FilePreview: file.webUrl:', file.webUrl);
+      console.log('📊 FilePreview: file.id:', file.id);
+
+      // Try direct API first, then Office Online as fallback
+      const directUrl = `/api/sharepoint-advanced/files/${file.id}/content`;
+      const officeOnlineUrl = file.webUrl ?
         `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file.webUrl)}` :
-        `/api/sharepoint-advanced/files/${file.id}/content`;
+        null;
 
       return (
         <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
           <iframe
-            src={previewUrl}
+            src={directUrl}
             width="100%"
             height="100%"
             style={{
@@ -206,50 +211,110 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
               minHeight: '600px'
             }}
             title={`Excel: ${String(file.name || file.displayName || 'Spreadsheet')}`}
-            onLoad={() => console.log('📊 Excel iframe loaded successfully')}
-            onError={(e) => console.error('📊 Excel iframe error:', e)}
+            onLoad={() => console.log('📊 Excel iframe loaded successfully with direct API')}
+            onError={(e) => {
+              console.error('📊 Excel direct API failed, trying Office Online fallback:', e);
+              const iframe = e.target as HTMLIFrameElement;
+              if (officeOnlineUrl && iframe.src !== officeOnlineUrl) {
+                console.log('📊 Switching to Office Online URL:', officeOnlineUrl);
+                iframe.src = officeOnlineUrl;
+              } else {
+                console.error('📊 No valid Office Online URL available');
+                // Show error message in iframe
+                const errorHtml = `
+                  <html><body style="padding:20px;font-family:Arial;">
+                    <h3>Spreadsheet Preview Unavailable</h3>
+                    <p>Unable to preview this Excel file. Please download it to view the content.</p>
+                    <p><a href="${directUrl}" download>Download File</a></p>
+                  </body></html>
+                `;
+                iframe.src = 'data:text/html,' + encodeURIComponent(errorHtml);
+              }
+            }}
           />
         </Box>
       );
     }
 
-    // Word documents - display as text with proper scrolling
-    if (isWord && content && !content.startsWith('blob:')) {
-      console.log('📄 FilePreview: Rendering Word document as text');
-      return (
-        <Box sx={{
-          width: '100%',
-          height: '100%',
-          overflow: 'auto',
-          p: 4,
-          backgroundColor: '#fff'
-        }}>
-          <Typography variant="body1" sx={{
-            whiteSpace: 'pre-wrap',
-            lineHeight: 1.8,
-            fontSize: '16px',
-            fontFamily: '"Times New Roman", serif',
-            maxWidth: '800px',
-            margin: '0 auto',
-            textAlign: 'justify'
+    // Word documents - enhanced handling for different SharePoint contexts
+    if (isWord) {
+      console.log('📄 FilePreview: Rendering Word document');
+      console.log('📄 FilePreview: content available:', !!content, 'type:', typeof content);
+      console.log('📄 FilePreview: content preview:', content ? content.substring(0, 100) + '...' : 'none');
+
+      // If we have text content, display it
+      if (content && typeof content === 'string' && !content.startsWith('blob:') && content.trim().length > 0) {
+        return (
+          <Box sx={{
+            width: '100%',
+            height: '100%',
+            overflow: 'auto',
+            p: 4,
+            backgroundColor: '#fff'
           }}>
-            {String(content)}
-          </Typography>
-        </Box>
-      );
+            <Typography variant="body1" sx={{
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.8,
+              fontSize: '16px',
+              fontFamily: '"Times New Roman", serif',
+              maxWidth: '800px',
+              margin: '0 auto',
+              textAlign: 'justify'
+            }}>
+              {String(content)}
+            </Typography>
+          </Box>
+        );
+      } else {
+        // Fallback: try to load directly through API or show download option
+        const directUrl = `/api/sharepoint-advanced/files/${file.id}/content`;
+
+        return (
+          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+            <iframe
+              src={directUrl}
+              width="100%"
+              height="100%"
+              style={{
+                border: 'none',
+                display: 'block',
+                minHeight: '600px'
+              }}
+              title={`Word: ${String(file.name || file.displayName || 'Document')}`}
+              onLoad={() => console.log('📄 Word iframe loaded successfully')}
+              onError={(e) => {
+                console.error('📄 Word iframe error, showing download option:', e);
+                const iframe = e.target as HTMLIFrameElement;
+                const errorHtml = `
+                  <html><body style="padding:20px;font-family:Arial;">
+                    <h3>Document Preview Unavailable</h3>
+                    <p>Unable to preview this Word document. Please download it to view the content.</p>
+                    <p><a href="${directUrl}" download>Download Document</a></p>
+                  </body></html>
+                `;
+                iframe.src = 'data:text/html,' + encodeURIComponent(errorHtml);
+              }}
+            />
+          </Box>
+        );
+      }
     }
 
-    // PowerPoint files - use SharePoint preview
+    // PowerPoint files - enhanced with fallback strategies
     if (isPowerPoint) {
-      console.log('📽️ FilePreview: Rendering PowerPoint with SharePoint preview');
-      const previewUrl = file.webUrl ?
+      console.log('📽️ FilePreview: Rendering PowerPoint with fallback strategies');
+      console.log('📽️ FilePreview: file.webUrl:', file.webUrl);
+
+      // Try direct API first, then Office Online as fallback
+      const directUrl = `/api/sharepoint-advanced/files/${file.id}/content`;
+      const officeOnlineUrl = file.webUrl ?
         `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file.webUrl)}` :
-        `/api/sharepoint-advanced/files/${file.id}/content`;
+        null;
 
       return (
         <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
           <iframe
-            src={previewUrl}
+            src={directUrl}
             width="100%"
             height="100%"
             style={{
@@ -258,8 +323,26 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
               minHeight: '600px'
             }}
             title={`PowerPoint: ${String(file.name || file.displayName || 'Presentation')}`}
-            onLoad={() => console.log('📽️ PowerPoint iframe loaded successfully')}
-            onError={(e) => console.error('📽️ PowerPoint iframe error:', e)}
+            onLoad={() => console.log('📽️ PowerPoint iframe loaded successfully with direct API')}
+            onError={(e) => {
+              console.error('📽️ PowerPoint direct API failed, trying Office Online fallback:', e);
+              const iframe = e.target as HTMLIFrameElement;
+              if (officeOnlineUrl && iframe.src !== officeOnlineUrl) {
+                console.log('📽️ Switching to Office Online URL:', officeOnlineUrl);
+                iframe.src = officeOnlineUrl;
+              } else {
+                console.error('📽️ No valid Office Online URL available');
+                // Show error message in iframe
+                const errorHtml = `
+                  <html><body style="padding:20px;font-family:Arial;">
+                    <h3>Presentation Preview Unavailable</h3>
+                    <p>Unable to preview this PowerPoint file. Please download it to view the content.</p>
+                    <p><a href="${directUrl}" download>Download File</a></p>
+                  </body></html>
+                `;
+                iframe.src = 'data:text/html,' + encodeURIComponent(errorHtml);
+              }
+            }}
           />
         </Box>
       );
