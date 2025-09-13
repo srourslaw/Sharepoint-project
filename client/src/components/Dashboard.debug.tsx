@@ -27,7 +27,8 @@ import { PeoplePage } from './pages/PeoplePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { RecentFilesPage } from './pages/RecentFilesPage';
 import { OneDrivePage } from './pages/OneDrivePage';
-import { ThakralFooter } from './ThakralFooter';
+import { BrandWatermark } from './BrandWatermark';
+import { UserProfileMenu } from './UserProfileMenu';
 import { LayoutState } from '../types';
 
 const getDrawerWidth = (theme: any, isMobile: boolean) => {
@@ -171,67 +172,55 @@ export const Dashboard: React.FC = () => {
       >
         <Toolbar sx={{ minHeight: '64px', py: 1 }}>
           
-          {/* Thakral One Logo and Branding */}
+          {/* Compact Branding */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, mr: 2 }}>
             <img
               src="https://www.thakralone.com/wp-content/uploads/2020/08/Thakral-One-Logo.png"
               alt="Thakral One Logo"
               style={{
-                height: '32px',
-                marginRight: '12px',
+                height: '28px',
+                marginRight: '10px',
                 filter: 'brightness(0) invert(1)'
               }}
             />
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <Typography
-                variant="h6"
-                noWrap
-                component="div"
-                sx={{ 
-                  fontWeight: 700,
-                  letterSpacing: '0.5px',
-                  color: 'white',
-                  fontSize: { xs: '1rem', sm: '1.1rem' },
-                  lineHeight: 1.2
-                }}
-              >
-                📊 SharePoint AI Dashboard
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{ 
-                  color: 'rgba(255,255,255,0.85)',
-                  fontSize: '0.7rem',
-                  fontWeight: 500,
-                  display: { xs: 'none', sm: 'block' }
-                }}
-              >
-                Prototype by Thakral One
-              </Typography>
-            </Box>
+            <Typography
+              variant="h6"
+              noWrap
+              component="div"
+              sx={{
+                fontWeight: 600,
+                letterSpacing: '0.3px',
+                color: 'white',
+                fontSize: { xs: '1rem', sm: '1.1rem', md: '1.2rem' },
+                lineHeight: 1.1
+              }}
+            >
+              SharePoint AI Dashboard
+            </Typography>
           </Box>
 
-          {/* Copyright notice */}
-          <Typography
-            variant="caption"
-            sx={{ 
-              color: 'rgba(255,255,255,0.9)',
-              fontSize: '0.7rem',
-              fontWeight: 500,
-              mr: 2,
-              display: { xs: 'none', md: 'block' }
-            }}
-          >
-            © 2025 Proprietary AI Solution
-          </Typography>
-          
-          <IconButton
-            color="inherit"
-            aria-label="toggle ai panel"
-            onClick={handleAIPanelToggle}
-          >
-            {layout.aiPanelOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </IconButton>
+          {/* Right side - User Profile and Actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <UserProfileMenu
+              userName="John Doe"
+              userEmail="john@company.com"
+              onLogout={() => console.log('Logout clicked')}
+              onSettings={() => console.log('Settings clicked')}
+            />
+
+            <IconButton
+              color="inherit"
+              aria-label="toggle ai panel"
+              onClick={handleAIPanelToggle}
+              sx={{
+                ml: 1,
+                color: 'rgba(255,255,255,0.9)',
+                '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+              }}
+            >
+              {layout.aiPanelOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+            </IconButton>
+          </Box>
         </Toolbar>
       </AppBar>
 
@@ -247,8 +236,8 @@ export const Dashboard: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3, // Increased padding for more space
-          ml: `calc(${actualSidebarWidth}px + 16px)`, // Added extra 16px margin from sidebar
+          p: 2, // Reduced padding for better space utilization
+          ml: `calc(${actualSidebarWidth}px + 12px)`, // Reduced margin for more content space
           mr: layout.aiPanelOpen ? `${layout.aiPanelWidth}px` : 0,
           transition: theme.transitions.create(['margin'], {
             easing: theme.transitions.easing.sharp,
@@ -256,6 +245,8 @@ export const Dashboard: React.FC = () => {
           }),
           display: 'flex',
           flexDirection: 'column',
+          height: '100vh',
+          overflow: 'hidden',
         }}
       >
         <Toolbar />
@@ -271,20 +262,8 @@ export const Dashboard: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Fixed Thakral One Footer */}
-      <Box sx={{
-        position: 'fixed',
-        bottom: 0,
-        left: `calc(${actualSidebarWidth}px + 16px)`, // Match main content margin
-        right: layout.aiPanelOpen ? `${layout.aiPanelWidth}px` : 0,
-        zIndex: 1000,
-        transition: theme.transitions.create(['left', 'right'], {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.leavingScreen,
-        }),
-      }}>
-        <ThakralFooter />
-      </Box>
+      {/* Subtle Brand Watermark */}
+      <BrandWatermark />
 
       {/* AI Panel - RESTORED */}
       <Drawer
