@@ -144,7 +144,7 @@ export const AnalyticsPage: React.FC = () => {
             width: 56,
             height: 56,
             borderRadius: '14px',
-            background: `linear-gradient(135deg, #00C853, #2E7D32)`,
+            background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -169,7 +169,7 @@ export const AnalyticsPage: React.FC = () => {
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h3" sx={{
               fontWeight: 700,
-              background: `linear-gradient(45deg, #00C853, #2E7D32)`,
+              background: `linear-gradient(45deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -225,7 +225,7 @@ export const AnalyticsPage: React.FC = () => {
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h4" sx={{
                 fontWeight: 700,
-                color: '#00C853',
+                color: currentTheme.primary,
                 mb: 0.5
               }}>
                 {loading ? '...' : analytics.totalFiles.toLocaleString()}
@@ -325,7 +325,7 @@ export const AnalyticsPage: React.FC = () => {
             p: 3,
             borderRadius: 3,
             boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            border: `1px solid #00C85315`,
+            border: `1px solid ${currentTheme.primary}15`,
             transition: 'all 0.3s ease',
             '&:hover': {
               transform: 'translateY(-4px)',
@@ -337,16 +337,16 @@ export const AnalyticsPage: React.FC = () => {
                 width: 48,
                 height: 48,
                 borderRadius: 2,
-                background: `linear-gradient(135deg, #00C85320, #2E7D3220)`,
+                background: `linear-gradient(135deg, ${currentTheme.primary}20, ${currentTheme.secondary}20)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 mx: 'auto',
                 mb: 2
               }}>
-                <AssessmentIcon sx={{ fontSize: 24, color: '#00C853' }} />
+                <AssessmentIcon sx={{ fontSize: 24, color: currentTheme.primary }} />
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, color: '#00C853' }}>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, color: currentTheme.primary }}>
                 {loading ? '...' : analytics.totalStorage}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
@@ -669,7 +669,7 @@ export const AnalyticsPage: React.FC = () => {
                     fontWeight: 600,
                     fontSize: '0.65rem',
                     background: activity.action === 'uploaded' ?
-                      'linear-gradient(45deg, #00C853, #2E7D32)' :
+                      `linear-gradient(45deg, ${currentTheme.primary}, ${currentTheme.secondary})` :
                       activity.action === 'shared' ?
                       `linear-gradient(45deg, ${currentTheme.secondary}, ${currentTheme.accent})` :
                       activity.action === 'modified' ?

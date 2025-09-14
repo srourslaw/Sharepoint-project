@@ -131,7 +131,7 @@ export const OneDrivePage: React.FC<OneDrivePageProps> = () => {
             width: 56,
             height: 56,
             borderRadius: '14px',
-            background: `linear-gradient(135deg, #0078d4, #005a9e)`,
+            background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -156,7 +156,7 @@ export const OneDrivePage: React.FC<OneDrivePageProps> = () => {
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h3" sx={{
               fontWeight: 700,
-              background: `linear-gradient(45deg, #0078d4, #005a9e)`,
+              background: `linear-gradient(45deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -212,7 +212,7 @@ export const OneDrivePage: React.FC<OneDrivePageProps> = () => {
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h4" sx={{
                 fontWeight: 700,
-                color: '#0078d4',
+                color: currentTheme.primary,
                 mb: 0.5
               }}>
                 {loading ? '...' : `${quota.used}GB`}
@@ -335,7 +335,7 @@ export const OneDrivePage: React.FC<OneDrivePageProps> = () => {
                   width: loading ? '100%' : `${quota.percentage}%`,
                   background: loading
                     ? `linear-gradient(90deg, ${currentTheme.primary}40, ${currentTheme.secondary}40, ${currentTheme.primary}40)`
-                    : `linear-gradient(90deg, #0078d4, ${currentTheme.secondary})`,
+                    : `linear-gradient(90deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
                   borderRadius: 2,
                   transition: 'width 0.5s ease',
                   animation: loading ? 'shimmer 2s infinite' : 'none',
@@ -362,10 +362,10 @@ export const OneDrivePage: React.FC<OneDrivePageProps> = () => {
                 onClick={handleUploadFiles}
                 disabled={loading}
                 sx={{
-                  background: `linear-gradient(45deg, #0078d4, #005a9e)`,
-                  boxShadow: `0 4px 12px rgba(0, 120, 212, 0.25)`,
+                  background: `linear-gradient(45deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
+                  boxShadow: `0 4px 12px ${currentTheme.primary}40`,
                   '&:hover': {
-                    boxShadow: `0 6px 16px rgba(0, 120, 212, 0.35)`,
+                    boxShadow: `0 6px 16px ${currentTheme.primary}58`,
                   }
                 }}
               >
@@ -405,7 +405,7 @@ export const OneDrivePage: React.FC<OneDrivePageProps> = () => {
             width: 40,
             height: 40,
             borderRadius: 2,
-            background: `linear-gradient(135deg, #0078d4, #005a9e)`,
+            background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -589,7 +589,7 @@ export const OneDrivePage: React.FC<OneDrivePageProps> = () => {
                 width: 36,
                 height: 36,
                 borderRadius: 2,
-                background: `linear-gradient(135deg, #0078d4, #005a9e)`,
+                background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

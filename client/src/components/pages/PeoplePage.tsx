@@ -257,7 +257,7 @@ export const PeoplePage: React.FC = () => {
       {/* Stunning Collaboration Header */}
       <Box className="collaboration-header" sx={{
         mb: 4,
-        background: `linear-gradient(135deg, #6366F1, #8B5CF6, #EC4899)`,
+        background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary}, ${currentTheme.accent})`,
         borderRadius: 4,
         p: 4,
         color: 'white',
@@ -360,7 +360,7 @@ export const PeoplePage: React.FC = () => {
               onClick={() => handleInvitePeople()}
               sx={{
                 background: 'rgba(255,255,255,0.9)',
-                color: '#6366F1',
+                color: currentTheme.primary,
                 fontWeight: 600,
                 px: 3,
                 py: 1,
@@ -387,18 +387,18 @@ export const PeoplePage: React.FC = () => {
           <Card className="collaboration-card" sx={{
             textAlign: 'center',
             p: 3,
-            background: `linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.05))`,
-            border: '1px solid rgba(99, 102, 241, 0.2)',
+            background: `linear-gradient(135deg, ${currentTheme.primary}1A, ${currentTheme.primary}0D)`,
+            border: `1px solid ${currentTheme.primary}33`,
             borderRadius: 3,
             transition: 'all 0.3s ease',
             '&:hover': {
               transform: 'translateY(-8px)',
-              boxShadow: '0 12px 40px rgba(99, 102, 241, 0.15)',
-              background: `linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(99, 102, 241, 0.08))`
+              boxShadow: `0 12px 40px ${currentTheme.primary}26`,
+              background: `linear-gradient(135deg, ${currentTheme.primary}26, ${currentTheme.primary}14)`
             }
           }}>
             <Box sx={{
-              background: `linear-gradient(135deg, #6366F1, #8B5CF6)`,
+              background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
               borderRadius: '50%',
               width: 70,
               height: 70,
@@ -407,11 +407,11 @@ export const PeoplePage: React.FC = () => {
               justifyContent: 'center',
               mx: 'auto',
               mb: 2,
-              boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+              boxShadow: `0 8px 25px ${currentTheme.primary}4D`
             }}>
               <PeopleIcon sx={{ fontSize: 35, color: 'white' }} />
             </Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#6366F1', mb: 1 }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: currentTheme.primary, mb: 1 }}>
               {peopleData.recentContacts.length}
             </Typography>
             <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 500 }}>
@@ -574,16 +574,16 @@ export const PeoplePage: React.FC = () => {
               fontSize: '0.95rem',
               transition: 'all 0.3s ease',
               '&:hover': {
-                color: '#6366F1',
+                color: currentTheme.primary,
                 transform: 'translateY(-2px)',
               },
               '&.Mui-selected': {
-                color: '#6366F1',
-                background: `linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.05))`,
+                color: currentTheme.primary,
+                background: `linear-gradient(135deg, ${currentTheme.primary}1A, ${currentTheme.primary}0D)`,
               }
             },
             '& .MuiTabs-indicator': {
-              background: `linear-gradient(135deg, #6366F1, #8B5CF6)`,
+              background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
               height: 3,
               borderRadius: '3px 3px 0 0'
             }
@@ -611,18 +611,18 @@ export const PeoplePage: React.FC = () => {
               transition: 'all 0.3s ease',
               '&:hover': {
                 transform: 'translateY(-2px)',
-                boxShadow: '0 8px 25px rgba(99, 102, 241, 0.15)',
+                boxShadow: `0 8px 25px ${currentTheme.primary}26`,
               },
               '&.Mui-focused': {
                 transform: 'translateY(-2px)',
-                boxShadow: '0 8px 25px rgba(99, 102, 241, 0.2)',
+                boxShadow: `0 8px 25px ${currentTheme.primary}33`,
                 '& fieldset': {
-                  borderColor: '#6366F1',
+                  borderColor: currentTheme.primary,
                   borderWidth: 2
                 }
               },
               '& fieldset': {
-                borderColor: 'rgba(99, 102, 241, 0.3)',
+                borderColor: `${currentTheme.primary}4D`,
                 transition: 'all 0.3s ease'
               }
             },
@@ -636,7 +636,7 @@ export const PeoplePage: React.FC = () => {
             startAdornment: (
               <InputAdornment position="start">
                 <Box sx={{
-                  background: `linear-gradient(135deg, #6366F1, #8B5CF6)`,
+                  background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
                   borderRadius: '50%',
                   width: 35,
                   height: 35,
@@ -644,7 +644,7 @@ export const PeoplePage: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   mr: 1,
-                  boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                  boxShadow: `0 4px 15px ${currentTheme.primary}4D`
                 }}>
                   <SearchIcon sx={{ color: 'white', fontSize: 18 }} />
                 </Box>
@@ -669,7 +669,7 @@ export const PeoplePage: React.FC = () => {
               title={
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Box sx={{
-                    background: `linear-gradient(135deg, #6366F1, #8B5CF6)`,
+                    background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
                     borderRadius: '50%',
                     width: 40,
                     height: 40,
@@ -677,7 +677,7 @@ export const PeoplePage: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     mr: 2,
-                    boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                    boxShadow: `0 4px 15px ${currentTheme.primary}4D`
                   }}>
                     <PeopleIcon sx={{ color: 'white', fontSize: 20 }} />
                   </Box>
