@@ -322,7 +322,7 @@ export const Dashboard: React.FC = () => {
         onWidthChange={handleSidebarWidthChange}
       />
 
-      {/* Main Content Area - Updated for Fixed Sidebar */}
+      {/* Main Content Area - Updated for Fixed Sidebar and Resizable AI Panel */}
       <Box
         component="main"
         sx={{
@@ -330,9 +330,9 @@ export const Dashboard: React.FC = () => {
           p: 2, // Reduced padding for better space utilization
           ml: `calc(${actualSidebarWidth}px + 12px)`, // Reduced margin for more content space
           mr: layout.aiPanelOpen ? `${layout.aiPanelWidth}px` : 0,
-          transition: theme.transitions.create(['margin'], {
+          transition: theme.transitions.create(['margin-right'], {
             easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
+            duration: theme.transitions.duration.leavingScreen,
           }),
           display: 'flex',
           flexDirection: 'column',
@@ -356,104 +356,108 @@ export const Dashboard: React.FC = () => {
       {/* Subtle Brand Watermark */}
       <BrandWatermark />
 
-      {/* AI Panel - RESIZABLE */}
-      <Drawer
-        sx={{
-          width: layout.aiPanelOpen ? layout.aiPanelWidth : 0,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: layout.aiPanelWidth,
-            boxSizing: 'border-box',
-            mt: '64px',
-            height: 'calc(100% - 64px)',
-            position: 'relative',
-          },
-        }}
-        variant="persistent"
-        anchor="right"
-        open={layout.aiPanelOpen}
-      >
-        {/* Enhanced Resize Handle */}
+      {/* AI Panel - FIXED RESIZABLE PANEL */}
+      {layout.aiPanelOpen && (
         <Box
-          ref={resizeRef}
-          onMouseDown={handleResizeStart}
           sx={{
-            position: 'absolute',
-            left: '-4px',
-            top: 0,
-            width: '12px',
-            height: '100%',
-            cursor: 'col-resize',
-            backgroundColor: 'transparent',
-            zIndex: 1200,
+            position: 'fixed',
+            right: 0,
+            top: '64px',
+            width: `${layout.aiPanelWidth}px`,
+            height: 'calc(100vh - 64px)',
+            backgroundColor: (theme) => theme.palette.background.paper,
+            borderLeft: (theme) => `1px solid ${theme.palette.divider}`,
+            zIndex: theme.zIndex.drawer,
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '0 4px 4px 0',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              left: '4px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: '4px',
-              height: '40px',
-              backgroundColor: currentTheme.primary,
-              opacity: 0.7,
-              borderRadius: '2px',
-              transition: 'all 0.2s ease',
-            },
-            '&:hover': {
-              backgroundColor: `${currentTheme.primary}15`,
-              '&::before': {
-                opacity: 0.8,
-                height: '60px',
-                backgroundColor: currentTheme.primary,
-              },
-              '& .resize-indicator': {
-                opacity: 1,
-                transform: 'rotate(90deg) scale(1.1)',
-              },
-            },
-            '&:active': {
-              backgroundColor: `${currentTheme.primary}25`,
-              '&::before': {
-                opacity: 1,
-                height: '80px',
-              },
-            },
-            transition: 'background-color 0.2s ease',
+            flexDirection: 'column',
+            transition: theme.transitions.create(['width'], {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.enteringScreen,
+            }),
           }}
         >
+          {/* Enhanced Resize Handle */}
           <Box
-            className="resize-indicator"
+            ref={resizeRef}
+            onMouseDown={handleResizeStart}
             sx={{
+              position: 'absolute',
+              left: '-6px',
+              top: 0,
+              width: '12px',
+              height: '100%',
+              cursor: 'col-resize',
+              backgroundColor: 'transparent',
+              zIndex: 1200,
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              opacity: 0.6,
-              transition: 'all 0.2s ease',
-              transform: 'rotate(90deg)',
-              pointerEvents: 'none',
-              '& .MuiSvgIcon-root': {
-                fontSize: '14px',
-                color: currentTheme.primary,
-                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
+              borderRadius: '4px 0 0 4px',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: '4px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '4px',
+                height: '40px',
+                backgroundColor: currentTheme.primary,
+                opacity: 0.7,
+                borderRadius: '2px',
+                transition: 'all 0.2s ease',
               },
+              '&:hover': {
+                backgroundColor: `${currentTheme.primary}15`,
+                '&::before': {
+                  opacity: 0.9,
+                  height: '60px',
+                  backgroundColor: currentTheme.primary,
+                },
+                '& .resize-indicator': {
+                  opacity: 1,
+                  transform: 'rotate(90deg) scale(1.1)',
+                },
+              },
+              '&:active': {
+                backgroundColor: `${currentTheme.primary}25`,
+                '&::before': {
+                  opacity: 1,
+                  height: '80px',
+                },
+              },
+              transition: 'background-color 0.2s ease',
             }}
           >
-            <DragIndicatorIcon />
+            <Box
+              className="resize-indicator"
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0.6,
+                transition: 'all 0.2s ease',
+                transform: 'rotate(90deg)',
+                pointerEvents: 'none',
+                '& .MuiSvgIcon-root': {
+                  fontSize: '14px',
+                  color: currentTheme.primary,
+                  filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
+                },
+              }}
+            >
+              <DragIndicatorIcon />
+            </Box>
           </Box>
-        </Box>
 
-        {/* AI Panel Content */}
-        <AIPanel
-          selectedFiles={selectedFiles}
-          onFileSelect={setSelectedFiles}
-          currentPath={currentPath}
-        />
-      </Drawer>
+          {/* AI Panel Content */}
+          <AIPanel
+            selectedFiles={selectedFiles}
+            onFileSelect={setSelectedFiles}
+            currentPath={currentPath}
+          />
+        </Box>
+      )}
     </Box>
   );
 };

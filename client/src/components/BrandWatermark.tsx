@@ -7,7 +7,7 @@ export const BrandWatermark: React.FC = () => {
       sx={{
         position: 'fixed',
         bottom: 16,
-        right: 16,
+        left: 16,
         display: 'flex',
         alignItems: 'center',
         gap: 0.5,
