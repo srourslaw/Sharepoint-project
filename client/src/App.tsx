@@ -7,7 +7,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 import { Dashboard } from './components/Dashboard.debug';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ThemeContextProvider } from './contexts/ThemeContext';
+import { DynamicThemeProvider } from './contexts/DynamicThemeContext';
 import { AuthLoadingSpinner } from './components/auth/AuthLoadingSpinner';
 import { AuthError } from './components/auth/AuthError';
 import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
@@ -93,14 +93,13 @@ const AppRoutes: React.FC = () => {
 function App() {
   return (
     <GlobalErrorBoundary>
-      <ThemeContextProvider>
-        <CssBaseline />
+      <DynamicThemeProvider>
         <AuthProvider>
           <Router>
             <AppRoutes />
           </Router>
         </AuthProvider>
-      </ThemeContextProvider>
+      </DynamicThemeProvider>
     </GlobalErrorBoundary>
   );
 }

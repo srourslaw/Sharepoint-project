@@ -24,6 +24,7 @@ import {
   Avatar,
   LinearProgress,
 } from '@mui/material';
+import { ThemeSelector } from '../ThemeSelector';
 import {
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
@@ -176,6 +177,9 @@ export const SettingsPage: React.FC = () => {
           {saveMessage}
         </Alert>
       )}
+
+      {/* Theme Selector */}
+      <ThemeSelector />
 
       <Grid container spacing={3}>
         {/* Notifications Settings */}
