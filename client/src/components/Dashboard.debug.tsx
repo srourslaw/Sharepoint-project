@@ -125,11 +125,14 @@ export const Dashboard: React.FC = () => {
 
   // AI Panel resize handlers
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    console.log('🖱️ AI Sidebar resize started:', { clientX: e.clientX, currentWidth: layout.aiPanelWidth });
     setIsResizing(true);
     setStartX(e.clientX);
     setStartWidth(layout.aiPanelWidth);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
+    e.preventDefault();
+    e.stopPropagation();
   }, [layout.aiPanelWidth]);
 
   const handleResizeMove = useCallback((e: MouseEvent) => {
@@ -370,37 +373,54 @@ export const Dashboard: React.FC = () => {
         anchor="right"
         open={layout.aiPanelOpen}
       >
-        {/* Resize Handle */}
+        {/* Enhanced Resize Handle */}
         <Box
           ref={resizeRef}
           onMouseDown={handleResizeStart}
           sx={{
             position: 'absolute',
-            left: 0,
+            left: '-4px',
             top: 0,
-            width: '8px',
+            width: '12px',
             height: '100%',
             cursor: 'col-resize',
             backgroundColor: 'transparent',
-            zIndex: 1000,
+            zIndex: 1200,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            '&:hover': {
-              backgroundColor: currentTheme.primary,
-              '& .resize-indicator': {
-                opacity: 1,
-              },
-            },
-            '&:hover::before': {
+            borderRadius: '0 4px 4px 0',
+            '&::before': {
               content: '""',
               position: 'absolute',
-              left: '0',
-              top: '0',
-              width: '2px',
-              height: '100%',
+              left: '4px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '4px',
+              height: '40px',
               backgroundColor: currentTheme.primary,
-              opacity: 0.6,
+              opacity: 0.7,
+              borderRadius: '2px',
+              transition: 'all 0.2s ease',
+            },
+            '&:hover': {
+              backgroundColor: `${currentTheme.primary}15`,
+              '&::before': {
+                opacity: 0.8,
+                height: '60px',
+                backgroundColor: currentTheme.primary,
+              },
+              '& .resize-indicator': {
+                opacity: 1,
+                transform: 'rotate(90deg) scale(1.1)',
+              },
+            },
+            '&:active': {
+              backgroundColor: `${currentTheme.primary}25`,
+              '&::before': {
+                opacity: 1,
+                height: '80px',
+              },
             },
             transition: 'background-color 0.2s ease',
           }}
@@ -412,12 +432,14 @@ export const Dashboard: React.FC = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              opacity: 0.3,
-              transition: 'opacity 0.2s ease',
+              opacity: 0.6,
+              transition: 'all 0.2s ease',
               transform: 'rotate(90deg)',
+              pointerEvents: 'none',
               '& .MuiSvgIcon-root': {
-                fontSize: '16px',
+                fontSize: '14px',
                 color: currentTheme.primary,
+                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
               },
             }}
           >
