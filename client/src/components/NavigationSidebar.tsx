@@ -15,6 +15,7 @@ import {
   TextField,
   InputAdornment,
   Chip,
+  alpha,
 } from '@mui/material';
 import {
   ExpandLess,
@@ -37,6 +38,7 @@ import {
 import { SharePointSite, SharePointLibrary, NavigationItem } from '../types';
 import { useSharePointData } from '../hooks/useSharePointData';
 import { useRecentFiles } from '../hooks/useRecentFiles';
+import { useDynamicTheme } from '../contexts/DynamicThemeContext';
 
 interface NavigationSidebarProps {
   onNavigate: (path: string) => void;
@@ -57,6 +59,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { sites, libraries, loading, error, refreshData } = useSharePointData();
   const { recentCount, loading: recentLoading } = useRecentFiles();
+  const { currentTheme } = useDynamicTheme();
 
   // Handle sidebar resize
   useEffect(() => {
@@ -358,11 +361,11 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
               cursor: 'pointer',
               transition: 'background-color 0.2s ease-in-out',
               '&:hover': {
-                backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                backgroundColor: alpha(currentTheme.primary, 0.1),
               }
             }}
           >
-            <SearchIcon sx={{ color: '#7c3aed', fontSize: '20px' }} />
+            <SearchIcon sx={{ color: currentTheme.primary, fontSize: '20px' }} />
           </Box>
         ) : (
           // Full search field when expanded
@@ -436,14 +439,14 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                 minHeight: 40,
                 transition: 'all 0.2s ease-in-out',
                 '&:hover': {
-                  backgroundColor: 'rgba(124, 58, 237, 0.08)',
+                  backgroundColor: alpha(currentTheme.primary, 0.08),
                   transform: 'translateX(2px)',
                 },
                 '&.Mui-selected': {
-                  backgroundColor: '#7c3aed',
+                  backgroundColor: currentTheme.primary,
                   color: 'white',
                   '&:hover': {
-                    backgroundColor: '#6d28d9',
+                    backgroundColor: currentTheme.secondary,
                   },
                   '& .MuiListItemIcon-root': {
                     color: 'white',
@@ -475,11 +478,11 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           justifyContent: 'center',
           gap: 0.5,
           '&:hover': {
-            backgroundColor: 'rgba(124, 58, 237, 0.05)',
+            backgroundColor: alpha(currentTheme.primary, 0.05),
             '& .edge-dots': {
               opacity: 1,
               transform: 'scale(1.2)',
-              backgroundColor: '#7c3aed',
+              backgroundColor: currentTheme.primary,
             }
           },
           zIndex: 10,
@@ -493,7 +496,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             sx={{
               width: 4,
               height: 4,
-              backgroundColor: '#c4b5fd',
+              backgroundColor: alpha(currentTheme.primary, 0.3),
               borderRadius: '50%',
               opacity: 0.4,
               transition: 'all 0.3s ease-in-out',

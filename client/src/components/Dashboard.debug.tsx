@@ -30,6 +30,7 @@ import { OneDrivePage } from './pages/OneDrivePage';
 import { BrandWatermark } from './BrandWatermark';
 import { UserProfileMenu } from './UserProfileMenu';
 import { useAuth } from '../contexts/AuthContext';
+import { useDynamicTheme } from '../contexts/DynamicThemeContext';
 import { LayoutState } from '../types';
 
 const getDrawerWidth = (theme: any, isMobile: boolean) => {
@@ -44,6 +45,7 @@ const getAIPanelWidth = (theme: any, isMobile: boolean) => {
 
 export const Dashboard: React.FC = () => {
   const theme = useTheme();
+  const { currentTheme } = useDynamicTheme();
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, logout } = useAuth();
@@ -165,7 +167,7 @@ export const Dashboard: React.FC = () => {
           width: `calc(100% - ${actualSidebarWidth}px)`,
           ml: `${actualSidebarWidth}px`,
           zIndex: theme.zIndex.drawer + 1,
-          background: 'linear-gradient(135deg, #4c1d95 0%, #6d28d9 30%, #7c3aed 70%, #8b5cf6 100%)',
+          background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.secondary} 30%, ${currentTheme.accent} 70%, ${currentTheme.primary} 100%)`,
           transition: theme.transitions.create(['width', 'margin'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
