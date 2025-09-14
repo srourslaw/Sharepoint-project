@@ -21,6 +21,7 @@ export const ThemeSelector: React.FC = () => {
   const muiTheme = useTheme();
 
   const handleThemeChange = (themeId: string) => {
+    console.log(`Switching theme from ${themeName} to ${themeId}`);
     setTheme(themeId);
   };
 
@@ -39,12 +40,12 @@ export const ThemeSelector: React.FC = () => {
           </Box>
         </Box>
 
-        <Grid container spacing={2}>
+        <Grid container spacing={1.5}>
           {availableThemes.map((theme) => {
             const isSelected = theme.id === themeName;
 
             return (
-              <Grid item xs={12} sm={6} md={4} key={theme.id}>
+              <Grid item xs={6} sm={4} md={3} key={theme.id}>
                 <Card
                   sx={{
                     cursor: 'pointer',
@@ -65,33 +66,33 @@ export const ThemeSelector: React.FC = () => {
                   }}
                   onClick={() => handleThemeChange(theme.id)}
                 >
-                  <CardContent sx={{ p: 3 }}>
+                  <CardContent sx={{ p: 1.5 }}>
                     {/* Theme Color Preview */}
-                    <Box sx={{ mb: 2 }}>
+                    <Box sx={{ mb: 1.5 }}>
                       <Box
                         sx={{
-                          height: 60,
-                          borderRadius: 2,
+                          height: 40,
+                          borderRadius: 1.5,
                           background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.secondary} 50%, ${theme.accent} 100%)`,
                           position: 'relative',
                           overflow: 'hidden',
-                          boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                         }}
                       >
                         {/* Color swatches overlay */}
                         <Box
                           sx={{
                             position: 'absolute',
-                            bottom: 8,
-                            right: 8,
+                            bottom: 4,
+                            right: 4,
                             display: 'flex',
-                            gap: 0.5,
+                            gap: 0.25,
                           }}
                         >
                           <Box
                             sx={{
-                              width: 12,
-                              height: 12,
+                              width: 8,
+                              height: 8,
                               borderRadius: '50%',
                               backgroundColor: theme.success,
                               border: '1px solid rgba(255,255,255,0.3)',
@@ -99,8 +100,8 @@ export const ThemeSelector: React.FC = () => {
                           />
                           <Box
                             sx={{
-                              width: 12,
-                              height: 12,
+                              width: 8,
+                              height: 8,
                               borderRadius: '50%',
                               backgroundColor: theme.warning,
                               border: '1px solid rgba(255,255,255,0.3)',
@@ -108,8 +109,8 @@ export const ThemeSelector: React.FC = () => {
                           />
                           <Box
                             sx={{
-                              width: 12,
-                              height: 12,
+                              width: 8,
+                              height: 8,
                               borderRadius: '50%',
                               backgroundColor: theme.error,
                               border: '1px solid rgba(255,255,255,0.3)',
@@ -122,21 +123,21 @@ export const ThemeSelector: React.FC = () => {
                           <Box
                             sx={{
                               position: 'absolute',
-                              top: 8,
-                              right: 8,
-                              width: 24,
-                              height: 24,
+                              top: 4,
+                              right: 4,
+                              width: 18,
+                              height: 18,
                               borderRadius: '50%',
-                              backgroundColor: 'rgba(255,255,255,0.9)',
+                              backgroundColor: 'rgba(255,255,255,0.95)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                              boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
                             }}
                           >
                             <CheckIcon
                               sx={{
-                                fontSize: 16,
+                                fontSize: 12,
                                 color: theme.primary,
                                 fontWeight: 600,
                               }}
@@ -149,41 +150,33 @@ export const ThemeSelector: React.FC = () => {
                     {/* Theme Info */}
                     <Box>
                       <Typography
-                        variant="h6"
+                        variant="subtitle2"
                         sx={{
                           fontWeight: 600,
-                          fontSize: '1rem',
+                          fontSize: '0.85rem',
                           mb: 0.5,
                           color: isSelected ? currentTheme.primary : 'text.primary',
+                          textAlign: 'center',
                         }}
                       >
                         {theme.displayName}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{
-                          fontSize: '0.8rem',
-                          lineHeight: 1.4,
-                          mb: 2,
-                        }}
-                      >
-                        {theme.description}
-                      </Typography>
 
                       {/* Status Chip */}
                       {isSelected && (
-                        <Chip
-                          label="Active"
-                          size="small"
-                          sx={{
-                            backgroundColor: alpha(currentTheme.primary, 0.1),
-                            color: currentTheme.primary,
-                            fontWeight: 600,
-                            fontSize: '0.7rem',
-                            height: 24,
-                          }}
-                        />
+                        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                          <Chip
+                            label="Active"
+                            size="small"
+                            sx={{
+                              backgroundColor: alpha(currentTheme.primary, 0.1),
+                              color: currentTheme.primary,
+                              fontWeight: 500,
+                              fontSize: '0.6rem',
+                              height: 18,
+                            }}
+                          />
+                        </Box>
                       )}
                     </Box>
                   </CardContent>

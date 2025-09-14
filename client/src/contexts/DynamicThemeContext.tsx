@@ -176,6 +176,11 @@ export const DynamicThemeProvider: React.FC<DynamicThemeProviderProps> = ({ chil
 
   const [muiTheme, setMuiTheme] = useState<Theme>(createMuiTheme(currentTheme));
 
+  // Update Material-UI theme when currentTheme changes
+  useEffect(() => {
+    setMuiTheme(createMuiTheme(currentTheme));
+  }, [currentTheme]);
+
   // Update theme function
   const setTheme = (themeId: string) => {
     try {
