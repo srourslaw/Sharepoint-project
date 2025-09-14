@@ -188,13 +188,97 @@ export const Dashboard: React.FC = () => {
         // Home page - SharePoint sites and documents
         return (
           <>
-            <Typography variant="h4" gutterBottom>
-              🏠 SharePoint Home
-            </Typography>
-            <Typography variant="body1" gutterBottom>
-              Browse your SharePoint sites, libraries, and documents
-            </Typography>
-            
+            {/* Beautiful Home Header */}
+            <Box sx={{
+              background: `linear-gradient(135deg, ${currentTheme.primary}08 0%, ${currentTheme.secondary}08 50%, ${currentTheme.accent}08 100%)`,
+              borderRadius: 3,
+              p: 4,
+              mb: 3,
+              border: `1px solid ${currentTheme.primary}15`,
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '4px',
+                background: `linear-gradient(90deg, ${currentTheme.primary}, ${currentTheme.secondary}, ${currentTheme.accent})`,
+              }
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Box sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '16px',
+                  background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: `0 8px 24px ${currentTheme.primary}40`,
+                }}>
+                  <Typography variant="h3" sx={{ color: 'white' }}>🏢</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="h3" sx={{
+                    fontWeight: 700,
+                    color: currentTheme.text.primary,
+                    mb: 0.5,
+                    background: `linear-gradient(45deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}>
+                    Your SharePoint Hub
+                  </Typography>
+                  <Typography variant="body1" sx={{
+                    color: currentTheme.text.secondary,
+                    fontSize: '1.1rem'
+                  }}>
+                    Access your sites, libraries, and documents in one place
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Quick Stats */}
+              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: currentTheme.primary,
+                  }} />
+                  <Typography variant="body2" sx={{ color: currentTheme.text.secondary }}>
+                    2 Active Sites
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: currentTheme.secondary,
+                  }} />
+                  <Typography variant="body2" sx={{ color: currentTheme.text.secondary }}>
+                    4 Document Libraries
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: currentTheme.accent,
+                  }} />
+                  <Typography variant="body2" sx={{ color: currentTheme.text.secondary }}>
+                    Recent Activity
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
             <Box sx={{
               flexGrow: 1,
               display: 'flex',
@@ -341,9 +425,9 @@ export const Dashboard: React.FC = () => {
         }}
       >
         <Toolbar />
-        
-        {/* Conditional Breadcrumb Navigation - only for Home/SharePoint content */}
-        {location.pathname === '/' && (
+
+        {/* Conditional Breadcrumb Navigation - only when navigating within folders */}
+        {location.pathname === '/' && currentPath && currentPath !== '/' && (
           <BreadcrumbNavigation currentPath={currentPath} onNavigate={setCurrentPath} />
         )}
         

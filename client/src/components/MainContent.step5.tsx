@@ -199,25 +199,32 @@ export const MainContent: React.FC<MainContentProps> = ({
   };
 
   const renderGridView = () => (
-    <Grid container spacing={{ xs: 2, sm: 2, md: 3 }} sx={{ p: { xs: 1, sm: 2 } }}>
-      {filteredFiles.map((file) => (
-        <Grid item xs={6} sm={4} md={3} lg={2} xl={2} key={file.id}>
+    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, bgcolor: 'background.default', minHeight: '100vh' }}>
+      <Grid container spacing={{ xs: 3, sm: 4, md: 4, lg: 5 }} sx={{ mb: 4 }}>
+        {filteredFiles.map((file) => (
+        <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={file.id}>
           <Card
             sx={{
               cursor: 'pointer',
               border: selectedFiles.includes(file.id) ? 2 : 1,
               borderColor: selectedFiles.includes(file.id) ? 'primary.main' : 'divider',
               backgroundColor: selectedFiles.includes(file.id) ? 'primary.50' : 'background.paper',
-              transition: 'all 0.2s ease-in-out',
+              transition: 'all 0.3s ease-in-out',
               display: 'flex',
               flexDirection: 'column',
               height: 'auto',
-              minHeight: 160,
-              maxHeight: 200,
+              minHeight: { xs: 180, sm: 200 },
+              maxHeight: { xs: 220, sm: 240 },
               width: '100%',
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
               '&:hover': {
-                boxShadow: 2,
-                transform: 'translateY(-1px)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                transform: 'translateY(-4px)',
+                borderColor: 'primary.light',
+              },
+              '&:active': {
+                transform: 'translateY(-2px)',
               },
             }}
             onClick={() => {
@@ -271,10 +278,17 @@ export const MainContent: React.FC<MainContentProps> = ({
                 flexGrow={1}
               >
                 <Box
-                  mb={{ xs: 1, sm: 1.5 }}
+                  mb={{ xs: 1.5, sm: 2 }}
                   sx={{
+                    p: { xs: 1, sm: 1.5 },
+                    borderRadius: 2,
+                    backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                    border: '1px solid rgba(25, 118, 210, 0.08)',
+                    transition: 'all 0.2s ease',
                     '& > *': {
-                      fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' } // Consistent icon sizes
+                      fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
+                      color: 'primary.main',
+                      filter: 'drop-shadow(0 2px 4px rgba(25, 118, 210, 0.1))'
                     }
                   }}
                 >
@@ -285,27 +299,31 @@ export const MainContent: React.FC<MainContentProps> = ({
                   variant="body2"
                   sx={{
                     width: '100%',
-                    fontWeight: 500,
-                    fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.8rem' },
-                    lineHeight: 1.1,
+                    fontWeight: 600,
+                    fontSize: { xs: '0.75rem', sm: '0.85rem', md: '0.9rem' },
+                    lineHeight: 1.3,
                     wordBreak: 'break-word',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
+                    mb: 0.5,
+                    color: 'text.primary'
                   }}
                 >
                   {file.displayName}
                 </Typography>
-                
+
                 <Typography
                   variant="caption"
                   color="text.secondary"
                   sx={{
-                    mb: 0.5,
-                    fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
-                    display: { xs: 'none', sm: 'block' }
+                    fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.02em',
+                    opacity: 0.8
                   }}
                 >
                   {file.isFolder ? 'Folder' : formatFileSize(file.size)}
@@ -326,7 +344,8 @@ export const MainContent: React.FC<MainContentProps> = ({
           </Card>
         </Grid>
       ))}
-    </Grid>
+      </Grid>
+    </Box>
   );
 
   const renderListView = () => (
