@@ -64,7 +64,7 @@ export const PeoplePage: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const { peopleData, loading, error, refreshPeopleData } = useSharePointPeople();
-  const { theme } = useDynamicTheme();
+  const { currentTheme } = useDynamicTheme();
 
   // Handler functions
   const handleInvitePeople = () => {
