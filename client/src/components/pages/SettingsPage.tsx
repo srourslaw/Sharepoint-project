@@ -42,10 +42,10 @@ import { useDynamicTheme } from '../../contexts/DynamicThemeContext';
 
 export const SettingsPage: React.FC = () => {
   const { settingsData, loading, error, updateSettings, refreshSettings, hasUnsavedChanges } = useSharePointSettings();
-  const { setTheme } = useDynamicTheme();
+  const { setTheme, isDarkMode, toggleDarkMode } = useDynamicTheme();
   const [localSettings, setLocalSettings] = useState(settingsData.settings);
-  const [hasLocalChanges, setHasLocalChanges] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [hasLocalChanges, setHasLocalChanges] = useState(false);
 
   // Sync local settings when data loads
   React.useEffect(() => {
@@ -68,7 +68,10 @@ export const SettingsPage: React.FC = () => {
       },
     }));
 
-    // Theme changes are now handled by the ThemeSelector component
+    // Handle special settings that need immediate effect
+    if (category === 'appearance' && setting === 'darkMode' && typeof value === 'boolean') {
+      toggleDarkMode(value);
+    }
   };
 
   const handleSave = async () => {
@@ -86,7 +89,7 @@ export const SettingsPage: React.FC = () => {
 
   const handleReset = () => {
     setLocalSettings(settingsData.settings);
-    // Theme is managed by the DynamicThemeProvider
+    setSaveMessage(null);
   };
 
   const handleCreateBackup = () => {
@@ -260,7 +263,7 @@ export const SettingsPage: React.FC = () => {
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={localSettings.appearance.darkMode}
+                      checked={isDarkMode}
                       onChange={(e) => handleSettingChange('appearance', 'darkMode', e.target.checked)}
                     />
                   </ListItemSecondaryAction>

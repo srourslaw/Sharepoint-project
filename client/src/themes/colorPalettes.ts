@@ -84,9 +84,9 @@ export const COLOR_THEMES: ColorPalette[] = [
     name: 'skyblue',
     displayName: 'Sky Blue',
     description: 'Fresh and modern with vibrant blue accents',
-    primary: '#3498db',
-    secondary: '#5d7fdb',
-    accent: '#667eea',
+    primary: '#2563eb', // Deep blue
+    secondary: '#3b82f6', // Medium blue
+    accent: '#60a5fa', // Light blue
     background: '#f8f9fa',
     surface: '#ffffff',
     text: {
@@ -106,9 +106,9 @@ export const COLOR_THEMES: ColorPalette[] = [
     name: 'emerald',
     displayName: 'Emerald Green',
     description: 'Nature-inspired with vibrant green tones',
-    primary: '#2ecc71',
-    secondary: '#a8e6cf',
-    accent: '#b5ead7',
+    primary: '#059669', // Deep emerald
+    secondary: '#10b981', // Medium emerald
+    accent: '#34d399', // Light emerald
     background: '#f8f9fa',
     surface: '#ffffff',
     text: {
@@ -128,9 +128,9 @@ export const COLOR_THEMES: ColorPalette[] = [
     name: 'orange',
     displayName: 'Orange Sunset',
     description: 'Warm and energetic with sunset orange tones',
-    primary: '#f39c12',
-    secondary: '#ffd93d',
-    accent: '#ff9aa2',
+    primary: '#ea580c', // Deep orange
+    secondary: '#f97316', // Medium orange
+    accent: '#fb923c', // Light orange
     background: '#f8f9fa',
     surface: '#ffffff',
     text: {
@@ -150,9 +150,9 @@ export const COLOR_THEMES: ColorPalette[] = [
     name: 'coral',
     displayName: 'Coral Pink',
     description: 'Soft and creative with coral pink highlights',
-    primary: '#ff9aa2',
-    secondary: '#ffd93d',
-    accent: '#b5ead7',
+    primary: '#ec4899', // Deep pink
+    secondary: '#f472b6', // Medium pink
+    accent: '#f9a8d4', // Light pink
     background: '#f8f9fa',
     surface: '#ffffff',
     text: {
@@ -172,9 +172,9 @@ export const COLOR_THEMES: ColorPalette[] = [
     name: 'mint',
     displayName: 'Mint Fresh',
     description: 'Calm and refreshing with mint green accents',
-    primary: '#a8e6cf',
-    secondary: '#b5ead7',
-    accent: '#2ecc71',
+    primary: '#14b8a6', // Deep teal
+    secondary: '#20d9cc', // Medium teal
+    accent: '#7dd3fc', // Light teal
     background: '#f8f9fa',
     surface: '#ffffff',
     text: {
@@ -194,9 +194,9 @@ export const COLOR_THEMES: ColorPalette[] = [
     name: 'navy',
     displayName: 'Professional Navy',
     description: 'Corporate and sophisticated with deep navy tones',
-    primary: '#2c3e50',
-    secondary: '#34495e',
-    accent: '#3498db',
+    primary: '#1e293b', // Deep navy
+    secondary: '#334155', // Medium navy
+    accent: '#64748b', // Light navy
     background: '#ecf0f1',
     surface: '#ffffff',
     text: {
@@ -216,9 +216,9 @@ export const COLOR_THEMES: ColorPalette[] = [
     name: 'periwinkle',
     displayName: 'Periwinkle Blue',
     description: 'Elegant and modern with periwinkle accents',
-    primary: '#5d7fdb',
-    secondary: '#667eea',
-    accent: '#3498db',
+    primary: '#6366f1', // Deep indigo
+    secondary: '#8b5cf6', // Medium indigo
+    accent: '#a78bfa', // Light indigo
     background: '#f8f9fa',
     surface: '#ffffff',
     text: {
@@ -229,7 +229,7 @@ export const COLOR_THEMES: ColorPalette[] = [
     success: '#2ecc71',
     warning: '#f39c12',
     error: '#e74c3c',
-    info: '#5d7fdb',
+    info: '#6366f1',
   },
 ];
 

@@ -59,7 +59,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { sites, libraries, loading, error, refreshData } = useSharePointData();
   const { recentCount, loading: recentLoading } = useRecentFiles();
-  const { currentTheme } = useDynamicTheme();
+  const { currentTheme, isDarkMode } = useDynamicTheme();
 
   // Handle sidebar resize
   useEffect(() => {
@@ -338,8 +338,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         height: 'calc(100vh - 64px)',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: '#fafafa',
-        borderRight: '1px solid #e0e0e0',
+        backgroundColor: isDarkMode ? '#1e1b4b' : '#fafafa',
+        borderRight: isDarkMode ? '1px solid rgba(148, 163, 184, 0.2)' : '1px solid #e0e0e0',
         borderRadius: '0 0 0 0', // Remove top-right radius to eliminate gap
         overflow: 'hidden',
         boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
@@ -378,15 +378,26 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '8px',
-                backgroundColor: 'white',
+                backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.8)' : 'white',
+                color: isDarkMode ? '#f8fafc' : 'inherit',
+                '& input': {
+                  color: isDarkMode ? '#f8fafc' : 'inherit',
+                  '&::placeholder': {
+                    color: isDarkMode ? 'rgba(148, 163, 184, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+                    opacity: 1,
+                  },
+                },
+                '& fieldset': {
+                  borderColor: isDarkMode ? 'rgba(148, 163, 184, 0.3)' : 'rgba(0, 0, 0, 0.23)',
+                },
                 '&:hover': {
                   '& > fieldset': {
-                    borderColor: '#7c3aed',
+                    borderColor: currentTheme.primary,
                   },
                 },
                 '&.Mui-focused': {
                   '& > fieldset': {
-                    borderColor: '#7c3aed',
+                    borderColor: currentTheme.primary,
                   },
                 },
               },
@@ -394,7 +405,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon fontSize="small" sx={{ color: '#666' }} />
+                  <SearchIcon fontSize="small" sx={{ color: isDarkMode ? 'rgba(148, 163, 184, 0.7)' : '#666' }} />
                 </InputAdornment>
               ),
             }}

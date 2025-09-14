@@ -44,7 +44,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<SimpleMessage[]>([]);
-  const { currentTheme } = useDynamicTheme();
+  const { currentTheme, isDarkMode } = useDynamicTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -196,7 +196,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
               variant="body2"
               component="div"
               sx={{
-                color: currentTheme.text.primary,
+                color: isDarkMode ? '#f8fafc' : currentTheme.text.primary,
                 fontWeight: isUser ? 500 : 400,
                 lineHeight: 1.5,
                 whiteSpace: 'pre-wrap',
@@ -210,7 +210,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
             <Typography
               variant="caption"
               sx={{
-                color: 'rgba(30,41,59,0.6)',
+                color: isDarkMode ? 'rgba(148, 163, 184, 0.7)' : 'rgba(30,41,59,0.6)',
                 display: 'block',
                 mt: 1,
                 textAlign: 'right',
@@ -307,7 +307,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
           flexGrow: 1,
           overflow: 'auto',
           p: 2,
-          backgroundColor: currentTheme.background,
+          backgroundColor: isDarkMode ? '#0f0f1e' : currentTheme.background,
         }}
       >
         {messages.length === 0 ? (
@@ -408,15 +408,15 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
             variant="outlined"
             sx={{
               '& .MuiOutlinedInput-root': {
-                backgroundColor: currentTheme.surface,
+                backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.8)' : currentTheme.surface,
                 borderRadius: '12px',
                 '& input, & textarea': {
-                  color: currentTheme.text.primary,
+                  color: isDarkMode ? '#f8fafc' : currentTheme.text.primary,
                   fontSize: '14px',
                   fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
                 },
                 '& fieldset': {
-                  borderColor: 'rgba(124, 58, 237, 0.2)',
+                  borderColor: isDarkMode ? 'rgba(148, 163, 184, 0.3)' : 'rgba(124, 58, 237, 0.2)',
                 },
                 '&:hover': {
                   transform: 'translateY(-1px)',

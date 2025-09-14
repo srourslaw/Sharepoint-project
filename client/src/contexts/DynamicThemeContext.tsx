@@ -14,6 +14,8 @@ interface DynamicThemeContextType {
   muiTheme: Theme;
   setTheme: (themeId: string) => void;
   availableThemes: ColorPalette[];
+  isDarkMode: boolean;
+  toggleDarkMode: (enabled: boolean) => void;
 }
 
 const DynamicThemeContext = createContext<DynamicThemeContextType | undefined>(undefined);
@@ -33,15 +35,43 @@ export const DynamicThemeProvider: React.FC<DynamicThemeProviderProps> = ({ chil
     }
   };
 
+  // Get initial dark mode setting from localStorage
+  const getInitialDarkMode = (): boolean => {
+    try {
+      const savedSettings = localStorage.getItem('sharepoint-settings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        return settings.appearance?.darkMode || false;
+      }
+      return false;
+    } catch (error) {
+      console.warn('Failed to load dark mode setting from localStorage:', error);
+      return false;
+    }
+  };
+
   const [themeName, setThemeName] = useState<string>(getInitialTheme);
   const [currentTheme, setCurrentTheme] = useState<ColorPalette>(getThemeById(themeName));
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(getInitialDarkMode);
 
   // Create Material-UI theme from current color theme
-  const createMuiTheme = (colorTheme: ColorPalette): Theme => {
+  const createMuiTheme = (colorTheme: ColorPalette, darkMode: boolean = false): Theme => {
     return createTheme({
       palette: {
-        mode: 'light',
+        mode: darkMode ? 'dark' : 'light',
         ...createMuiPaletteFromTheme(colorTheme),
+        ...(darkMode && {
+          background: {
+            default: '#0f0f1e',
+            paper: '#1e1b4b',
+          },
+          text: {
+            primary: '#f8fafc',
+            secondary: '#94a3b8',
+            disabled: '#64748b',
+          },
+          divider: 'rgba(148, 163, 184, 0.2)',
+        }),
       },
       typography: {
         fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
@@ -174,12 +204,12 @@ export const DynamicThemeProvider: React.FC<DynamicThemeProviderProps> = ({ chil
     });
   };
 
-  const [muiTheme, setMuiTheme] = useState<Theme>(createMuiTheme(currentTheme));
+  const [muiTheme, setMuiTheme] = useState<Theme>(createMuiTheme(currentTheme, isDarkMode));
 
-  // Update Material-UI theme when currentTheme changes
+  // Update Material-UI theme when currentTheme or dark mode changes
   useEffect(() => {
-    setMuiTheme(createMuiTheme(currentTheme));
-  }, [currentTheme]);
+    setMuiTheme(createMuiTheme(currentTheme, isDarkMode));
+  }, [currentTheme, isDarkMode]);
 
   // Update theme function
   const setTheme = (themeId: string) => {
@@ -187,7 +217,7 @@ export const DynamicThemeProvider: React.FC<DynamicThemeProviderProps> = ({ chil
       const newTheme = getThemeById(themeId);
       setThemeName(themeId);
       setCurrentTheme(newTheme);
-      setMuiTheme(createMuiTheme(newTheme));
+      setMuiTheme(createMuiTheme(newTheme, isDarkMode));
 
       // Save to localStorage
       localStorage.setItem('dashboard-theme', themeId);
@@ -195,6 +225,33 @@ export const DynamicThemeProvider: React.FC<DynamicThemeProviderProps> = ({ chil
       console.log(`Theme switched to: ${newTheme.displayName}`);
     } catch (error) {
       console.error('Failed to switch theme:', error);
+    }
+  };
+
+  // Toggle dark mode function
+  const toggleDarkMode = (enabled: boolean) => {
+    setIsDarkMode(enabled);
+    setMuiTheme(createMuiTheme(currentTheme, enabled));
+
+    // Update the settings in localStorage
+    try {
+      const savedSettings = localStorage.getItem('sharepoint-settings');
+      let settings = {};
+      if (savedSettings) {
+        settings = JSON.parse(savedSettings);
+      }
+
+      const updatedSettings = {
+        ...settings,
+        appearance: {
+          ...(settings as any).appearance,
+          darkMode: enabled,
+        },
+      };
+
+      localStorage.setItem('sharepoint-settings', JSON.stringify(updatedSettings));
+    } catch (error) {
+      console.error('Failed to save dark mode setting:', error);
     }
   };
 
@@ -212,6 +269,8 @@ export const DynamicThemeProvider: React.FC<DynamicThemeProviderProps> = ({ chil
     muiTheme,
     setTheme,
     availableThemes: COLOR_THEMES,
+    isDarkMode,
+    toggleDarkMode,
   };
 
   return (
