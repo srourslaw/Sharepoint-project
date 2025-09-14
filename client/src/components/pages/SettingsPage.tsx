@@ -38,11 +38,11 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { useSharePointSettings } from '../../hooks/useSharePointSettings';
-import { useThemeMode } from '../../contexts/ThemeContext';
+import { useDynamicTheme } from '../../contexts/DynamicThemeContext';
 
 export const SettingsPage: React.FC = () => {
   const { settingsData, loading, error, updateSettings, refreshSettings, hasUnsavedChanges } = useSharePointSettings();
-  const { toggleDarkMode } = useThemeMode();
+  const { setTheme } = useDynamicTheme();
   const [localSettings, setLocalSettings] = useState(settingsData.settings);
   const [hasLocalChanges, setHasLocalChanges] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -68,17 +68,13 @@ export const SettingsPage: React.FC = () => {
       },
     }));
 
-    // Handle Dark Mode toggle immediately for better UX
-    if (category === 'appearance' && setting === 'darkMode' && typeof value === 'boolean') {
-      toggleDarkMode(value);
-    }
+    // Theme changes are now handled by the ThemeSelector component
   };
 
   const handleSave = async () => {
     try {
       await updateSettings(localSettings);
-      // Ensure theme is also updated when settings are saved
-      toggleDarkMode(localSettings.appearance.darkMode);
+      // Theme is managed by the DynamicThemeProvider
       setSaveMessage('Settings saved successfully!');
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (err) {
@@ -90,8 +86,7 @@ export const SettingsPage: React.FC = () => {
 
   const handleReset = () => {
     setLocalSettings(settingsData.settings);
-    // Reset theme to match original settings
-    toggleDarkMode(settingsData.settings.appearance.darkMode);
+    // Theme is managed by the DynamicThemeProvider
   };
 
   const handleCreateBackup = () => {
