@@ -259,10 +259,17 @@ export const AnalyticsChart: React.FC<AnalyticsChartProps> = ({
         return (
           <LineChart {...commonProps}>
             {showGrid && <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />}
-            <XAxis 
-              dataKey="x" 
+            <XAxis
+              dataKey="x"
               stroke={theme.palette.text.secondary}
               tick={{ fontSize: 12 }}
+              tickFormatter={(value) => {
+                // Map numeric values back to day labels
+                const dayMap: { [key: number]: string } = {
+                  1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'
+                };
+                return dayMap[value as number] || value;
+              }}
             />
             <YAxis 
               stroke={theme.palette.text.secondary}

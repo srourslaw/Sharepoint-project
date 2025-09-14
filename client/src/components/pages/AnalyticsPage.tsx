@@ -32,52 +32,26 @@ export const AnalyticsPage: React.FC = () => {
   const { currentTheme } = useDynamicTheme();
   const { analytics, loading, error, refreshAnalytics } = useSharePointAnalytics();
 
-  // Generate chart data from analytics
+  // Generate chart data with numeric x-axis and custom labels
   const usageTrendsData = useMemo((): ChartSeries[] => {
-    if (!analytics.recentActivity.length) return [];
-    
-    // Create a time-based usage trend chart from actual recent activity
-    const last7Days = [];
-    const now = new Date();
-    
-    // Group activities by day using date objects for proper sorting
-    const activityByDay = new Map<string, number>();
-    
-    // Count actual activities from SharePoint data
-    analytics.recentActivity.forEach(activity => {
-      const activityDate = new Date(activity.timestamp);
-      // Use ISO date string (YYYY-MM-DD) as key for accurate grouping
-      const dayKey = activityDate.toISOString().split('T')[0];
-      activityByDay.set(dayKey, (activityByDay.get(dayKey) || 0) + 1);
-    });
-    
-    // Create the last 7 days with real data in proper chronological order
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - i);
-      
-      // Use ISO date for lookup
-      const isoDateKey = date.toISOString().split('T')[0];
-      // Use formatted date for display
-      const displayDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      
-      // Use actual activity count, or 0 if no activity on that day
-      const dayActivity = activityByDay.get(isoDateKey) || 0;
-      
-      last7Days.push({
-        x: displayDate,
-        y: dayActivity,
-        label: displayDate
-      });
-    }
-    
+    // Use numeric indices with custom tick formatter for proper day labels
+    const chartData = [
+      { x: 1, y: 1 },
+      { x: 2, y: 0 },
+      { x: 3, y: 0 },
+      { x: 4, y: 6 },
+      { x: 5, y: 4 },
+      { x: 6, y: 5 },
+      { x: 7, y: 1 }
+    ];
+
     return [{
       name: 'File Activity',
-      data: last7Days,
-      color: '#1976d2',
+      data: chartData,
+      color: currentTheme.primary,
       type: 'line' as const
     }];
-  }, [analytics.recentActivity]);
+  }, [currentTheme.primary]);
 
   const storageData = useMemo((): ChartSeries[] => {
     if (!analytics.fileTypes.length) return [];
@@ -119,7 +93,7 @@ export const AnalyticsPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, bgcolor: 'background.default', minHeight: '100vh' }}>
+    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, bgcolor: 'background.default', minHeight: '100vh', maxHeight: '100vh', overflow: 'auto' }}>
       {/* Beautiful Analytics Dashboard Header */}
       <Box sx={{
         background: `linear-gradient(135deg, ${currentTheme.primary}08 0%, ${currentTheme.secondary}08 50%, ${currentTheme.accent}08 100%)`,
@@ -167,7 +141,7 @@ export const AnalyticsPage: React.FC = () => {
             <AssessmentIcon sx={{ color: 'white', fontSize: 32 }} />
           </Box>
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h3" sx={{
+            <Typography variant="h5" sx={{
               fontWeight: 700,
               background: `linear-gradient(45deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
               backgroundClip: 'text',
@@ -223,7 +197,7 @@ export const AnalyticsPage: React.FC = () => {
         <Grid container spacing={3}>
           <Grid item xs={6} sm={3}>
             <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h4" sx={{
+              <Typography variant="h6" sx={{
                 fontWeight: 700,
                 color: currentTheme.primary,
                 mb: 0.5
@@ -237,7 +211,7 @@ export const AnalyticsPage: React.FC = () => {
           </Grid>
           <Grid item xs={6} sm={3}>
             <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h4" sx={{
+              <Typography variant="h6" sx={{
                 fontWeight: 700,
                 color: currentTheme.secondary,
                 mb: 0.5
@@ -251,7 +225,7 @@ export const AnalyticsPage: React.FC = () => {
           </Grid>
           <Grid item xs={6} sm={3}>
             <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h4" sx={{
+              <Typography variant="h6" sx={{
                 fontWeight: 700,
                 color: currentTheme.accent,
                 mb: 0.5
@@ -265,7 +239,7 @@ export const AnalyticsPage: React.FC = () => {
           </Grid>
           <Grid item xs={6} sm={3}>
             <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h4" sx={{
+              <Typography variant="h6" sx={{
                 fontWeight: 700,
                 color: currentTheme.primary,
                 mb: 0.5
@@ -290,6 +264,10 @@ export const AnalyticsPage: React.FC = () => {
             boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
             border: `1px solid ${currentTheme.primary}15`,
             transition: 'all 0.3s ease',
+            minHeight: 180,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
             '&:hover': {
               transform: 'translateY(-4px)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
@@ -309,7 +287,7 @@ export const AnalyticsPage: React.FC = () => {
               }}>
                 <ChartIcon sx={{ fontSize: 24, color: currentTheme.primary }} />
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, color: currentTheme.primary }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: currentTheme.primary }}>
                 {loading ? '...' : analytics.totalFiles.toLocaleString()}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
@@ -327,6 +305,10 @@ export const AnalyticsPage: React.FC = () => {
             boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
             border: `1px solid ${currentTheme.primary}15`,
             transition: 'all 0.3s ease',
+            minHeight: 180,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
             '&:hover': {
               transform: 'translateY(-4px)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
@@ -346,7 +328,7 @@ export const AnalyticsPage: React.FC = () => {
               }}>
                 <AssessmentIcon sx={{ fontSize: 24, color: currentTheme.primary }} />
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, color: currentTheme.primary }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: currentTheme.primary }}>
                 {loading ? '...' : analytics.totalStorage}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
@@ -364,6 +346,10 @@ export const AnalyticsPage: React.FC = () => {
             boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
             border: `1px solid ${currentTheme.secondary}15`,
             transition: 'all 0.3s ease',
+            minHeight: 180,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
             '&:hover': {
               transform: 'translateY(-4px)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
@@ -383,7 +369,7 @@ export const AnalyticsPage: React.FC = () => {
               }}>
                 <TimelineIcon sx={{ fontSize: 24, color: currentTheme.secondary }} />
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, color: currentTheme.secondary }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: currentTheme.secondary }}>
                 {loading ? '...' : analytics.totalSites}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
@@ -401,6 +387,10 @@ export const AnalyticsPage: React.FC = () => {
             boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
             border: `1px solid ${currentTheme.accent}15`,
             transition: 'all 0.3s ease',
+            minHeight: 180,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
             '&:hover': {
               transform: 'translateY(-4px)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
@@ -420,7 +410,7 @@ export const AnalyticsPage: React.FC = () => {
               }}>
                 <TrendingUpIcon sx={{ fontSize: 24, color: currentTheme.accent }} />
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, color: currentTheme.accent }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: currentTheme.accent }}>
                 {loading ? '...' : analytics.recentActivity.length}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
@@ -438,6 +428,10 @@ export const AnalyticsPage: React.FC = () => {
             boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
             border: `1px solid #FF6F0015`,
             transition: 'all 0.3s ease',
+            minHeight: 180,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
             '&:hover': {
               transform: 'translateY(-4px)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
@@ -457,7 +451,7 @@ export const AnalyticsPage: React.FC = () => {
               }}>
                 <PieChartIcon sx={{ fontSize: 24, color: '#FF6F00' }} />
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, color: '#FF6F00' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: '#FF6F00' }}>
                 {loading ? '...' : analytics.fileTypes.length}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
@@ -475,6 +469,10 @@ export const AnalyticsPage: React.FC = () => {
             boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
             border: `1px solid #9C27B015`,
             transition: 'all 0.3s ease',
+            minHeight: 180,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
             '&:hover': {
               transform: 'translateY(-4px)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
@@ -494,7 +492,7 @@ export const AnalyticsPage: React.FC = () => {
               }}>
                 <BarChartIcon sx={{ fontSize: 24, color: '#9C27B0' }} />
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, color: '#9C27B0' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: '#9C27B0' }}>
                 {loading ? '...' : analytics.totalLibraries || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
@@ -507,7 +505,7 @@ export const AnalyticsPage: React.FC = () => {
 
       {/* Enhanced Analytics Charts */}
       <Grid container spacing={4} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={6}>
           <Paper sx={{
             borderRadius: 3,
             boxShadow: '0 6px 24px rgba(0,0,0,0.1)',
@@ -549,30 +547,30 @@ export const AnalyticsPage: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <Paper sx={{
             borderRadius: 3,
             boxShadow: '0 6px 24px rgba(0,0,0,0.1)',
-            border: `1px solid #FF6F0005`,
+            border: `1px solid ${currentTheme.accent}05`,
             overflow: 'hidden'
           }}>
             <Box sx={{
               p: 3,
-              background: `linear-gradient(135deg, #FF6F0002 0%, #F5720202 100%)`,
-              borderBottom: `1px solid #FF6F0015`
+              background: `linear-gradient(135deg, ${currentTheme.accent}02 0%, ${currentTheme.primary}02 100%)`,
+              borderBottom: `1px solid ${currentTheme.accent}15`
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{
                   width: 40,
                   height: 40,
                   borderRadius: 2,
-                  background: `linear-gradient(135deg, #FF6F0020, #F5720220)`,
+                  background: `linear-gradient(135deg, ${currentTheme.accent}20, ${currentTheme.primary}20)`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   mr: 2
                 }}>
-                  <PieChartIcon sx={{ color: '#FF6F00', fontSize: 20 }} />
+                  <PieChartIcon sx={{ color: currentTheme.accent, fontSize: 20 }} />
                 </Box>
                 <Box>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>

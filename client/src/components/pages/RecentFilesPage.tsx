@@ -450,7 +450,7 @@ export const RecentFilesPage: React.FC = () => {
             <TimeIcon sx={{ color: 'white', fontSize: 28 }} />
           </Box>
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h3" sx={{
+            <Typography variant="h5" sx={{
               fontWeight: 700,
               background: `linear-gradient(45deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
               backgroundClip: 'text',
@@ -497,7 +497,7 @@ export const RecentFilesPage: React.FC = () => {
         <Grid container spacing={3} sx={{ mt: 2 }}>
           <Grid item xs={6} sm={3}>
             <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h4" sx={{
+              <Typography variant="h6" sx={{
                 fontWeight: 700,
                 color: currentTheme.primary,
                 mb: 0.5
@@ -511,7 +511,7 @@ export const RecentFilesPage: React.FC = () => {
           </Grid>
           <Grid item xs={6} sm={3}>
             <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h4" sx={{
+              <Typography variant="h6" sx={{
                 fontWeight: 700,
                 color: currentTheme.secondary,
                 mb: 0.5
@@ -525,7 +525,7 @@ export const RecentFilesPage: React.FC = () => {
           </Grid>
           <Grid item xs={6} sm={3}>
             <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h4" sx={{
+              <Typography variant="h6" sx={{
                 fontWeight: 700,
                 color: currentTheme.accent,
                 mb: 0.5
@@ -539,7 +539,7 @@ export const RecentFilesPage: React.FC = () => {
           </Grid>
           <Grid item xs={6} sm={3}>
             <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h4" sx={{
+              <Typography variant="h6" sx={{
                 fontWeight: 700,
                 color: currentTheme.primary,
                 mb: 0.5

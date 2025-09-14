@@ -292,7 +292,7 @@ export const PeoplePage: React.FC = () => {
               <ConnectWithoutContact sx={{ fontSize: 40, color: 'white' }} />
             </Box>
             <Box>
-              <Typography variant="h3" sx={{
+              <Typography variant="h5" sx={{
                 fontWeight: 700,
                 background: `linear-gradient(45deg, #FFFFFF, #F1F5F9)`,
                 backgroundClip: 'text',
@@ -411,7 +411,7 @@ export const PeoplePage: React.FC = () => {
             }}>
               <PeopleIcon sx={{ fontSize: 35, color: 'white' }} />
             </Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: currentTheme.primary, mb: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: currentTheme.primary, mb: 1 }}>
               {peopleData.recentContacts.length}
             </Typography>
             <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 500 }}>
@@ -452,7 +452,7 @@ export const PeoplePage: React.FC = () => {
             }}>
               <ShareIcon sx={{ fontSize: 35, color: 'white' }} />
             </Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#10B981', mb: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#10B981', mb: 1 }}>
               {peopleData.totalSharedItems}
             </Typography>
             <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 500 }}>
@@ -493,7 +493,7 @@ export const PeoplePage: React.FC = () => {
             }}>
               <SecurityIcon sx={{ fontSize: 35, color: 'white' }} />
             </Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#3B82F6', mb: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#3B82F6', mb: 1 }}>
               3
             </Typography>
             <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 500 }}>
@@ -540,7 +540,7 @@ export const PeoplePage: React.FC = () => {
                 <EmailIcon sx={{ fontSize: 35, color: 'white' }} />
               </Box>
             </Badge>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#F59E0B', mb: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#F59E0B', mb: 1 }}>
               {pendingInvitations.length}
             </Typography>
             <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 500 }}>

@@ -131,7 +131,7 @@ export const SettingsPage: React.FC = () => {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
-          <Typography variant="h4" gutterBottom>
+          <Typography variant="h5" gutterBottom>
             ⚙️ Settings
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -419,13 +419,13 @@ export const SettingsPage: React.FC = () => {
               <Grid container spacing={3}>
                 <Grid item xs={12} md={4}>
                   <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4" color="primary">15.6 GB</Typography>
+                    <Typography variant="h6" color="primary">15.6 GB</Typography>
                     <Typography variant="body2" color="text.secondary">Used</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} md={4}>
                   <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4" color="success.main">84.4 GB</Typography>
+                    <Typography variant="h6" color="success.main">84.4 GB</Typography>
                     <Typography variant="body2" color="text.secondary">Available</Typography>
                   </Box>
                 </Grid>

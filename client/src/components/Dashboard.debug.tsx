@@ -221,7 +221,7 @@ export const Dashboard: React.FC = () => {
                   <Typography variant="h3" sx={{ color: 'white' }}>🏢</Typography>
                 </Box>
                 <Box>
-                  <Typography variant="h3" sx={{
+                  <Typography variant="h5" sx={{
                     fontWeight: 700,
                     color: currentTheme.text.primary,
                     mb: 0.5,
