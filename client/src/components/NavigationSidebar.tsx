@@ -225,19 +225,19 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   };
 
   const renderIcon = (iconName: string, isActive: boolean = false) => {
-    const iconColor = isActive ? '#ffffff' : '#7c3aed';
+    const iconColor = isActive ? '#ffffff' : currentTheme.primary;
     
     switch (iconName) {
       case 'home': return <HomeIcon sx={{ color: iconColor, fontSize: '20px' }} />;
       case 'star': return <StarIcon sx={{ color: '#f59e0b', fontSize: '20px' }} />;
       case 'recent': return <RecentIcon sx={{ color: iconColor, fontSize: '20px' }} />;
-      case 'onedrive': return <OneDriveIcon sx={{ color: '#06b6d4', fontSize: '20px' }} />;
-      case 'analytics': return <AnalyticsIcon sx={{ color: '#10b981', fontSize: '20px' }} />;
+      case 'onedrive': return <OneDriveIcon sx={{ color: iconColor, fontSize: '20px' }} />;
+      case 'analytics': return <AnalyticsIcon sx={{ color: iconColor, fontSize: '20px' }} />;
       case 'settings': return <SettingsIcon sx={{ color: iconColor, fontSize: '20px' }} />;
-      case 'people': return <PeopleIcon sx={{ color: '#a855f7', fontSize: '20px' }} />;
+      case 'people': return <PeopleIcon sx={{ color: iconColor, fontSize: '20px' }} />;
       case 'dashboard': return <DashboardIcon sx={{ color: iconColor, fontSize: '20px' }} />;
-      case 'site': return <SiteIcon sx={{ color: '#3b82f6', fontSize: '20px' }} />;
-      case 'library': return <LibraryIcon sx={{ color: '#8b5cf6', fontSize: '20px' }} />;
+      case 'site': return <SiteIcon sx={{ color: iconColor, fontSize: '20px' }} />;
+      case 'library': return <LibraryIcon sx={{ color: iconColor, fontSize: '20px' }} />;
       case 'folder': return <FolderIcon sx={{ color: '#f59e0b', fontSize: '20px' }} />;
       case 'folder-open': return <FolderOpenIcon sx={{ color: '#f59e0b', fontSize: '20px' }} />;
       case 'separator': return null;
