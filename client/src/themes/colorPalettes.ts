@@ -62,9 +62,9 @@ export const COLOR_THEMES: ColorPalette[] = [
     name: 'purple',
     displayName: 'Royal Purple',
     description: 'The classic purple theme - sophisticated and professional',
-    primary: '#764ba2',
+    primary: '#7c3aed',
     secondary: '#9013fe',
-    accent: '#667eea',
+    accent: '#8b5cf6',
     background: '#f8f9fa',
     surface: '#ffffff',
     text: {

@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 
 import { useEnhancedAIChat } from '../hooks/useEnhancedAIChat';
+import { useDynamicTheme } from '../contexts/DynamicThemeContext';
 
 interface SimplifiedAIChatProps {
   selectedFiles: string[];
@@ -43,6 +44,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<SimpleMessage[]>([]);
+  const { currentTheme } = useDynamicTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -154,7 +156,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
       >
         {!isUser && (
           <Avatar sx={{ 
-            background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)', 
+            background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`, 
             width: 32, 
             height: 32,
             boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
@@ -171,7 +173,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
                 ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%)'
                 : 'linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%)',
               border: '2px solid',
-              borderColor: '#7c3aed',
+              borderColor: currentTheme.primary,
               borderRadius: '16px',
               borderTopLeftRadius: !isUser ? '4px' : '16px',
               borderTopRightRadius: isUser ? '4px' : '16px',
@@ -184,7 +186,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
                 left: '-1px',
                 right: '-1px',
                 bottom: '-1px',
-                background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+                background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`,
                 borderRadius: '16px',
                 zIndex: -1,
               },
@@ -194,7 +196,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
               variant="body2"
               component="div"
               sx={{
-                color: '#1e293b',
+                color: currentTheme.text.primary,
                 fontWeight: isUser ? 500 : 400,
                 lineHeight: 1.5,
                 whiteSpace: 'pre-wrap',
@@ -222,7 +224,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
 
         {isUser && (
           <Avatar sx={{ 
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+            background: `linear-gradient(135deg, ${currentTheme.success} 0%, ${currentTheme.success} 100%)`, 
             width: 32, 
             height: 32,
             boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
@@ -241,7 +243,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box display="flex" alignItems="center" gap={1}>
             <Avatar sx={{ 
-              background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)', 
+              background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`, 
               width: 32, 
               height: 32,
               boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
@@ -305,7 +307,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
           flexGrow: 1,
           overflow: 'auto',
           p: 2,
-          backgroundColor: '#fafafa',
+          backgroundColor: currentTheme.background,
         }}
       >
         {messages.length === 0 ? (
@@ -319,7 +321,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
             gap={2}
           >
             <Avatar sx={{ 
-              background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)', 
+              background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`, 
               width: 64, 
               height: 64,
               boxShadow: '0 8px 25px rgba(124, 58, 237, 0.4)'
@@ -341,7 +343,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
             {isLoading && (
               <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2, alignItems: 'flex-start', gap: 1 }}>
                 <Avatar sx={{ 
-                  background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)', 
+                  background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`, 
                   width: 32, 
                   height: 32,
                   boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
@@ -353,7 +355,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
                     p: 2,
                     background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%)',
                     border: '2px solid',
-                    borderColor: '#7c3aed',
+                    borderColor: currentTheme.primary,
                     borderRadius: '16px',
                     borderTopLeftRadius: '4px',
                     boxShadow: '0 2px 8px rgba(124, 58, 237, 0.1)',
@@ -365,7 +367,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
                       left: '-1px',
                       right: '-1px',
                       bottom: '-1px',
-                      background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+                      background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`,
                       borderRadius: '16px',
                       zIndex: -1,
                     },
@@ -406,10 +408,10 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
             variant="outlined"
             sx={{
               '& .MuiOutlinedInput-root': {
-                backgroundColor: '#ffffff',
+                backgroundColor: currentTheme.surface,
                 borderRadius: '12px',
                 '& input, & textarea': {
-                  color: '#1e293b',
+                  color: currentTheme.text.primary,
                   fontSize: '14px',
                   fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
                 },
@@ -420,14 +422,14 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
                   transform: 'translateY(-1px)',
                   boxShadow: '0 4px 12px rgba(124, 58, 237, 0.15)',
                   '& fieldset': {
-                    borderColor: '#7c3aed',
+                    borderColor: currentTheme.primary,
                   },
                 },
                 '&.Mui-focused': {
                   transform: 'translateY(-2px)',
                   boxShadow: '0 8px 25px rgba(124, 58, 237, 0.25)',
                   '& fieldset': {
-                    borderColor: '#7c3aed',
+                    borderColor: currentTheme.primary,
                     borderWidth: '2px',
                   },
                 },
@@ -442,7 +444,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
               p: 1,
               background: isLoading || !inputValue.trim() 
                 ? 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)' 
-                : 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+                : `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`,
               color: 'white',
               borderRadius: '12px',
               boxShadow: isLoading || !inputValue.trim() 
@@ -451,7 +453,7 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
               '&:hover': {
                 background: isLoading || !inputValue.trim() 
                   ? 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)' 
-                  : 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%)',
+                  : `linear-gradient(135deg, ${currentTheme.secondary} 0%, ${currentTheme.primary} 100%)`,
                 transform: isLoading || !inputValue.trim() ? 'none' : 'translateY(-2px)',
                 boxShadow: isLoading || !inputValue.trim() 
                   ? 'none' 
