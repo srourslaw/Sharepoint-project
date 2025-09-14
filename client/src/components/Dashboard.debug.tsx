@@ -206,6 +206,7 @@ export const Dashboard: React.FC = () => {
             <UserProfileMenu
               userName={user?.displayName || 'Unknown User'}
               userEmail={user?.mail || user?.userPrincipalName || 'unknown@email.com'}
+              user={user}
               onLogout={logout}
               onSettings={() => console.log('Settings clicked')}
             />

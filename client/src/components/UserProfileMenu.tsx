@@ -16,6 +16,9 @@ import {
   Logout as LogoutIcon,
   Notifications as NotificationsIcon,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { UserProfileDialog } from './UserProfileDialog';
+import { HelpSupportDialog } from './HelpSupportDialog';
 
 interface UserProfileMenuProps {
   userName?: string;
@@ -23,6 +26,12 @@ interface UserProfileMenuProps {
   avatarUrl?: string;
   onLogout?: () => void;
   onSettings?: () => void;
+  user?: {
+    id: string;
+    displayName: string;
+    mail: string;
+    userPrincipalName: string;
+  };
 }
 
 export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
@@ -30,10 +39,14 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
   userEmail = "john@company.com",
   avatarUrl,
   onLogout,
-  onSettings
+  onSettings,
+  user
 }) => {
+  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [helpDialogOpen, setHelpDialogOpen] = useState(false);
 
   const handleProfileClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -55,7 +68,17 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
 
   const handleSettings = () => {
     handleClose();
-    onSettings?.();
+    navigate('/settings');
+  };
+
+  const handleProfile = () => {
+    handleClose();
+    setProfileDialogOpen(true);
+  };
+
+  const handleHelp = () => {
+    handleClose();
+    setHelpDialogOpen(true);
   };
 
   return (
@@ -176,7 +199,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
 
         <Divider />
 
-        <MenuItem onClick={handleClose}>
+        <MenuItem onClick={handleProfile}>
           <AccountIcon sx={{ mr: 2, fontSize: 20 }} />
           Profile
         </MenuItem>
@@ -186,7 +209,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
           Settings
         </MenuItem>
 
-        <MenuItem onClick={handleClose}>
+        <MenuItem onClick={handleHelp}>
           <HelpIcon sx={{ mr: 2, fontSize: 20 }} />
           Help & Support
         </MenuItem>
@@ -198,6 +221,21 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
           Sign Out
         </MenuItem>
       </Menu>
+
+      {/* Profile Dialog */}
+      <UserProfileDialog
+        open={profileDialogOpen}
+        onClose={() => setProfileDialogOpen(false)}
+        userName={userName}
+        userEmail={userEmail}
+        user={user}
+      />
+
+      {/* Help Support Dialog */}
+      <HelpSupportDialog
+        open={helpDialogOpen}
+        onClose={() => setHelpDialogOpen(false)}
+      />
     </Box>
   );
 };
