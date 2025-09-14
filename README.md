@@ -240,24 +240,216 @@ npm run dev
 
 ---
 
-## 🤝 **Contributing**
+## 📋 **Development Instructions & CI/CD Guidelines**
+
+### **🎯 Claude Code Project Kickoff Statement**
+
+For this project, we use **GitHub** as the single source of truth and persistent context. Treat the repository's commit history, branch structure, and file changes as the project's "memory".
+
+#### **How to Use GitHub Context**
+- **Commit History as Living Documentation**
+  Always read and interpret commit messages to understand what changed, why, and when. Use `git log`, `git diff`, and branch comparisons to track the evolution of the codebase and architecture decisions.
+- **Pattern Recognition & Reuse**
+  Identify and reuse established coding, architecture, and testing patterns. When adding new features, APIs, or modules, follow these patterns unless explicitly told otherwise. Maintain consistent approaches to error handling, authentication, and integration.
+- **Error Resolution via Comparison**
+  When something breaks, compare the current implementation to previously working versions and suggest fixes based on proven solutions from earlier commits.
+- **Architecture Continuity**
+  For new integrations, follow the same structure and conventions used in similar past work, keeping error handling, logging, and testing strategies consistent.
+
+#### **Development Workflow**
+- **Commit Strategy**
+  **CRITICAL**: Commit after **EVERY SINGLE CODE CHANGE** with clear, descriptive messages. Use "fix" or "debug" commits when investigating failed tests. **NO EXCEPTIONS** - every edit, no matter how small, must be committed.
+- **Branch Strategy**
+  Create feature branches for major phases or complex features. Merge into `main` only after all tests pass.
+
+#### **Your Role as Claude Code**
+- **Before starting a new phase**: Review the README and recent commits to understand the current state.
+- **During development**: Suggest next steps based on commit history and established patterns.
+- **When debugging**: Compare broken code to working implementations.
+- **When validating changes**: Ensure new work does not break existing functionality by referencing and running the test suite.
+
+#### **Key Principles**
+1. **Persistent Context** – Always leverage GitHub history before making suggestions.
+2. **Consistency** – Maintain coding, testing, and architecture patterns.
+3. **Continuity** – Ensure smooth integration without regressions.
+4. **Documentation** – Treat commit messages as part of the project's knowledge base.
+5. **Safety Net** – Use Git history for quick rollbacks if needed.
+6. **Testing Discipline** – Ensure all tests pass before merging or moving to the next phase.
+
+**Bottom Line:** GitHub is your "memory" for this project. Always reference commit history, branch structure, and past implementations before making recommendations. Use established patterns for architecture, testing, and error handling. Ensure every change is documented, tested, and consistent with the project's evolution. Your guidance should always be context‑aware, pattern‑aligned, and quality‑driven.
+
+---
+
+### **🔧 CI/CD Troubleshooting & Quick Fixes**
+
+#### **⚡ Common CI/CD Issues - RESOLVED SOLUTIONS**
+
+**1. Package Lock File Out of Sync (MOST COMMON)**
+```bash
+# ROOT CAUSE: package-lock.json not in sync with package.json
+# SOLUTION: Update package-lock.json and commit
+cd client
+npm install --legacy-peer-deps
+cd ../server
+npm install --legacy-peer-deps
+cd ..
+git add client/package-lock.json server/package-lock.json package-lock.json
+git commit -m "🔧 CI/CD FIX: Sync package-lock.json files"
+git push origin main
+```
+
+**2. Build Failures Due to Missing Dependencies**
+```bash
+# SOLUTION: Clean install dependencies
+rm -rf node_modules client/node_modules server/node_modules
+rm package-lock.json client/package-lock.json server/package-lock.json
+npm install --legacy-peer-deps
+cd client && npm install --legacy-peer-deps
+cd ../server && npm install --legacy-peer-deps
+cd ..
+git add . && git commit -m "🔧 CI/CD FIX: Rebuild all package-lock.json files"
+```
+
+**3. TypeScript Build Errors**
+```bash
+# SOLUTION: Check TypeScript configuration and dependencies
+npm run build  # Test locally first
+npm run typecheck  # Verify type checking
+git add . && git commit -m "🔧 CI/CD FIX: Resolve TypeScript build errors"
+```
+
+#### **📊 GitHub Actions Workflow Status Check**
+```bash
+# Check recent workflow runs
+gh run list --limit 5
+
+# Watch current workflow
+gh run watch --exit-status
+
+# View workflow details
+gh run view --log
+```
+
+---
+
+### **⚙️ Mandatory Development Workflow**
+
+#### **🚨 CRITICAL RULE: COMMIT EVERYTHING**
+**EVERY single code change must be committed immediately. No exceptions.**
+
+```bash
+# After ANY code edit (no matter how small):
+git add .
+git commit -m "descriptive message about the change"
+git push origin main
+```
+
+#### **🔄 Standard Development Cycle**
+1. **Read Recent Commits**: `git log --oneline -10`
+2. **Check Current Status**: `git status`
+3. **Make Code Changes**
+4. **Test Changes**: Run tests/builds locally
+5. **Commit Changes**: `git add . && git commit -m "clear message"`
+6. **Push to GitHub**: `git push origin main`
+7. **Verify CI/CD**: `gh run list --limit 1`
+
+#### **📝 Commit Message Format**
+```bash
+# Format: TYPE: Brief description
+git commit -m "🔧 FIX: Resolve dark mode toggle functionality"
+git commit -m "✨ FEATURE: Add new color theme system"
+git commit -m "🎨 UI: Improve sidebar responsiveness"
+git commit -m "📚 DOCS: Update README with CI/CD instructions"
+git commit -m "🧪 TEST: Add unit tests for theme context"
+git commit -m "🚀 DEPLOY: Update Docker configuration"
+```
+
+#### **🛠 Local Testing Before Commit**
+```bash
+# Frontend Testing
+cd client
+npm run build  # Verify build works
+npm run lint   # Check code quality
+npm run typecheck  # Verify TypeScript
+
+# Backend Testing
+cd server
+npm run build  # Verify build works
+npm run lint   # Check code quality
+npm run typecheck  # Verify TypeScript
+
+# Docker Testing (if using containers)
+docker-compose build  # Verify Docker builds
+```
+
+---
+
+### **🚨 Emergency Recovery Procedures**
+
+#### **CI/CD Pipeline Completely Broken**
+```bash
+# 1. Identify last working commit
+git log --oneline --graph -20
+
+# 2. Reset to last working state (if needed)
+git reset --hard [LAST_WORKING_COMMIT]
+
+# 3. Force push (ONLY in emergency)
+git push --force origin main
+
+# 4. Or create hotfix branch
+git checkout -b hotfix/ci-cd-fix
+# Make fixes
+git commit -m "🚨 HOTFIX: Restore CI/CD functionality"
+git push origin hotfix/ci-cd-fix
+# Create PR to merge back to main
+```
+
+#### **Dependency Hell Recovery**
+```bash
+# Nuclear option - complete clean slate
+rm -rf node_modules client/node_modules server/node_modules
+rm package-lock.json client/package-lock.json server/package-lock.json
+npm install --legacy-peer-deps
+cd client && npm install --legacy-peer-deps && cd ..
+cd server && npm install --legacy-peer-deps && cd ..
+npm run build  # Test everything works
+git add . && git commit -m "🔥 REBUILD: Complete dependency reset"
+```
+
+---
+
+### **📋 Pre-Commit Checklist**
+
+Before every commit, ensure:
+- [ ] **Code compiles** without errors
+- [ ] **Tests pass** (if applicable)
+- [ ] **TypeScript types** are correct
+- [ ] **Build process** works locally
+- [ ] **Commit message** is descriptive
+- [ ] **Changes are focused** on one logical unit
+
+---
+
+### **🤝 Contributing Guidelines**
 
 We welcome contributions from the development community:
 
 1. **Fork the repository**
 2. **Create feature branch**: `git checkout -b feature/amazing-feature`
 3. **Make changes** following our coding standards
-4. **Add tests** for new functionality
+4. **Test changes** locally using the workflow above
 5. **Commit changes**: `git commit -m 'feat: add amazing feature'`
 6. **Push to branch**: `git push origin feature/amazing-feature`
 7. **Create Pull Request** with detailed description
 
-### **Development Guidelines**
+### **Development Standards**
 - Follow TypeScript best practices
 - Add comprehensive tests
-- Update documentation
-- Follow commit convention
-- Ensure CI/CD passes
+- Update documentation for any changes
+- Follow commit message convention
+- Ensure CI/CD passes before PR
+- **Commit every single change** - no exceptions
 
 ---
 
