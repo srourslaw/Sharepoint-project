@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Box,
@@ -14,6 +14,7 @@ import {
 import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  DragIndicator as DragIndicatorIcon,
 } from '@mui/icons-material';
 
 import { NavigationSidebar } from './NavigationSidebar';
@@ -43,6 +44,36 @@ const getAIPanelWidth = (theme: any, isMobile: boolean) => {
   return theme.breakpoints.up('lg') ? 380 : 350;
 };
 
+// AI Panel width constraints
+const AI_PANEL_MIN_WIDTH = 300;
+const AI_PANEL_MAX_WIDTH = 600;
+const AI_PANEL_DEFAULT_WIDTH = 380;
+
+// Get saved AI panel width from localStorage
+const getSavedAIPanelWidth = (): number => {
+  try {
+    const saved = localStorage.getItem('ai-panel-width');
+    if (saved) {
+      const width = parseInt(saved, 10);
+      if (width >= AI_PANEL_MIN_WIDTH && width <= AI_PANEL_MAX_WIDTH) {
+        return width;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load AI panel width from localStorage:', error);
+  }
+  return AI_PANEL_DEFAULT_WIDTH;
+};
+
+// Save AI panel width to localStorage
+const saveAIPanelWidth = (width: number) => {
+  try {
+    localStorage.setItem('ai-panel-width', width.toString());
+  } catch (error) {
+    console.warn('Failed to save AI panel width to localStorage:', error);
+  }
+};
+
 export const Dashboard: React.FC = () => {
   const theme = useTheme();
   const { currentTheme } = useDynamicTheme();
@@ -51,13 +82,14 @@ export const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
 
   const drawerWidth = getDrawerWidth(theme, isMobile);
-  const aiPanelWidth = getAIPanelWidth(theme, isMobile);
+  const defaultAIPanelWidth = getAIPanelWidth(theme, isMobile);
+  const savedAIPanelWidth = getSavedAIPanelWidth();
 
   const [layout, setLayout] = useState<LayoutState>({
     sidebarOpen: !isMobile,
     sidebarWidth: drawerWidth,
     aiPanelOpen: !isMobile,
-    aiPanelWidth: aiPanelWidth,
+    aiPanelWidth: isMobile ? defaultAIPanelWidth : savedAIPanelWidth,
     previewOpen: false,
     previewHeight: 500,
   });
@@ -65,6 +97,12 @@ export const Dashboard: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [actualSidebarWidth, setActualSidebarWidth] = useState<number>(drawerWidth);
+
+  // AI Panel resizing state
+  const [isResizing, setIsResizing] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startWidth, setStartWidth] = useState(0);
+  const resizeRef = useRef<HTMLDivElement>(null);
 
 
   const handleAIPanelToggle = () => {
@@ -84,6 +122,51 @@ export const Dashboard: React.FC = () => {
   const handleSidebarWidthChange = (width: number) => {
     setActualSidebarWidth(width);
   };
+
+  // AI Panel resize handlers
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    setIsResizing(true);
+    setStartX(e.clientX);
+    setStartWidth(layout.aiPanelWidth);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [layout.aiPanelWidth]);
+
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!isResizing) return;
+
+    const deltaX = startX - e.clientX; // Reverse direction for right-side panel
+    const newWidth = Math.max(
+      AI_PANEL_MIN_WIDTH,
+      Math.min(AI_PANEL_MAX_WIDTH, startWidth + deltaX)
+    );
+
+    setLayout(prev => ({
+      ...prev,
+      aiPanelWidth: newWidth
+    }));
+  }, [isResizing, startX, startWidth]);
+
+  const handleResizeEnd = useCallback(() => {
+    if (isResizing) {
+      setIsResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      saveAIPanelWidth(layout.aiPanelWidth);
+    }
+  }, [isResizing, layout.aiPanelWidth]);
+
+  // Mouse event listeners for resizing
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
 
   // Render content based on current route
   const renderMainContent = () => {
@@ -270,7 +353,7 @@ export const Dashboard: React.FC = () => {
       {/* Subtle Brand Watermark */}
       <BrandWatermark />
 
-      {/* AI Panel - RESTORED */}
+      {/* AI Panel - RESIZABLE */}
       <Drawer
         sx={{
           width: layout.aiPanelOpen ? layout.aiPanelWidth : 0,
@@ -280,13 +363,70 @@ export const Dashboard: React.FC = () => {
             boxSizing: 'border-box',
             mt: '64px',
             height: 'calc(100% - 64px)',
+            position: 'relative',
           },
         }}
         variant="persistent"
         anchor="right"
         open={layout.aiPanelOpen}
       >
-        <AIPanel 
+        {/* Resize Handle */}
+        <Box
+          ref={resizeRef}
+          onMouseDown={handleResizeStart}
+          sx={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: '8px',
+            height: '100%',
+            cursor: 'col-resize',
+            backgroundColor: 'transparent',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            '&:hover': {
+              backgroundColor: currentTheme.primary,
+              '& .resize-indicator': {
+                opacity: 1,
+              },
+            },
+            '&:hover::before': {
+              content: '""',
+              position: 'absolute',
+              left: '0',
+              top: '0',
+              width: '2px',
+              height: '100%',
+              backgroundColor: currentTheme.primary,
+              opacity: 0.6,
+            },
+            transition: 'background-color 0.2s ease',
+          }}
+        >
+          <Box
+            className="resize-indicator"
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: 0.3,
+              transition: 'opacity 0.2s ease',
+              transform: 'rotate(90deg)',
+              '& .MuiSvgIcon-root': {
+                fontSize: '16px',
+                color: currentTheme.primary,
+              },
+            }}
+          >
+            <DragIndicatorIcon />
+          </Box>
+        </Box>
+
+        {/* AI Panel Content */}
+        <AIPanel
           selectedFiles={selectedFiles}
           onFileSelect={setSelectedFiles}
           currentPath={currentPath}
