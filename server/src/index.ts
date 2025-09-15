@@ -13,6 +13,7 @@ import { createAIFeaturesRoutes } from './routes/aiFeatures';
 import { createPnPRoutes } from './routes/pnpRoutes';
 import { createDuplicateDetectionRoutes } from './routes/duplicateDetectionRoutes';
 import { createEnhancedDocumentAnalysisRoutes } from './routes/enhancedDocumentAnalysisRoutes';
+import { createProcessAutomationRoutes } from './routes/processAutomationRoutes';
 import { authConfig, serverConfig, validateConfig } from './utils/config';
 
 // Load environment variables
@@ -81,6 +82,7 @@ app.use('/api/sharepoint-advanced', createAdvancedSharePointRoutes(authService, 
 app.use('/api/pnp', createPnPRoutes(authService, authMiddleware));
 app.use('/api/duplicates', createDuplicateDetectionRoutes(authService, authMiddleware));
 app.use('/api/analysis', createEnhancedDocumentAnalysisRoutes(authService, authMiddleware));
+app.use('/api/automation', createProcessAutomationRoutes(authService, authMiddleware));
 app.use('/api/gemini', createGeminiRoutes(authService, authMiddleware));
 app.use('/api/ai', createAIFeaturesRoutes(authService, authMiddleware));
 
@@ -214,6 +216,15 @@ app.listen(port, () => {
   console.log(`   POST /api/analysis/process/complete - Complete document analysis workflow`);
   console.log(`   POST /api/analysis/batch/process - Batch document processing`);
   console.log(`   GET  /api/analysis/capabilities - Enhanced analysis service capabilities`);
+  console.log(`\n⚡ Process Automation API (Phase 4):`);
+  console.log(`   GET  /api/automation/health - Process automation service health check`);
+  console.log(`   POST /api/automation/workflows/create - Create custom automation workflows`);
+  console.log(`   POST /api/automation/workflows/execute - Execute specific workflow`);
+  console.log(`   POST /api/automation/lifecycle/process - Document lifecycle management`);
+  console.log(`   POST /api/automation/approval/create - Create approval workflows`);
+  console.log(`   GET  /api/automation/metrics - Workflow metrics and analytics`);
+  console.log(`   POST /api/automation/batch/process - Enterprise batch processing`);
+  console.log(`   GET  /api/automation/capabilities - Process automation capabilities`);
   console.log(`\n🎨 Demo Interface:`);
   console.log(`   GET  /ai-features-demo.html - Interactive AI features demonstration`);
 });
