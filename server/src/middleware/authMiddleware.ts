@@ -28,15 +28,29 @@ export class AuthMiddleware {
   requireAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const sessionId = this.extractSessionId(req);
-      
+
+      // Enhanced debugging for session issues
+      console.log('🔍 Auth middleware check:', {
+        path: req.path,
+        sessionId: sessionId ? sessionId.substring(0, 8) + '...' : 'none',
+        cookies: Object.keys(req.cookies || {}),
+        headers: {
+          authorization: !!req.headers.authorization,
+          'x-session-id': !!req.headers['x-session-id']
+        },
+        query: !!req.query.sessionId
+      });
+
       if (!sessionId) {
+        console.log('❌ No session ID found in request');
         this.sendAuthError(res, 'MISSING_SESSION', 'Authentication required. No session found.', 401);
         return;
       }
 
       const user = await this.authService.validateSession(sessionId);
-      
+
       if (!user) {
+        console.log('❌ Session validation failed for:', sessionId.substring(0, 8) + '...');
         this.sendAuthError(res, 'INVALID_SESSION', 'Authentication required. Session is invalid or expired.', 401);
         return;
       }
@@ -44,9 +58,12 @@ export class AuthMiddleware {
       // Get fresh session data for access token
       const session = this.authService.getSession(sessionId);
       if (!session) {
+        console.log('❌ Session data not found for:', sessionId.substring(0, 8) + '...');
         this.sendAuthError(res, 'SESSION_NOT_FOUND', 'Authentication session not found.', 401);
         return;
       }
+
+      console.log('✅ Authentication successful for user:', user.displayName);
 
       // Attach user and session info to request
       req.user = user;
@@ -57,7 +74,7 @@ export class AuthMiddleware {
 
       next();
     } catch (error) {
-      console.error('Auth middleware error:', error);
+      console.error('❌ Auth middleware error:', error);
       this.sendAuthError(res, 'AUTH_MIDDLEWARE_ERROR', 'Authentication verification failed.', 500);
     }
   };
@@ -155,8 +172,10 @@ export class AuthMiddleware {
       return sessionHeader;
     }
 
-    // Check cookies
-    const sessionCookie = req.cookies?.['session_id'] || req.cookies?.['session-id'];
+    // Check cookies (multiple cookie names for compatibility)
+    const sessionCookie = req.cookies?.['session_id'] ||
+                          req.cookies?.['session-id'] ||
+                          req.cookies?.['sharepoint_session'];
     if (sessionCookie) {
       return sessionCookie;
     }

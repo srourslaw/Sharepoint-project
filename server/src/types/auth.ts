@@ -25,7 +25,8 @@ export interface AuthSession {
   userId: string;
   accessToken: string;
   refreshToken?: string;
-  expiresAt: Date;
+  expiresAt: Date; // Session expiration (24 hours)
+  tokenExpiresAt: Date; // Access token expiration (typically 1 hour)
   user: AuthenticatedUser;
 }
 

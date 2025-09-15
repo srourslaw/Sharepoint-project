@@ -53,14 +53,22 @@ export class AuthService {
       };
 
       const response: AuthenticationResult = await this.msalClient.acquireTokenByCode(tokenRequest);
-      
+
       if (!response.accessToken) {
         throw new Error('No access token received');
       }
 
+      // Store account info for token refresh instead of using refresh tokens
+      const accountInfo = response.account ? {
+        homeAccountId: response.account.homeAccountId,
+        localAccountId: response.account.localAccountId,
+        username: response.account.username,
+        tenantId: response.account.tenantId
+      } : undefined;
+
       return {
         accessToken: response.accessToken,
-        refreshToken: response.account?.homeAccountId || undefined,
+        refreshToken: accountInfo ? JSON.stringify(accountInfo) : undefined,
         expiresIn: response.expiresOn ? Math.floor((response.expiresOn.getTime() - Date.now()) / 1000) : 3600,
         tokenType: 'Bearer',
         scope: response.scopes?.join(' ') || this.config.scopes.join(' '),
@@ -73,28 +81,41 @@ export class AuthService {
   /**
    * Refresh access token using account info
    */
-  async refreshToken(accountId: string): Promise<TokenResponse> {
+  async refreshToken(accountInfoJson: string): Promise<TokenResponse> {
     try {
-      const account = await this.msalClient.getTokenCache().getAccountByHomeId(accountId);
-      
-      if (!account) {
-        throw new Error('Account not found for refresh');
+      const accountInfo = JSON.parse(accountInfoJson);
+      const account = await this.msalClient.getTokenCache().getAccountByHomeId(accountInfo.homeAccountId);
+
+      let targetAccount = account;
+
+      if (!targetAccount) {
+        // Try to find account by local account ID as fallback
+        const allAccounts = await this.msalClient.getTokenCache().getAllAccounts();
+        targetAccount = allAccounts.find(acc =>
+          acc.localAccountId === accountInfo.localAccountId ||
+          acc.username === accountInfo.username
+        ) || null;
+
+        if (!targetAccount) {
+          throw new Error('Account not found for refresh');
+        }
       }
 
       const silentRequest = {
-        account: account,
+        account: targetAccount,
         scopes: this.config.scopes,
       };
 
       const response: AuthenticationResult = await this.msalClient.acquireTokenSilent(silentRequest);
-      
+
       if (!response.accessToken) {
         throw new Error('No access token received from refresh');
       }
 
+      // Keep the same account info for future refreshes
       return {
         accessToken: response.accessToken,
-        refreshToken: response.account?.homeAccountId || accountId,
+        refreshToken: accountInfoJson,
         expiresIn: response.expiresOn ? Math.floor((response.expiresOn.getTime() - Date.now()) / 1000) : 3600,
         tokenType: 'Bearer',
         scope: response.scopes?.join(' ') || this.config.scopes.join(' '),
@@ -136,11 +157,15 @@ export class AuthService {
       const user = await this.getUserInfo(tokenResponse.accessToken);
       const sessionId = this.generateSessionId();
       
+      // Extend session expiration to 24 hours for better user experience
+      // Track token expiration separately for proper refresh timing
+      const sessionExpirationHours = 24;
       const session: AuthSession = {
         userId: user.id,
         accessToken: tokenResponse.accessToken,
         refreshToken: tokenResponse.refreshToken,
-        expiresAt: new Date(Date.now() + (tokenResponse.expiresIn * 1000)),
+        expiresAt: new Date(Date.now() + (sessionExpirationHours * 60 * 60 * 1000)),
+        tokenExpiresAt: new Date(Date.now() + (tokenResponse.expiresIn * 1000)),
         user: user,
       };
 
@@ -182,15 +207,15 @@ export class AuthService {
 
     // Check if token will expire in the next 5 minutes
     const fiveMinutesFromNow = new Date(Date.now() + 5 * 60 * 1000);
-    
-    if (session.expiresAt < fiveMinutesFromNow && session.refreshToken) {
+
+    if (session.tokenExpiresAt < fiveMinutesFromNow && session.refreshToken) {
       try {
         const tokenResponse = await this.refreshToken(session.refreshToken);
         
-        // Update session with new tokens
+        // Update session with new tokens, keep 24-hour session expiration
         session.accessToken = tokenResponse.accessToken;
         session.refreshToken = tokenResponse.refreshToken || session.refreshToken;
-        session.expiresAt = new Date(Date.now() + (tokenResponse.expiresIn * 1000));
+        session.tokenExpiresAt = new Date(Date.now() + (tokenResponse.expiresIn * 1000));
         
         this.sessions.set(sessionId, session);
         return session;

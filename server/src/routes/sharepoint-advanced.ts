@@ -59,70 +59,62 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           // Try multiple approaches to get sites
           let sitesResponse: { value: any[] } = { value: [] };
           
-          // FIRST: Try to get the user's specific SharePoint sites directly
+          // UNIVERSAL APPROACH: Dynamic site discovery for any SharePoint tenant
+          console.log('🚀 Using universal SharePoint site discovery...');
+          const workingSites = [];
+
+          // Method 1: Try to get sites the user follows/has access to
           try {
-            console.log('🔍 Trying to get specific SharePoint sites by hostname...');
-            const specificSiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com').get();
-            console.log('✅ Found specific site:', specificSiteResponse.displayName);
-            
-            // Also try the allcompany subsite
-            try {
-              const subsiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany').get();
-              console.log('✅ Found allcompany subsite:', subsiteResponse.displayName);
-              sitesResponse.value = [specificSiteResponse, subsiteResponse];
-            } catch (subsiteError: any) {
-              console.log('⚠️ Allcompany subsite not accessible, using root site only');
-              sitesResponse.value = [specificSiteResponse];
-            }
-          } catch (specificSiteError: any) {
-            console.log('⚠️ Specific site access failed, trying standard approaches...');
-            console.error('Specific site error:', specificSiteError.message);
-            
-            try {
-              // Second try: Get all sites (requires Sites.Read.All)
-              console.log('🔍 Trying to get all sites...');
-              sitesResponse = await graphClient.api('/sites?$select=id,displayName,name,webUrl,description').get();
-              console.log(`✅ Found ${sitesResponse.value?.length || 0} sites via /sites endpoint`);
-              
-              // If we got 0 sites, that might mean no access to the sites collection, try alternatives
-              if (!sitesResponse.value || sitesResponse.value.length === 0) {
-                console.log('⚠️  No sites returned from /sites endpoint, trying alternative approaches...');
-                throw new Error('No sites found, trying alternatives');
+            console.log('🔍 Attempting to get followed sites...');
+            const followedSitesResponse = await graphClient.api('/me/followedSites').get();
+            if (followedSitesResponse.value && followedSitesResponse.value.length > 0) {
+              console.log(`✅ Found ${followedSitesResponse.value.length} followed sites`);
+              for (const site of followedSitesResponse.value) {
+                workingSites.push({
+                  id: site.id,
+                  displayName: site.displayName || site.name,
+                  name: site.displayName || site.name,
+                  webUrl: site.webUrl,
+                  description: site.description || 'SharePoint site',
+                  realSiteId: site.id,
+                  accessible: true,
+                  siteType: 'followed'
+                });
               }
-            } catch (sitesError: any) {
-              console.log('⚠️  /sites endpoint failed, trying alternative approaches...');
-              
-              try {
-                // Third try: Get root site for the tenant
-                console.log('🔍 Trying to get tenant root site...');
-                const rootSite = await graphClient.api('/sites/root').get();
-                console.log('✅ Found tenant root site:', rootSite.displayName);
-                sitesResponse.value = [rootSite];
-              } catch (rootError: any) {
-                console.log('⚠️  Root site access failed, trying user drives...');
-                
-                try {
-                  // Fourth try: Get user's drives (OneDrive, SharePoint libraries they have access to)
-                  console.log('🔍 Trying to get user drives...');
-                  const drivesResponse = await graphClient.api('/me/drives').get();
-                  console.log(`✅ Found ${drivesResponse.value?.length || 0} drives`);
-                  
-                  // Convert drives to site-like objects
-                  sitesResponse.value = drivesResponse.value?.map((drive: any) => ({
+            }
+          } catch (followedError: any) {
+            console.log('⚠️ Cannot access followed sites:', followedError.message);
+          }
+
+          // Method 2: Get user's drives which include SharePoint sites
+          try {
+            console.log('🔍 Getting user drives to discover SharePoint sites...');
+            const drivesResponse = await graphClient.api('/me/drives').get();
+            if (drivesResponse.value && drivesResponse.value.length > 0) {
+              console.log(`✅ Found ${drivesResponse.value.length} drives`);
+              for (const drive of drivesResponse.value) {
+                // Add drive as site-like object
+                const existingSite = workingSites.find(s => s.realSiteId === drive.id);
+                if (!existingSite) {
+                  workingSites.push({
                     id: drive.id,
-                    displayName: drive.name || 'OneDrive',
-                    name: drive.name || 'OneDrive',
+                    displayName: drive.name || 'SharePoint Library',
+                    name: drive.name || 'SharePoint Library',
                     webUrl: drive.webUrl,
-                    description: `${drive.driveType} - ${drive.name}`,
-                    driveId: drive.id
-                  })) || [];
-                } catch (drivesError: any) {
-                  console.log('❌ All Graph API attempts failed:', drivesError.message);
-                  throw drivesError;
+                    description: `${drive.driveType} - ${drive.name || 'Document Library'}`,
+                    realSiteId: drive.id,
+                    accessible: true,
+                    siteType: 'drive'
+                  });
                 }
               }
             }
+          } catch (drivesError: any) {
+            console.log('⚠️ Cannot access user drives:', drivesError.message);
           }
+
+          sitesResponse.value = workingSites;
+          console.log(`✅ Successfully configured ${workingSites.length} organizational sites`);
           
           // Convert sites to folder-like items for navigation
           const siteFolders = (sitesResponse.value || []).map((site: any) => ({
@@ -2841,35 +2833,25 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           let fileMetadata = null;
           let fileContent = null;
           
-          // Search for file in SharePoint sites
-          const sites = [
-            { path: '/sites/netorgft18344752.sharepoint.com/drives', name: 'Communication site' },
-            { path: '/sites/netorgft18344752.sharepoint.com:/sites/allcompany:/drives', name: 'All Company subsite' }
-          ];
-          
-          for (const site of sites) {
+          // Search for file across all user drives (universal approach)
+          console.log('🔍 Searching all accessible drives for file...');
+          const drivesResponse = await graphClient.api('/me/drives').get();
+          console.log(`Found ${drivesResponse.value?.length || 0} drives to search`);
+
+          for (const drive of drivesResponse.value || []) {
             try {
-              console.log(`🔍 Searching ${site.name} for file...`);
-              const drivesResponse = await graphClient.api(site.path).get();
-              
-              for (const drive of drivesResponse.value || []) {
-                try {
-                  // Get metadata
-                  fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
-                  
-                  // Get content
-                  fileContent = await graphClient.api(`/drives/${drive.id}/items/${fileId}/content`).get();
-                  
-                  console.log(`✅ Found file in ${site.name}, drive: ${drive.name}`);
-                  break;
-                } catch (driveError) {
-                  // File not in this drive, continue searching
-                }
-              }
-              
-              if (fileMetadata && fileContent) break;
-            } catch (siteError) {
-              console.log(`⚠️ Could not search ${site.name}`);
+              console.log(`🔍 Searching drive: ${drive.name} (${drive.driveType})`);
+
+              // Get metadata
+              fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
+
+              // Get content
+              fileContent = await graphClient.api(`/drives/${drive.id}/items/${fileId}/content`).get();
+
+              console.log(`✅ Found file in drive: ${drive.name}`);
+              break;
+            } catch (driveError) {
+              // File not in this drive, continue searching
             }
           }
           
