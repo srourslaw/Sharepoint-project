@@ -28,6 +28,67 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
   // Feature flag for enabling real SharePoint API
   const isRealSharePointEnabled = process.env.ENABLE_REAL_SHAREPOINT === 'true';
 
+  // Helper functions for filtering SharePoint sites and drives
+  const isBusinessSharePointSite = (site: any): boolean => {
+    // Filter out personal sites and cache libraries
+    if (!site || !site.webUrl) return false;
+
+    // Exclude personal OneDrive sites (contain /personal/)
+    if (site.webUrl.includes('/personal/')) {
+      console.log(`🚫 Filtering out personal site: ${site.displayName || site.name} - ${site.webUrl}`);
+      return false;
+    }
+
+    // Exclude cache libraries by name
+    const siteName = (site.displayName || site.name || '').toLowerCase();
+    if (siteName.includes('personalcachelibrary') ||
+        siteName.includes('personal cache') ||
+        siteName === 'onedrive') {
+      console.log(`🚫 Filtering out cache/personal library: ${site.displayName || site.name}`);
+      return false;
+    }
+
+    // Include organizational SharePoint sites
+    console.log(`✅ Including business site: ${site.displayName || site.name} - ${site.webUrl}`);
+    return true;
+  };
+
+  const isBusinessDrive = (drive: any): boolean => {
+    // Filter out personal drives and cache libraries
+    if (!drive || !drive.webUrl) return false;
+
+    // Exclude personal OneDrive drives (contain /personal/)
+    if (drive.webUrl && drive.webUrl.includes('/personal/')) {
+      console.log(`🚫 Filtering out personal drive: ${drive.name} - ${drive.webUrl}`);
+      return false;
+    }
+
+    // Exclude OneDrive drives by type
+    if (drive.driveType === 'personal') {
+      console.log(`🚫 Filtering out personal drive by type: ${drive.name}`);
+      return false;
+    }
+
+    // Exclude cache libraries and OneDrive by name
+    const driveName = (drive.name || '').toLowerCase();
+    if (driveName.includes('personalcachelibrary') ||
+        driveName.includes('personal cache') ||
+        driveName === 'onedrive' ||
+        driveName.includes('my site')) {
+      console.log(`🚫 Filtering out cache/personal drive: ${drive.name}`);
+      return false;
+    }
+
+    // Include business document libraries and SharePoint drives
+    if (drive.driveType === 'documentLibrary' || drive.driveType === 'business') {
+      console.log(`✅ Including business drive: ${drive.name} (${drive.driveType}) - ${drive.webUrl}`);
+      return true;
+    }
+
+    console.log(`🤔 Uncertain drive type, excluding for safety: ${drive.name} (${drive.driveType})`);
+    return false;
+  };
+
   // Initialize file processor for content extraction
   const fileProcessor = new AdvancedFileProcessor({
     maxFileSize: 50 * 1024 * 1024, // 50MB limit for preview
@@ -86,31 +147,119 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
             console.log('⚠️ Cannot access followed sites:', followedError.message);
           }
 
-          // Method 2: Get user's drives which include SharePoint sites
+          // Method 2: Get organizational SharePoint sites
           try {
-            console.log('🔍 Getting user drives to discover SharePoint sites...');
-            const drivesResponse = await graphClient.api('/me/drives').get();
-            if (drivesResponse.value && drivesResponse.value.length > 0) {
-              console.log(`✅ Found ${drivesResponse.value.length} drives`);
-              for (const drive of drivesResponse.value) {
-                // Add drive as site-like object
-                const existingSite = workingSites.find(s => s.realSiteId === drive.id);
-                if (!existingSite) {
-                  workingSites.push({
-                    id: drive.id,
-                    displayName: drive.name || 'SharePoint Library',
-                    name: drive.name || 'SharePoint Library',
-                    webUrl: drive.webUrl,
-                    description: `${drive.driveType} - ${drive.name || 'Document Library'}`,
-                    realSiteId: drive.id,
-                    accessible: true,
-                    siteType: 'drive'
-                  });
+            console.log('🔍 Getting organizational SharePoint sites...');
+            const orgSitesResponse = await graphClient.api('/sites?search=*').get();
+            if (orgSitesResponse.value && orgSitesResponse.value.length > 0) {
+              console.log(`✅ Found ${orgSitesResponse.value.length} organizational sites`);
+              for (const site of orgSitesResponse.value) {
+                // Filter out personal sites and cache libraries
+                if (isBusinessSharePointSite(site)) {
+                  const existingSite = workingSites.find(s => s.realSiteId === site.id);
+                  if (!existingSite) {
+                    workingSites.push({
+                      id: site.id,
+                      displayName: site.displayName || site.name,
+                      name: site.displayName || site.name,
+                      webUrl: site.webUrl,
+                      description: site.description || 'SharePoint site',
+                      realSiteId: site.id,
+                      accessible: true,
+                      siteType: 'organizational'
+                    });
+                  }
                 }
               }
             }
+          } catch (orgSitesError: any) {
+            console.log('⚠️ Cannot access organizational sites:', orgSitesError.message);
+          }
+
+          // Method 3: Get user's drives with proper filtering for business sites only
+          try {
+            console.log('🔍 Getting filtered business drives...');
+            const drivesResponse = await graphClient.api('/me/drives').get();
+            if (drivesResponse.value && drivesResponse.value.length > 0) {
+              console.log(`✅ Found ${drivesResponse.value.length} total drives`);
+              let businessDriveCount = 0;
+              for (const drive of drivesResponse.value) {
+                // Filter out personal drives and cache libraries
+                if (isBusinessDrive(drive)) {
+                  const existingSite = workingSites.find(s => s.realSiteId === drive.id);
+                  if (!existingSite) {
+                    workingSites.push({
+                      id: drive.id,
+                      displayName: drive.name || 'SharePoint Library',
+                      name: drive.name || 'SharePoint Library',
+                      webUrl: drive.webUrl,
+                      description: `${drive.driveType} - ${drive.name || 'Document Library'}`,
+                      realSiteId: drive.id,
+                      accessible: true,
+                      siteType: 'business-drive'
+                    });
+                    businessDriveCount++;
+                  }
+                }
+              }
+              console.log(`✅ Added ${businessDriveCount} business drives after filtering`);
+            }
           } catch (drivesError: any) {
             console.log('⚠️ Cannot access user drives:', drivesError.message);
+          }
+
+          // Method 4: Get root site and subsites for the organization
+          try {
+            console.log('🔍 Getting organization root site and subsites...');
+
+            // Try to get the root site first
+            try {
+              const rootSiteResponse = await graphClient.api('/sites/root').get();
+              if (rootSiteResponse && !workingSites.find(s => s.realSiteId === rootSiteResponse.id)) {
+                workingSites.push({
+                  id: rootSiteResponse.id,
+                  displayName: rootSiteResponse.displayName || rootSiteResponse.name || 'Organization Root Site',
+                  name: rootSiteResponse.displayName || rootSiteResponse.name || 'Organization Root Site',
+                  webUrl: rootSiteResponse.webUrl,
+                  description: rootSiteResponse.description || 'Organization root SharePoint site',
+                  realSiteId: rootSiteResponse.id,
+                  accessible: true,
+                  siteType: 'root'
+                });
+                console.log(`✅ Added root site: ${rootSiteResponse.displayName || rootSiteResponse.name}`);
+              }
+            } catch (rootError: any) {
+              console.log('⚠️ Cannot access root site:', rootError.message);
+            }
+
+            // Get all sites in the organization (alternative approach)
+            try {
+              const allSitesResponse = await graphClient.api('/sites?$select=id,displayName,name,webUrl,description&$top=50').get();
+              if (allSitesResponse.value && allSitesResponse.value.length > 0) {
+                console.log(`✅ Found ${allSitesResponse.value.length} total organization sites`);
+                let orgSiteCount = 0;
+                for (const site of allSitesResponse.value) {
+                  if (isBusinessSharePointSite(site) && !workingSites.find(s => s.realSiteId === site.id)) {
+                    workingSites.push({
+                      id: site.id,
+                      displayName: site.displayName || site.name,
+                      name: site.displayName || site.name,
+                      webUrl: site.webUrl,
+                      description: site.description || 'SharePoint site',
+                      realSiteId: site.id,
+                      accessible: true,
+                      siteType: 'organization-direct'
+                    });
+                    orgSiteCount++;
+                  }
+                }
+                console.log(`✅ Added ${orgSiteCount} organization sites from direct API`);
+              }
+            } catch (allSitesError: any) {
+              console.log('⚠️ Cannot access all organization sites:', allSitesError.message);
+            }
+          } catch (orgError: any) {
+            console.log('⚠️ Error getting organization sites:', orgError.message);
           }
 
           sitesResponse.value = workingSites;
@@ -230,12 +379,17 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           console.log('🔍 Attempting to get real SharePoint sites via direct Graph API...');
           const graphClient = authService.getGraphClient(req.session!.accessToken);
           const sitesResponse = await graphClient.api('/sites?$select=id,displayName,name,webUrl,description').get();
-          
+
           console.log('✅ Successfully retrieved', sitesResponse.value?.length || 0, 'SharePoint sites');
+
+          // Filter out personal sites and cache libraries
+          const businessSites = (sitesResponse.value || []).filter(isBusinessSharePointSite);
+          console.log(`✅ Filtered to ${businessSites.length} business SharePoint sites`);
+
           res.json({
             success: true,
-            data: sitesResponse.value || [],
-            message: `Retrieved ${sitesResponse.value?.length || 0} SharePoint sites from your tenant`,
+            data: businessSites,
+            message: `Retrieved ${businessSites.length} business SharePoint sites from your tenant`,
             isRealData: true
           });
           return;
@@ -2838,7 +2992,15 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           const drivesResponse = await graphClient.api('/me/drives').get();
           console.log(`Found ${drivesResponse.value?.length || 0} drives to search`);
 
-          for (const drive of drivesResponse.value || []) {
+          // Prioritize business drives over personal drives for file search
+          const allDrives = drivesResponse.value || [];
+          const businessDrives = allDrives.filter(isBusinessDrive);
+          const personalDrives = allDrives.filter((drive: any) => !isBusinessDrive(drive));
+          const searchOrder = [...businessDrives, ...personalDrives];
+
+          console.log(`Search order: ${businessDrives.length} business drives first, then ${personalDrives.length} personal drives`);
+
+          for (const drive of searchOrder) {
             try {
               console.log(`🔍 Searching drive: ${drive.name} (${drive.driveType})`);
 
@@ -3320,12 +3482,19 @@ In a real implementation, this would show the actual extracted text content from
       
       console.log('✅ DEBUG: Graph API success! Sites found:', sitesResponse.value?.length || 0);
       console.log('🔍 DEBUG: First site:', sitesResponse.value?.[0]);
-      
+
+      // Apply business filtering for debug purposes
+      const allSites = sitesResponse.value || [];
+      const businessSites = allSites.filter(isBusinessSharePointSite);
+      console.log(`🔍 DEBUG: After filtering - Business sites: ${businessSites.length}, Total sites: ${allSites.length}`);
+
       res.json({
         success: true,
-        sitesCount: sitesResponse.value?.length || 0,
-        sites: sitesResponse.value || [],
-        debugInfo: 'Direct Graph API call successful'
+        totalSitesCount: allSites.length,
+        businessSitesCount: businessSites.length,
+        allSites: allSites,
+        businessSites: businessSites,
+        debugInfo: 'Direct Graph API call successful with business filtering applied'
       });
       
     } catch (error: any) {
