@@ -10,6 +10,7 @@ import { createSharePointRoutes } from './routes/sharepoint';
 import { createAdvancedSharePointRoutes } from './routes/sharepoint-advanced';
 import { createGeminiRoutes } from './routes/gemini';
 import { createAIFeaturesRoutes } from './routes/aiFeatures';
+import { createPnPRoutes } from './routes/pnpRoutes';
 import { authConfig, serverConfig, validateConfig } from './utils/config';
 
 // Load environment variables
@@ -75,6 +76,7 @@ app.use('/auth', createAuthRoutes(authService, authMiddleware));
 // Protected SharePoint API routes
 app.use('/api/sharepoint', createSharePointRoutes(authService, authMiddleware));
 app.use('/api/sharepoint-advanced', createAdvancedSharePointRoutes(authService, authMiddleware));
+app.use('/api/pnp', createPnPRoutes(authService, authMiddleware));
 app.use('/api/gemini', createGeminiRoutes(authService, authMiddleware));
 app.use('/api/ai', createAIFeaturesRoutes(authService, authMiddleware));
 
@@ -186,6 +188,12 @@ app.listen(port, () => {
   console.log(`   POST /api/ai/format - Output formatting`);
   console.log(`   GET  /api/ai/health - AI services health check`);
   console.log(`   GET  /api/ai/capabilities - Available AI capabilities`);
+  console.log(`\n🔍 PnP.js Enhanced SharePoint API:`);
+  console.log(`   GET  /api/pnp/health - PnP.js service health check and connectivity test`);
+  console.log(`   POST /api/pnp/search - Cross-site search with advanced filtering`);
+  console.log(`   GET  /api/pnp/libraries - Enumerate all document libraries across sites`);
+  console.log(`   GET  /api/pnp/files/:fileId/details - Enhanced file details with metadata`);
+  console.log(`   GET  /api/pnp/capabilities - PnP.js service capabilities and features`);
   console.log(`\n🎨 Demo Interface:`);
   console.log(`   GET  /ai-features-demo.html - Interactive AI features demonstration`);
 });
