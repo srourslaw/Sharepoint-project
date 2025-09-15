@@ -11,6 +11,7 @@ import { createAdvancedSharePointRoutes } from './routes/sharepoint-advanced';
 import { createGeminiRoutes } from './routes/gemini';
 import { createAIFeaturesRoutes } from './routes/aiFeatures';
 import { createPnPRoutes } from './routes/pnpRoutes';
+import { createDuplicateDetectionRoutes } from './routes/duplicateDetectionRoutes';
 import { authConfig, serverConfig, validateConfig } from './utils/config';
 
 // Load environment variables
@@ -77,6 +78,7 @@ app.use('/auth', createAuthRoutes(authService, authMiddleware));
 app.use('/api/sharepoint', createSharePointRoutes(authService, authMiddleware));
 app.use('/api/sharepoint-advanced', createAdvancedSharePointRoutes(authService, authMiddleware));
 app.use('/api/pnp', createPnPRoutes(authService, authMiddleware));
+app.use('/api/duplicates', createDuplicateDetectionRoutes(authService, authMiddleware));
 app.use('/api/gemini', createGeminiRoutes(authService, authMiddleware));
 app.use('/api/ai', createAIFeaturesRoutes(authService, authMiddleware));
 
@@ -194,6 +196,14 @@ app.listen(port, () => {
   console.log(`   GET  /api/pnp/libraries - Enumerate all document libraries across sites`);
   console.log(`   GET  /api/pnp/files/:fileId/details - Enhanced file details with metadata`);
   console.log(`   GET  /api/pnp/capabilities - PnP.js service capabilities and features`);
+  console.log(`\n🔄 Duplicate Detection API (Phase 2):`);
+  console.log(`   GET  /api/duplicates/health - Duplicate detection service health check`);
+  console.log(`   POST /api/duplicates/scan - Comprehensive duplicate detection scan`);
+  console.log(`   POST /api/duplicates/scan/quick - Quick exact duplicates scan`);
+  console.log(`   GET  /api/duplicates/statistics - Duplicate analysis statistics and insights`);
+  console.log(`   GET  /api/duplicates/groups/:groupId - Detailed duplicate group information`);
+  console.log(`   POST /api/duplicates/cleanup/preview - Preview cleanup actions`);
+  console.log(`   GET  /api/duplicates/capabilities - Duplicate detection service capabilities`);
   console.log(`\n🎨 Demo Interface:`);
   console.log(`   GET  /ai-features-demo.html - Interactive AI features demonstration`);
 });
