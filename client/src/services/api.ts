@@ -65,7 +65,34 @@ class ApiService {
   }
 
   private getSessionId(): string | null {
-    return localStorage.getItem('session_id');
+    // Try multiple sources for session ID to ensure compatibility
+    // 1. First try localStorage (most reliable)
+    let sessionId = localStorage.getItem('session_id');
+    if (sessionId) return sessionId;
+
+    // 2. Try sessionStorage (backup)
+    sessionId = sessionStorage.getItem('session_id');
+    if (sessionId) return sessionId;
+
+    // 3. Try reading from cookies as fallback
+    try {
+      const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        acc[key] = value;
+        return acc;
+      }, {} as Record<string, string>);
+
+      sessionId = cookies['session-id'] || cookies['sharepoint_session'] || cookies['session_id'];
+      if (sessionId) {
+        // Store it in localStorage for future use
+        localStorage.setItem('session_id', sessionId);
+        return sessionId;
+      }
+    } catch (error) {
+      console.warn('Failed to read session from cookies:', error);
+    }
+
+    return null;
   }
 
   private setSessionId(sessionId: string): void {

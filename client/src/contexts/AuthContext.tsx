@@ -240,8 +240,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           dispatch({ type: 'SET_LOADING', payload: true });
           
-          // Store the session ID directly
+          // Store the session ID in multiple places for compatibility
           localStorage.setItem('session_id', sessionId);
+          sessionStorage.setItem('session_id', sessionId);
+
+          // Also notify the API service about the new session
+          const { api } = await import('../services/api');
+          api.setSession(sessionId);
 
           // Add small delay to ensure session is available
           await new Promise(resolve => setTimeout(resolve, 500));

@@ -117,15 +117,31 @@ export const useSharePointFiles = (options: UseSharePointFilesOptions): UseShare
       }
     }
 
-      // Handle specific folder navigation for your SharePoint sites
+      // Universal site navigation - handle any dynamically discovered site
       if (pathParts.length === 1) {
-        const folderName = pathParts[0];
-        if (folderName === 'Communication site' || folderName === 'Communication%20site') {
-          // Navigate to Communication site contents
-          return '/api/sharepoint-advanced/drives/netorgft18344752.sharepoint.com/items/root/children';
-        } else if (folderName === 'All Company' || folderName === 'All%20Company') {
-          // Navigate to All Company subsite contents - use same pattern as Communication site
-          return '/api/sharepoint-advanced/drives/netorgft18344752.sharepoint.com.allcompany/items/root/children';
+        const siteId = pathParts[0];
+
+        // Handle the dynamically discovered sites based on their ID patterns
+        console.log('🔍 Frontend: Navigating to site:', siteId);
+
+        // Map common site patterns to proper API endpoints
+        if (siteId.includes('.sharepoint.com')) {
+          // Sites with full URLs like "netorgft18344752.sharepoint.com"
+          // URL encode the site ID to handle dots properly
+          const encodedSiteId = encodeURIComponent(siteId);
+          return `/api/sharepoint-advanced/drives/${encodedSiteId}/items/root/children`;
+        } else if (siteId === 'allcompany' || siteId === 'All Company' || siteId === 'All%20Company') {
+          // All Company site variants
+          return '/api/sharepoint-advanced/drives/allcompany/items/root/children';
+        } else if (siteId === 'Testingsite' || siteId.toLowerCase().includes('testing')) {
+          // Testing sites
+          return `/api/sharepoint-advanced/drives/${siteId}/items/root/children`;
+        } else if (siteId.includes('_')) {
+          // OneDrive personal sites (contain underscores)
+          return `/api/sharepoint-advanced/drives/${siteId}/items/root/children`;
+        } else {
+          // Generic site handling - treat as drive ID
+          return `/api/sharepoint-advanced/drives/${siteId}/items/root/children`;
         }
       }
       
