@@ -12,6 +12,7 @@ import { createGeminiRoutes } from './routes/gemini';
 import { createAIFeaturesRoutes } from './routes/aiFeatures';
 import { createPnPRoutes } from './routes/pnpRoutes';
 import { createDuplicateDetectionRoutes } from './routes/duplicateDetectionRoutes';
+import { createEnhancedDocumentAnalysisRoutes } from './routes/enhancedDocumentAnalysisRoutes';
 import { authConfig, serverConfig, validateConfig } from './utils/config';
 
 // Load environment variables
@@ -79,6 +80,7 @@ app.use('/api/sharepoint', createSharePointRoutes(authService, authMiddleware));
 app.use('/api/sharepoint-advanced', createAdvancedSharePointRoutes(authService, authMiddleware));
 app.use('/api/pnp', createPnPRoutes(authService, authMiddleware));
 app.use('/api/duplicates', createDuplicateDetectionRoutes(authService, authMiddleware));
+app.use('/api/analysis', createEnhancedDocumentAnalysisRoutes(authService, authMiddleware));
 app.use('/api/gemini', createGeminiRoutes(authService, authMiddleware));
 app.use('/api/ai', createAIFeaturesRoutes(authService, authMiddleware));
 
@@ -204,6 +206,14 @@ app.listen(port, () => {
   console.log(`   GET  /api/duplicates/groups/:groupId - Detailed duplicate group information`);
   console.log(`   POST /api/duplicates/cleanup/preview - Preview cleanup actions`);
   console.log(`   GET  /api/duplicates/capabilities - Duplicate detection service capabilities`);
+  console.log(`\n📊 Enhanced Document Analysis API (Phase 3):`);
+  console.log(`   GET  /api/analysis/health - Enhanced document analysis service health check`);
+  console.log(`   POST /api/analysis/summarize/multiformat - Multi-format document summarization`);
+  console.log(`   POST /api/analysis/tag/smart - AI-powered intelligent document tagging`);
+  console.log(`   POST /api/analysis/metadata/enhance - Automatic metadata enhancement`);
+  console.log(`   POST /api/analysis/process/complete - Complete document analysis workflow`);
+  console.log(`   POST /api/analysis/batch/process - Batch document processing`);
+  console.log(`   GET  /api/analysis/capabilities - Enhanced analysis service capabilities`);
   console.log(`\n🎨 Demo Interface:`);
   console.log(`   GET  /ai-features-demo.html - Interactive AI features demonstration`);
 });
