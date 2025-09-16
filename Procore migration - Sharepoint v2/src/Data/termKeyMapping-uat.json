@@ -1,0 +1,20 @@
+{
+  "Business": "Business",
+  "Resort": "Resort",
+  "Department": "DepartmentDMS",
+  "Building": "Building",
+  "Document Type": "DocumentType",
+  "Discipline": "Discipline",
+  "Gate": "Gate",
+  "Park Stage": "ParkStage",
+  "Drawing Set Name": "DrawingSetName",
+  "Drawing Area": "DrawingArea",
+  "Drawing Number": "DrawingNumber",
+  "Villa": "Villa",
+  "Confidentiality": "Confidentiality",
+  "File Extension": "FileType",
+  "Revision Number": "RevisionNumber",
+  "Short Description": "ShortDescription",
+  "Drawing Date" : "DrawingDate",
+  "Drawing Received Date" : "DrawingReceivedDate"
+}

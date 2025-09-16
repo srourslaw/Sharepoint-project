@@ -14,6 +14,7 @@ import { createPnPRoutes } from './routes/pnpRoutes';
 import { createDuplicateDetectionRoutes } from './routes/duplicateDetectionRoutes';
 import { createEnhancedDocumentAnalysisRoutes } from './routes/enhancedDocumentAnalysisRoutes';
 import { createProcessAutomationRoutes } from './routes/processAutomationRoutes';
+import { createPiiDetectionRoutes } from './routes/piiDetectionRoutes';
 import { authConfig, serverConfig, validateConfig } from './utils/config';
 
 // Load environment variables
@@ -34,9 +35,13 @@ const app = express();
 const authService = new AuthService(authConfig);
 const authMiddleware = new AuthMiddleware(authService);
 
-// Middleware setup
+// Middleware setup - parse CORS origins from environment
+const corsOriginEnv = serverConfig.corsOrigin || 'http://localhost:8080,http://localhost:8081';
+const corsOrigin = corsOriginEnv.split(',').map(origin => origin.trim());
+console.log('🌐 CORS configuration:', { corsOrigin, fromEnv: corsOriginEnv });
+
 app.use(cors({
-  origin: serverConfig.corsOrigin,
+  origin: corsOrigin,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id']
@@ -83,6 +88,7 @@ app.use('/api/pnp', createPnPRoutes(authService, authMiddleware));
 app.use('/api/duplicates', createDuplicateDetectionRoutes(authService, authMiddleware));
 app.use('/api/analysis', createEnhancedDocumentAnalysisRoutes(authService, authMiddleware));
 app.use('/api/automation', createProcessAutomationRoutes(authService, authMiddleware));
+app.use('/api/privacy', createPiiDetectionRoutes(authService, authMiddleware));
 app.use('/api/gemini', createGeminiRoutes(authService, authMiddleware));
 app.use('/api/ai', createAIFeaturesRoutes(authService, authMiddleware));
 

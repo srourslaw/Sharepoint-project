@@ -6,7 +6,9 @@ import { CssBaseline, Box, Typography, Button, CircularProgress } from '@mui/mat
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import { Dashboard } from './components/Dashboard.debug';
+import { SharePointTest } from './components/SharePointTest';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { MSALAuthProvider } from './contexts/MSALAuthContext';
 import { DynamicThemeProvider } from './contexts/DynamicThemeContext';
 import { AuthLoadingSpinner } from './components/auth/AuthLoadingSpinner';
 import { AuthError } from './components/auth/AuthError';
@@ -85,6 +87,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/analytics" element={<Dashboard />} />
       <Route path="/people" element={<Dashboard />} />
       <Route path="/settings" element={<Dashboard />} />
+      <Route path="/sharepoint-test" element={<SharePointTest />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -94,11 +97,13 @@ function App() {
   return (
     <GlobalErrorBoundary>
       <DynamicThemeProvider>
-        <AuthProvider>
-          <Router>
-            <AppRoutes />
-          </Router>
-        </AuthProvider>
+        <MSALAuthProvider>
+          <AuthProvider>
+            <Router>
+              <AppRoutes />
+            </Router>
+          </AuthProvider>
+        </MSALAuthProvider>
       </DynamicThemeProvider>
     </GlobalErrorBoundary>
   );

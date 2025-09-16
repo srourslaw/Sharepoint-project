@@ -90,33 +90,8 @@ export const useEnhancedAIChat = (initialSessionId?: string): UseEnhancedAIChatR
       }
     } catch (err: any) {
       console.warn('Failed to load quick actions:', err);
-      // Use mock data when API fails
-      setQuickActions([
-        {
-          id: 'summarize',
-          label: 'Summarize Document',
-          prompt: 'Please provide a summary of this document',
-          icon: 'summary',
-          category: 'summary',
-          requiresDocuments: true
-        },
-        {
-          id: 'analyze',
-          label: 'Analyze Content',
-          prompt: 'Please analyze the key themes and insights in this content',
-          icon: 'analytics',
-          category: 'analysis',
-          requiresDocuments: true
-        },
-        {
-          id: 'extract',
-          label: 'Extract Key Points',
-          prompt: 'Extract the main points and action items from this document',
-          icon: 'list',
-          category: 'extraction',
-          requiresDocuments: true
-        }
-      ]);
+      // Set empty array when API fails - no fallback mock data
+      setQuickActions([]);
     }
   };
 
@@ -241,19 +216,6 @@ export const useEnhancedAIChat = (initialSessionId?: string): UseEnhancedAIChatR
           };
           
           setMessages(prev => [...prev, aiMessage]);
-          
-          // Create mock session for general chat
-          if (!session) {
-            setSession({
-              id: `general-session-${Date.now()}`,
-              title: 'General Chat',
-              messages: [],
-              documentIds: [],
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              totalMessages: 0
-            });
-          }
         } else {
           throw new Error('Failed to get AI response for general chat');
         }

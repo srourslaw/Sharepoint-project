@@ -22,7 +22,7 @@ export const authConfig: AuthConfig = {
 export const serverConfig = {
   port: process.env.PORT || 3001,
   environment: process.env.NODE_ENV || 'development',
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:8080,http://localhost:8081',
   sessionSecret: process.env.SESSION_SECRET || 'default-session-secret-change-in-production'
 };
 

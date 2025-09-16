@@ -35,8 +35,8 @@ interface UserProfileMenuProps {
 }
 
 export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
-  userName = "John Doe",
-  userEmail = "john@company.com",
+  userName,
+  userEmail,
   avatarUrl,
   onLogout,
   onSettings,
@@ -170,7 +170,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
         </MenuItem>
         <MenuItem onClick={handleClose}>
           <Typography variant="body2">
-            👥 John Smith commented on your folder
+            No new notifications
           </Typography>
         </MenuItem>
       </Menu>

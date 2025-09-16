@@ -1,0 +1,20 @@
+{
+  "Business": "glBusiness",
+  "Resort": "glResort",
+  "Department": "glDepartmentDMS",
+  "Building": "glBuilding",
+  "Document Type": "glDocumentType",
+  "Discipline": "glDiscipline",
+  "Gate": "glGate",
+  "Park Stage": "glParkStage",
+  "Drawing Set Name": "glDrawingSetName",
+  "Drawing Area": "glDrawingArea",
+  "Drawing Number": "glDrawingNumber",
+  "Villa": "glVilla",
+  "Confidentiality": "glConfidentiality",
+  "File Extension": "FileType",
+  "Revision Number": "glRevisionNumber",
+  "Short Description": "glShortDescription",
+  "Drawing Date" : "glDrawingDate",
+  "Drawing Received Date" : "glDrawingReceivedDate"
+}

@@ -54,10 +54,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   ];
 
   const authorOptions: FilterOption[] = [
-    { label: 'John Doe', value: 'john.doe@company.com' },
-    { label: 'Jane Smith', value: 'jane.smith@company.com' },
-    { label: 'Mike Johnson', value: 'mike.johnson@company.com' },
-    { label: 'Sarah Wilson', value: 'sarah.wilson@company.com' },
+    // Author options will be populated dynamically from real SharePoint users
   ];
 
   const sizeMarks = [

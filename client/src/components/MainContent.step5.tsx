@@ -47,12 +47,14 @@ import {
   Slideshow as PowerPointIcon,
   ArrowBack as ArrowBackIcon,
   Home as HomeIcon,
+  AutoAwesome as AIIcon,
 } from '@mui/icons-material';
 
 import { SharePointFile, ViewMode, SearchFilters } from '../types';
 import { formatFileSize, formatDate, getFileIcon } from '../utils/formatters';
 // Use the safe version that doesn't make problematic API calls
 import { useSharePointFiles } from '../hooks/useSharePointFiles';
+import { AIFeaturesPanel } from './AIFeaturesPanel';
 
 interface MainContentProps {
   currentPath: string;
@@ -89,6 +91,7 @@ export const MainContent: React.FC<MainContentProps> = ({
   const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedFileForMenu, setSelectedFileForMenu] = useState<SharePointFile | null>(null);
+  const [showAIFeatures, setShowAIFeatures] = useState<boolean>(false);
 
   // Use the safe version of the hook
   const { files, loading, error, totalCount, refreshFiles } = useSharePointFiles({
@@ -99,22 +102,34 @@ export const MainContent: React.FC<MainContentProps> = ({
 
   // Filter files based on search query
   const filteredFiles = files.filter(file =>
-    file.displayName.toLowerCase().includes(searchQuery.toLowerCase())
+    (file.displayName || file.name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleFileSelect = (fileId: string, isSelected: boolean) => {
     if (isSelected) {
-      onFileSelect([...selectedFiles, fileId]);
+      const newSelection = [...selectedFiles, fileId];
+      onFileSelect(newSelection);
+      // Auto-show AI features when first file is selected
+      if (selectedFiles.length === 0) {
+        setShowAIFeatures(true);
+      }
     } else {
-      onFileSelect(selectedFiles.filter(id => id !== fileId));
+      const newSelection = selectedFiles.filter(id => id !== fileId);
+      onFileSelect(newSelection);
+      // Hide AI features when no files are selected
+      if (newSelection.length === 0) {
+        setShowAIFeatures(false);
+      }
     }
   };
 
   const handleSelectAll = () => {
     if (selectedFiles.length === filteredFiles.length) {
       onFileSelect([]);
+      setShowAIFeatures(false);
     } else {
       onFileSelect(filteredFiles.map(file => file.id));
+      setShowAIFeatures(true);
     }
   };
 
@@ -512,7 +527,7 @@ export const MainContent: React.FC<MainContentProps> = ({
 
             <Box flexGrow={1} />
             
-            <Box display="flex" ml={{ xs: 0.5, sm: 1 }}>
+            <Box display="flex" ml={{ xs: 0.5, sm: 1 }} gap={0.5}>
               <IconButton
                 size="small"
                 color={viewMode.type === 'grid' ? 'primary' : 'default'}
@@ -527,6 +542,16 @@ export const MainContent: React.FC<MainContentProps> = ({
               >
                 <ListViewIcon fontSize="small" />
               </IconButton>
+              <Tooltip title="AI Features">
+                <IconButton
+                  size="small"
+                  color={showAIFeatures ? 'primary' : 'default'}
+                  onClick={() => setShowAIFeatures(!showAIFeatures)}
+                  disabled={selectedFiles.length === 0}
+                >
+                  <AIIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Box>
           </Box>
         </Toolbar>
@@ -534,7 +559,18 @@ export const MainContent: React.FC<MainContentProps> = ({
 
       {/* Content Area */}
       <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-        
+        {/* AI Features Panel */}
+        {showAIFeatures && selectedFiles.length > 0 && (
+          <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <AIFeaturesPanel
+              selectedFiles={selectedFiles}
+              onAnalysisComplete={(results) => {
+                console.log('Analysis completed:', results);
+              }}
+            />
+          </Box>
+        )}
+
         {loading ? (
           <Box display="flex" justifyContent="center" alignItems="center" height="200px">
             <CircularProgress />

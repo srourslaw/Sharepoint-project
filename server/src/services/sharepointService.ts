@@ -95,7 +95,7 @@ export class SharePointService {
     return this.cache.getOrSet(cacheKey, async () => {
       const response = await this.client.makeRequest<SharePointApiResponse<DocumentLibrary>>(
         'GET',
-        `/sites/${siteId}/drives?$select=id,name,displayName,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota`
+        `/sites/${siteId}/drives?$select=id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota`
       );
       
       return response.value || [];

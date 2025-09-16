@@ -1,0 +1,19 @@
+{
+  "Business": "Business",
+  "Resort": "Resort",
+  "Department": "DepartmentDMS",
+  "Building": "Building",
+  "Document Type": "DocumentType",
+  "Discipline": "Discipline",
+  "Gate": "Gate",
+  "Park Stage": "ParkStage",
+  "Drawing Set Name": "DrawingSetName",
+  "Drawing Area": "Drawing_x005f_x0020_x005f_Area",
+  "Drawing Number": "DrawingNumber",
+  "Villa": "Villa",
+  "Confidentiality": "Confidentiality",
+  "Revision Number": "RevisionNumber",
+  "Short Description": "ShortDescription",
+  "Drawing Date" : "Drawing_x005f_x0020_x005f_Date",
+  "Drawing Received Date" : "Drawing_x005f_x0020_x005f_Received_x005f_x0020_x005f_Date"
+}

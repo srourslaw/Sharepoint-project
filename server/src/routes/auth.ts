@@ -90,7 +90,9 @@ export const createAuthRoutes = (authService: AuthService, authMiddleware: AuthM
 
       // Redirect back to frontend after successful authentication with session ID
       console.log('🎉 OAuth callback successful, redirecting to frontend');
-      const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:8080';
+      const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:8080';
+      const frontendUrl = corsOrigin.split(',')[0].trim(); // Use first CORS origin as frontend URL
+      console.log('🔄 Redirecting to:', frontendUrl);
       res.redirect(`${frontendUrl}/?sessionId=${sessionId}&auth=success`);
     } catch (error: any) {
       console.error('❌ OAuth callback error:', error);

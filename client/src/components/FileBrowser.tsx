@@ -365,11 +365,12 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({
         {/* Selection controls */}
         {allowMultiSelect && (
           <Tooltip title="Select all">
-            <IconButton
-              size="small"
-              onClick={handleSelectAll}
-              disabled={files.length === 0}
-            >
+            <span>
+              <IconButton
+                size="small"
+                onClick={handleSelectAll}
+                disabled={files.length === 0}
+              >
               {state.selectedFiles.size === 0 ? (
                 <CheckBoxOutlineBlankIcon />
               ) : state.selectedFiles.size === files.length ? (
@@ -377,7 +378,8 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({
               ) : (
                 <IndeterminateCheckBoxIcon color="primary" />
               )}
-            </IconButton>
+              </IconButton>
+            </span>
           </Tooltip>
         )}
 
@@ -429,9 +431,11 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({
 
         {/* Actions */}
         <Tooltip title="Refresh">
-          <IconButton size="small" onClick={refreshFiles} disabled={loading}>
-            <RefreshIcon fontSize="small" />
-          </IconButton>
+          <span>
+            <IconButton size="small" onClick={refreshFiles} disabled={loading}>
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </span>
         </Tooltip>
 
         {allowUpload && !readOnly && (

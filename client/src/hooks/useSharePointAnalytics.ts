@@ -200,46 +200,16 @@ export const useSharePointAnalytics = (): UseSharePointAnalyticsReturn => {
 
     } catch (err: any) {
       console.error('Error fetching SharePoint analytics:', err);
-      console.log('🔄 Falling back to mock SharePoint analytics data');
-      
-      // Generate realistic mock analytics based on your SharePoint structure
-      const mockAnalytics = {
-        totalFiles: 147,
-        totalStorage: formatBytes(892 * 1024 * 1024), // 892 MB
-        totalSites: 2, // Communication site + All Company site
-        totalLibraries: 4,
-        fileTypes: [
-          { type: 'Word Documents', count: 42, percentage: 29, extension: 'docx' },
-          { type: 'Excel Sheets', count: 31, percentage: 21, extension: 'xlsx' },
-          { type: 'PDFs', count: 28, percentage: 19, extension: 'pdf' },
-          { type: 'PowerPoint', count: 23, percentage: 16, extension: 'pptx' },
-          { type: 'Images', count: 15, percentage: 10, extension: 'jpg' },
-          { type: 'Text Files', count: 8, percentage: 5, extension: 'txt' }
-        ],
-        recentActivity: [
-          { fileName: 'Quarterly Report Q4.docx', action: 'modified', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toLocaleString(), site: 'Communication site' },
-          { fileName: 'Budget Analysis.xlsx', action: 'modified', timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toLocaleString(), site: 'All Company' },
-          { fileName: 'Team Meeting Notes.pdf', action: 'modified', timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toLocaleString(), site: 'Communication site' },
-          { fileName: 'Project Timeline.pptx', action: 'modified', timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toLocaleString(), site: 'All Company' },
-          { fileName: 'Site Overview.docx', action: 'modified', timestamp: new Date(Date.now() - 18 * 60 * 60 * 1000).toLocaleString(), site: 'Communication site' },
-          { fileName: 'Financial Summary.xlsx', action: 'modified', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toLocaleString(), site: 'All Company' },
-          { fileName: 'Policy Document.pdf', action: 'modified', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleString(), site: 'Communication site' },
-          { fileName: 'Training Materials.pptx', action: 'modified', timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toLocaleString(), site: 'All Company' },
-          { fileName: 'Workflow Diagram.png', action: 'modified', timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toLocaleString(), site: 'Communication site' },
-          { fileName: 'Data Export.csv', action: 'modified', timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toLocaleString(), site: 'All Company' }
-        ],
-        storageByType: [
-          { type: 'Word Documents', size: 268 * 1024 * 1024, sizeFormatted: formatBytes(268 * 1024 * 1024) },
-          { type: 'Excel Sheets', size: 192 * 1024 * 1024, sizeFormatted: formatBytes(192 * 1024 * 1024) },
-          { type: 'PDFs', size: 156 * 1024 * 1024, sizeFormatted: formatBytes(156 * 1024 * 1024) },
-          { type: 'PowerPoint', size: 134 * 1024 * 1024, sizeFormatted: formatBytes(134 * 1024 * 1024) },
-          { type: 'Images', size: 98 * 1024 * 1024, sizeFormatted: formatBytes(98 * 1024 * 1024) },
-          { type: 'Text Files', size: 44 * 1024 * 1024, sizeFormatted: formatBytes(44 * 1024 * 1024) }
-        ]
-      };
-
-      setAnalytics(mockAnalytics);
-      setError('Using sample analytics data (SharePoint API connection failed)');
+      setError('Failed to load SharePoint analytics. Please check your connection and try again.');
+      setAnalytics({
+        totalFiles: 0,
+        totalStorage: '0 B',
+        totalSites: 0,
+        totalLibraries: 0,
+        fileTypes: [],
+        recentActivity: [],
+        storageByType: []
+      });
     } finally {
       setLoading(false);
     }

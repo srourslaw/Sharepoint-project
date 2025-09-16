@@ -101,7 +101,7 @@ services:
       ENABLE_METRICS: ${ENABLE_METRICS:-true}
       
       # Feature Flags
-      ENABLE_REAL_SHAREPOINT: ${ENABLE_REAL_SHAREPOINT:-false}
+      ENABLE_REAL_SHAREPOINT: ${ENABLE_REAL_SHAREPOINT:-true}
       
     volumes:
       - ./server/logs:/app/logs

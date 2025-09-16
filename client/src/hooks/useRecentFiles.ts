@@ -15,47 +15,6 @@ export const useRecentFiles = (): UseRecentFilesReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Generate consistent mock data that persists across refreshes
-  const generateMockRecentFiles = (): SharePointFile[] => {
-    const mockRecentFiles: SharePointFile[] = [];
-    
-    // Use consistent data - same files every time
-    const files = [
-      { name: 'Project Proposal', type: 'docx', days: 1 },
-      { name: 'Budget Report Q3', type: 'xlsx', days: 2 },
-      { name: 'Meeting Minutes', type: 'docx', days: 3 },
-      { name: 'Technical Specification', type: 'pdf', days: 4 },
-      { name: 'User Manual v2', type: 'pdf', days: 5 },
-      { name: 'Performance Review', type: 'docx', days: 7 },
-      { name: 'Marketing Plan 2024', type: 'pptx', days: 10 },
-      { name: 'Financial Summary', type: 'xlsx', days: 12 },
-      { name: 'Training Materials', type: 'pptx', days: 15 },
-      { name: 'Code Documentation', type: 'pdf', days: 18 },
-      { name: 'Design Mockups', type: 'pptx', days: 20 },
-      { name: 'Client Presentation', type: 'pptx', days: 25 },
-    ];
-
-    files.forEach((file, i) => {
-      const modifiedDate = new Date();
-      modifiedDate.setDate(modifiedDate.getDate() - file.days);
-
-      mockRecentFiles.push({
-        id: `recent-file-${i}`,
-        name: `${file.name}.${file.type}`,
-        displayName: file.name,
-        webUrl: `https://company.sharepoint.com/sites/docs/file-${i}`,
-        size: Math.floor(Math.random() * 5000000) + 10000, // 10KB to 5MB
-        mimeType: `application/${file.type}`,
-        extension: file.type,
-        createdDateTime: modifiedDate.toISOString(),
-        lastModifiedDateTime: modifiedDate.toISOString(),
-        parentPath: '/sites/docs/Shared Documents',
-        isFolder: false,
-      });
-    });
-
-    return mockRecentFiles;
-  };
 
   const fetchRecentFiles = async (): Promise<SharePointFile[]> => {
     try {
@@ -120,8 +79,8 @@ export const useRecentFiles = (): UseRecentFilesReturn => {
         throw new Error('No files found in any SharePoint site');
       } catch (siteErr: any) {
         console.warn('Error fetching from specific SharePoint sites:', siteErr);
-        // Fall back to consistent mock data only if no real data is available
-        return generateMockRecentFiles();
+        // Return empty array instead of mock data
+        return [];
       }
     }
   };

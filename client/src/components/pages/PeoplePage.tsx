@@ -94,70 +94,9 @@ export const PeoplePage: React.FC = () => {
     }
   };
 
-  const teamMembers = [
-    { 
-      id: 1, 
-      name: 'Sarah Johnson', 
-      email: 'sarah.johnson@company.com', 
-      role: 'Project Manager', 
-      department: 'Operations',
-      avatar: 'SJ',
-      status: 'online',
-      permissions: 'Full Control',
-      lastActive: '2 minutes ago'
-    },
-    { 
-      id: 2, 
-      name: 'Mike Chen', 
-      email: 'mike.chen@company.com', 
-      role: 'Developer', 
-      department: 'Engineering',
-      avatar: 'MC',
-      status: 'online',
-      permissions: 'Contribute',
-      lastActive: '15 minutes ago'
-    },
-    { 
-      id: 3, 
-      name: 'Emily Davis', 
-      email: 'emily.davis@company.com', 
-      role: 'Designer', 
-      department: 'Creative',
-      avatar: 'ED',
-      status: 'away',
-      permissions: 'Read',
-      lastActive: '1 hour ago'
-    },
-    { 
-      id: 4, 
-      name: 'Alex Wilson', 
-      email: 'alex.wilson@company.com', 
-      role: 'Analyst', 
-      department: 'Finance',
-      avatar: 'AW',
-      status: 'offline',
-      permissions: 'Contribute',
-      lastActive: '2 hours ago'
-    },
-    { 
-      id: 5, 
-      name: 'Lisa Brown', 
-      email: 'lisa.brown@company.com', 
-      role: 'Marketing Lead', 
-      department: 'Marketing',
-      avatar: 'LB',
-      status: 'online',
-      permissions: 'Full Control',
-      lastActive: 'Active now'
-    },
-  ];
-
-  const sharedFiles = [
-    { name: 'Q3 Budget Report.xlsx', sharedWith: 8, permissions: 'View Only', sharedBy: 'Sarah Johnson', date: '2 days ago' },
-    { name: 'Project Timeline.pptx', sharedWith: 12, permissions: 'Can Edit', sharedBy: 'Mike Chen', date: '1 week ago' },
-    { name: 'Design Guidelines.pdf', sharedWith: 25, permissions: 'View Only', sharedBy: 'Emily Davis', date: '2 weeks ago' },
-    { name: 'Meeting Notes.docx', sharedWith: 6, permissions: 'Can Edit', sharedBy: 'Alex Wilson', date: '3 days ago' },
-  ];
+  // Use real data from SharePoint People API
+  const teamMembers = peopleData.recentContacts || [];
+  const sharedFiles = peopleData.sharedFiles || [];
 
   // Use real invitations data from the hook
   const pendingInvitations = peopleData.pendingInvitations.map(invitation => ({

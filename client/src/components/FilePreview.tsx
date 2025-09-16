@@ -228,10 +228,37 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       );
     }
 
-    // Excel/Spreadsheet files - enhanced with DataGrid for proper spreadsheet view
+    // Excel/Spreadsheet files - enhanced with Microsoft Graph preview URLs
     if (isExcel) {
-      console.log('📊 FilePreview: Rendering Excel with DataGrid');
+      console.log('📊 FilePreview: Rendering Excel with Microsoft Graph preview');
       console.log('📊 FilePreview: content available:', !!content, 'type:', typeof content);
+
+      // If content is a Microsoft Graph preview URL, use it directly
+      if (content && typeof content === 'string' && (content.startsWith('https://') || content.startsWith('http://'))) {
+        console.log('📊 FilePreview: Using Microsoft Graph preview URL for Excel');
+        return (
+          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+            <iframe
+              src={content}
+              width="100%"
+              height="100%"
+              style={{
+                border: 'none',
+                display: 'block',
+                minHeight: '600px'
+              }}
+              title={`Excel: ${String(file.name || file.displayName || 'Spreadsheet')}`}
+              onLoad={() => console.log('📊 Excel Microsoft Graph preview loaded successfully')}
+              onError={(e) => {
+                console.error('📊 Microsoft Graph preview failed, trying direct API:', e);
+                const iframe = e.target as HTMLIFrameElement;
+                const directUrl = `/api/sharepoint-advanced/files/${file.id}/content`;
+                iframe.src = directUrl;
+              }}
+            />
+          </Box>
+        );
+      }
 
       // If we have text content, try to parse it as a spreadsheet
       if (content && typeof content === 'string' && !content.startsWith('blob:') && content.trim().length > 0) {
@@ -322,11 +349,38 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       );
     }
 
-    // Word documents - enhanced handling for different SharePoint contexts
+    // Word documents - enhanced with Microsoft Graph preview URLs
     if (isWord) {
-      console.log('📄 FilePreview: Rendering Word document');
+      console.log('📄 FilePreview: Rendering Word document with Microsoft Graph preview');
       console.log('📄 FilePreview: content available:', !!content, 'type:', typeof content);
       console.log('📄 FilePreview: content preview:', content ? content.substring(0, 100) + '...' : 'none');
+
+      // If content is a Microsoft Graph preview URL, use it directly
+      if (content && typeof content === 'string' && (content.startsWith('https://') || content.startsWith('http://'))) {
+        console.log('📄 FilePreview: Using Microsoft Graph preview URL for Word');
+        return (
+          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+            <iframe
+              src={content}
+              width="100%"
+              height="100%"
+              style={{
+                border: 'none',
+                display: 'block',
+                minHeight: '600px'
+              }}
+              title={`Word: ${String(file.name || file.displayName || 'Document')}`}
+              onLoad={() => console.log('📄 Word Microsoft Graph preview loaded successfully')}
+              onError={(e) => {
+                console.error('📄 Microsoft Graph preview failed, trying direct API:', e);
+                const iframe = e.target as HTMLIFrameElement;
+                const directUrl = `/api/sharepoint-advanced/files/${file.id}/content`;
+                iframe.src = directUrl;
+              }}
+            />
+          </Box>
+        );
+      }
 
       // If we have text content, display it
       if (content && typeof content === 'string' && !content.startsWith('blob:') && content.trim().length > 0) {

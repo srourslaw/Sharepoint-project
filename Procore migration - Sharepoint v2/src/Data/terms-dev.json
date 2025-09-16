@@ -1,0 +1,125 @@
+{
+  "DMS Terms": {
+    "Business": {
+      "Allira": "Allira|5a59d212-70f7-4ae8-9ca0-af85b8b5f514",
+      "Gemlife": "Gemlife|f7e3f84b-181d-45af-97b4-e32c71c7b792",
+      "LivingGems": "LivingGems|c97f5ec1-2928-4333-ac9d-f9a35e70ca30",
+      "Prospecta": "Prospecta|792238f6-99a8-4b63-bd2a-f4da9baec5da"
+    },
+    "Resort": {
+      "Ballina": "Ballina|312710eb-41f1-461a-9ee0-3b78e4846f90",
+      "Beachmere (Site 1)": "Beachmere (Site 1)|6f0f6839-a143-4fc4-a19f-d0b992ca5ac6",
+      "Beachmere (Site 2)": "Beachmere (Site 2)|bd6906bf-9fbb-4480-90a1-a5895b949daf",
+      "Bribie Island": "Bribie Island|56e89007-569f-429a-b9c2-677add54d812",
+      "GEMLIFE-DEV-RESORT-A": "GEMLIFE-DEV-RESORT-A|a2aa1f0b-36f5-49c6-8ac1-f766fb1c375c",
+      "GEMLIFE-DEV-RESORT-B": "GEMLIFE-DEV-RESORT-B|b71bd60d-7b2a-4415-a3ef-edcb2b99347e",
+      "Highfields": "Highfields|cfb7b5a7-1420-4b10-a490-924acae62606",
+      "Highfields 2 (Toowoomba)": "Highfields 2 (Toowoomba)|8791f0a7-b2db-4f89-af4f-ce6a92670e2b",
+      "Palmwoods": "Palmwoods|857e3596-8969-411a-88db-0a6d9e2f9c58",
+      "Pampana": "Pampana|87408ed4-a285-4d51-9319-86782b9786c8"
+    },
+    "Department": {
+      "Asset": "Asset|0e718be6-c077-4209-8742-c662e7271365",
+      "Civil": "Civil|0b5bf580-0531-4e42-96c2-c3f76f6ea266",
+      "Commercial": "Commercial|c9603621-c1be-468d-80ac-c78c7c17595b",
+      "Construction Support": "Construction Support|7b2bdb2b-b801-4d23-8bd3-59a6a6087012",
+      "Design Team": "Design Team|269942de-9155-44e0-b3e0-2b753f52b619",
+      "Drafting/Architecture": "Drafting/Architecture|e6af0139-dd51-4f26-a268-e1a00c0916bc",
+      "Estimating": "Estimating|831b66e2-a135-442c-8cf5-d6b595a1a447",
+      "Finance": "Finance|69643804-be49-4255-bd3a-ecc62e1b1ee4",
+      "Human Resource": "Human Resource|8c7d6695-df79-4805-906c-5e5968fb6d1b",
+      "IT": "IT|48999909-3958-4905-beb4-7a3e3be27751",
+      "Operations": "Operations|8c6948ef-b663-4db0-8499-58611d0b5ac3",
+      "Residential": "Residential|dca86655-9a0f-41e4-873f-85fbff485441",
+      "Sales and Marketing": "Sales and Marketing|2bb5cf21-746b-4da7-b552-05b5a0427a99"
+    },
+    "Building": {
+      "Clubhouse": "Clubhouse|c0f516f2-3f73-47fd-91be-66322192c485",
+      "Entry Statement": "Entry Statement|3472ae0d-d3d0-4449-8b69-d92fe50433db",
+      "Fitness Centre": "Fitness Centre|ab65e14b-b765-4eb5-b10a-6f7715a80dcd",
+      "Lifestyle Pavillion": "Lifestyle Pavillion|a57f3542-e3b3-49e9-9544-b69be3f74274",
+      "Sales Office": "Sales Office|c2b518d3-64c5-462b-86fe-35cbbc9bf712",
+      "Summerhouse": "Summerhouse|384212b1-d1b8-4979-8b21-daa35dff60b9"
+    },
+    "Document Type": {
+      "Brief": "Brief|143da6de-2820-4960-8ef8-b8cc4f881465",
+      "Contact List": "Contact List|d1d86f11-918f-46f6-9bc7-ac5c15ac2e0c",
+      "Contract": "Contract|ba8af9d8-306c-4743-9718-d18696ac08f7",
+      "Drawing": "Drawing|5192a2cd-889e-4177-ad24-7a960c8a8902",
+      "Guide": "Guide|bd2ffa33-38f8-4165-a9a0-d6b77b786965",
+      "Invoice": "Invoice|b17a44dd-0c1c-46ec-8441-9c40d7cdbf10",
+      "Learning and Development": "Learning and Development|acdd9c64-e3ee-4c75-8d40-b64f297c911f",
+      "Manual": "Manual|2a6114b5-a873-414a-8e89-2c1581dcd5b8",
+      "Marketing": "Marketing|a45b7236-d575-4244-8a60-3f7d68b8611a",
+      "Minutes": "Minutes|2c6f33a0-4e03-45e3-8e7e-6b876ce0d348",
+      "Org Chart": "Org Chart|7a8c8831-7adb-4ae6-93e5-abf20d636d49",
+      "Photograph": "Photograph|f0d177e7-015c-4120-b1c7-4cc655bd6fcb",
+      "PII": "PII|8b8c4044-435d-4a1a-92b9-29605d1d2dc6",
+      "Plan": "Plan|694222d4-48d6-4885-8f20-3efbfcc35579",
+      "Policy and Procedures": "Policy and Procedures|dd3982f8-3264-411c-8547-729f6c405ae9",
+      "Presentation": "Presentation|8c81f62c-1087-49a0-8eb3-04effea0ac87",
+      "Program": "Program|e026e6ab-df7b-4622-9ed5-a3134a76098d",
+      "Reference / Example": "Reference / Example|93770fc6-a73d-4d24-ae48-51381c0efc23",
+      "Register": "Register|9808bdd8-3627-431f-91e2-5c8e0d46af20",
+      "Report": "Report|9044912a-7861-475c-8c5c-b34457bd8d96",
+      "Schedule": "Schedule|c48aa649-d353-4308-be2b-85342d3c5261",
+      "Sketch": "Sketch|2b2f63a5-53e4-439a-a49e-8ac58fe7ae8f",
+      "Specification": "Specification|92097c0e-20f0-4522-81c9-2cbbb1aabd08",
+      "Staff Memos": "Staff Memos|3f14d06f-9bb3-45b3-af61-89dfa402c190",
+      "Standard": "Standard|81e5767f-3345-4a02-b84d-9e9a5da35e89",
+      "Template": "Template|8372e371-fb54-47a0-9db6-d3c5487e7fb7",
+      "to be tagged": "to be tagged|3ee28161-025d-4fc9-8511-23d412de4f53"
+    },
+    "Villa": {
+      "001": "001|48464f1d-57a0-41e0-a406-78791f3688d4"
+    },
+    "Discipline": {
+      "Architectural": "Architectural|fc7534b8-9bb4-4876-b840-5507e00548dc",
+      "Civil": "Civil|650aa291-0bad-435d-b049-03cc0481a382",
+      "Electrical": "Electrical|d4a93205-34df-4144-bb6f-9ac90386b573",
+      "Energy Rating": "Energy Rating|1df9cfb5-ea87-44b4-8e44-0b704ef8bb03",
+      "Environmental": "Environmental|84fb3a10-f5de-492b-80ea-29d95e9333c9",
+      "Fire": "Fire|4f3fef81-d9a2-4bb7-b3fb-ff6d04660fab",
+      "Geotechnical": "Geotechnical|95c08210-8345-4884-8d89-d7d39b166a66",
+      "Heritage": "Heritage|f99e8129-b082-4a41-b1e1-8c2360332455",
+      "Hydraulic": "Hydraulic|41adf9cb-9ca6-4025-a859-0f261a63cd10",
+      "Interior": "Interior|b87738ca-8e2a-4f1e-8fed-f4d7b16b152f",
+      "Kitchen Design": "Kitchen Design|e479b7b4-a2d3-4016-8d9b-f4c226f060ab",
+      "Landscape": "Landscape|4417de73-1ead-4888-bd3f-3b8e82bbe515",
+      "Mechanical": "Mechanical|8ed0c010-2984-4618-b2ef-a2f4f848a285",
+      "Pool Design": "Pool Design|538076af-a2d1-44be-9e76-443d20f56c2f",
+      "Structural": "Structural|6237718e-5fa9-49a8-bb9c-726e7b4ed5d8",
+      "Survey": "Survey|445b317b-fdfd-4f9a-8964-1a4c4ecdf63e",
+      "Traffic and Parking": "Traffic and Parking|df86f54b-cccb-4542-a00b-d3ea8cbf1738",
+      "Visualisation": "Visualisation|b5f0f9f7-8799-471a-a114-2c8a45e9c367"
+    },
+    "Drawing Set Name": {
+      "BA/Tender Issue": "BA/Tender Issue|d561a393-6a3b-481a-ad0c-c26d2c025d8a",
+      "Construction Issue": "Construction Issue|423bd7cf-70a8-40ca-bcd3-b2e1cff0f5da",
+      "Council Stamped": "Council Stamped|950bd68a-346b-4f23-858c-5839261e8471",
+      "DA Concept Issue": "DA Concept Issue|98b923de-a280-4aa1-8757-9200e75d822a",
+      "Development": "Development|fe000bb3-9011-4b05-a01c-b2ac916a2096",
+      "Preliminary Issue": "Preliminary Issue|e2c413e6-16a0-4c7c-9e92-0daee2cc741b"
+    },
+    "Drawing Area": {
+      "Civil Works": "Civil Works|7581292d-caa4-4f2e-af3d-62c30957c3dc",
+      "Clubhouse": "Clubhouse|4c5f4266-ba7a-415f-bc64-df332194bfb2",
+      "DA Drawings": "DA Drawings|4b1b1209-a399-4030-bcea-7e1d66d8ca61",
+      "Heritage": "Heritage|2c4a54fc-efdf-4a5a-880f-a1c08bd1fe95",
+      "Sales Office": "Sales Office|5605387a-0545-408e-acb4-5404c4c37256",
+      "URD": "URD|8e51a207-32a6-4b8b-9128-ce8a9fd28ccf"
+    },
+    "Gate": {
+      "1-Site plan": "1-Site plan|5a137676-6409-4bdd-b6c3-952807e48b22",
+      "2-Commercial building design": "2-Commercial building design|30d198dc-fbc3-4f3c-b3c5-ab0e09108891"
+    },
+    "Park Stage": {
+      "00": "00|dd882453-301f-43d5-8d42-6a3e60e188f4",
+      "01": "01|7ae50843-9a5a-4423-b7a5-81435ec6eb9a",
+      "1A": "1A|1be1eb13-1b29-4e8a-bb5d-492028d0f648"
+    },
+    "Confidentiality": {
+      "Internal Only": "Internal Only|e13b9ea0-3936-4627-bb8b-5555663f8e56"
+    }
+  }
+}

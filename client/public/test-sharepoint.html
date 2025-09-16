@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SharePoint Access Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .file-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+        }
+        .file-item:hover {
+            background: #e9e9e9;
+        }
+        button {
+            background: #0078d4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #106ebe;
+        }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .loading { background: #d1ecf1; color: #0c5460; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <h1>SharePoint File Access Test</h1>
+
+    <div class="container">
+        <h2>Authentication</h2>
+        <button onclick="login()">Login to SharePoint</button>
+        <button onclick="checkAuth()">Check Auth Status</button>
+        <div id="status"></div>
+    </div>
+
+    <div class="container">
+        <h2>SharePoint Sites</h2>
+        <button onclick="loadSites()">Load Sites</button>
+        <div id="sites"></div>
+    </div>
+
+    <div class="container">
+        <h2>Files</h2>
+        <button onclick="loadFiles()">Load Files</button>
+        <div id="files"></div>
+    </div>
+
+    <div class="container">
+        <h2>File Preview</h2>
+        <div id="preview"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+
+        function setStatus(message, type = 'loading') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+        }
+
+        async function login() {
+            setStatus('Redirecting to Microsoft login...', 'loading');
+            window.location.href = 'http://localhost:3001/auth/login';
+        }
+
+        async function checkAuth() {
+            try {
+                setStatus('Checking authentication...', 'loading');
+                const response = await fetch('http://localhost:3001/auth/me', {
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    setStatus(`✅ Authenticated as: ${user.displayName}`, 'success');
+                } else {
+                    setStatus('❌ Not authenticated', 'error');
+                }
+            } catch (error) {
+                setStatus(`❌ Auth check failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadSites() {
+            try {
+                setStatus('Loading SharePoint sites...', 'loading');
+                const response = await fetch(`${API_BASE}/api/sharepoint-advanced/drives/root/items/root/children`, {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const sitesDiv = document.getElementById('sites');
+
+                if (data.items && data.items.length > 0) {
+                    sitesDiv.innerHTML = '<h3>Available Sites:</h3>' +
+                        data.items.map(site =>
+                            `<div class="file-item" onclick="loadSiteFiles('${site.id}')">${site.name}</div>`
+                        ).join('');
+                    setStatus(`✅ Loaded ${data.items.length} sites`, 'success');
+                } else {
+                    sitesDiv.innerHTML = '<p>No sites found</p>';
+                    setStatus('⚠️ No sites found', 'error');
+                }
+            } catch (error) {
+                setStatus(`❌ Failed to load sites: ${error.message}`, 'error');
+                document.getElementById('sites').innerHTML = `<pre>${error.stack}</pre>`;
+            }
+        }
+
+        async function loadSiteFiles(siteId) {
+            try {
+                setStatus(`Loading files from site: ${siteId}...`, 'loading');
+                const response = await fetch(`${API_BASE}/api/sharepoint-advanced/drives/${encodeURIComponent(siteId)}/items/root/children`, {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const filesDiv = document.getElementById('files');
+
+                if (data.items && data.items.length > 0) {
+                    filesDiv.innerHTML = '<h3>Files in Site:</h3>' +
+                        data.items.map(file =>
+                            `<div class="file-item" onclick="previewFile('${file.id}', '${file.name}')">${file.name} (${file.size || 0} bytes)</div>`
+                        ).join('');
+                    setStatus(`✅ Loaded ${data.items.length} files`, 'success');
+                } else {
+                    filesDiv.innerHTML = '<p>No files found in this site</p>';
+                    setStatus('⚠️ No files found', 'error');
+                }
+            } catch (error) {
+                setStatus(`❌ Failed to load files: ${error.message}`, 'error');
+                document.getElementById('files').innerHTML = `<pre>${error.stack}</pre>`;
+            }
+        }
+
+        async function loadFiles() {
+            try {
+                setStatus('Loading root files...', 'loading');
+                const response = await fetch(`${API_BASE}/api/sharepoint-advanced/drives/root/items/root/children`, {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const filesDiv = document.getElementById('files');
+
+                if (data.items && data.items.length > 0) {
+                    filesDiv.innerHTML = '<h3>Root Files:</h3>' +
+                        data.items.map(file =>
+                            `<div class="file-item" onclick="previewFile('${file.id}', '${file.name}')">${file.name} (${file.size || 0} bytes)</div>`
+                        ).join('');
+                    setStatus(`✅ Loaded ${data.items.length} files`, 'success');
+                } else {
+                    filesDiv.innerHTML = '<p>No files found</p>';
+                    setStatus('⚠️ No files found', 'error');
+                }
+            } catch (error) {
+                setStatus(`❌ Failed to load files: ${error.message}`, 'error');
+                document.getElementById('files').innerHTML = `<pre>${error.stack}</pre>`;
+            }
+        }
+
+        async function previewFile(fileId, fileName) {
+            try {
+                setStatus(`Loading preview for: ${fileName}...`, 'loading');
+                const response = await fetch(`${API_BASE}/api/sharepoint-advanced/files/${encodeURIComponent(fileId)}/content?extractText=false&format=binary`, {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const blob = await response.blob();
+                const previewDiv = document.getElementById('preview');
+
+                if (fileName.toLowerCase().endsWith('.pdf')) {
+                    const url = URL.createObjectURL(blob);
+                    previewDiv.innerHTML = `
+                        <h3>Preview: ${fileName}</h3>
+                        <iframe src="${url}" width="100%" height="500px" style="border: 1px solid #ccc;"></iframe>
+                        <p>File size: ${blob.size} bytes</p>
+                    `;
+                } else if (fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/)) {
+                    const url = URL.createObjectURL(blob);
+                    previewDiv.innerHTML = `
+                        <h3>Preview: ${fileName}</h3>
+                        <img src="${url}" style="max-width: 100%; height: auto;" />
+                        <p>File size: ${blob.size} bytes</p>
+                    `;
+                } else {
+                    previewDiv.innerHTML = `
+                        <h3>File Info: ${fileName}</h3>
+                        <p>File size: ${blob.size} bytes</p>
+                        <p>MIME type: ${blob.type}</p>
+                        <p>✅ File downloaded successfully but preview not available for this file type</p>
+                    `;
+                }
+
+                setStatus(`✅ Preview loaded for: ${fileName}`, 'success');
+            } catch (error) {
+                setStatus(`❌ Failed to preview file: ${error.message}`, 'error');
+                document.getElementById('preview').innerHTML = `<pre>${error.stack}</pre>`;
+            }
+        }
+
+        // Check auth on page load
+        window.onload = function() {
+            checkAuth();
+        };
+    </script>
+</body>
+</html>

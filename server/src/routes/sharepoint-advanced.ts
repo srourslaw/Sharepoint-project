@@ -3160,6 +3160,249 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
     }
   });
 
+  /**
+   * GET /api/sharepoint-advanced/files/:fileId/preview
+   * Get Microsoft Graph preview URL for Office documents
+   */
+  router.get('/files/:fileId/preview', async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { fileId } = req.params;
+      console.log('🔍 Getting Microsoft Graph preview URL for:', fileId);
+
+      if (isRealSharePointEnabled) {
+        try {
+          if (!req.session?.accessToken) {
+            res.status(401).json({
+              success: false,
+              error: {
+                code: 'AUTHENTICATION_REQUIRED',
+                message: 'Authentication required'
+              }
+            });
+            return;
+          }
+          const graphClient = authService.getGraphClient(req.session.accessToken);
+
+          // Search for file across all user drives to get correct drive/site context
+          console.log('🔍 Searching all accessible drives for file...');
+          const drivesResponse = await graphClient.api('/me/drives').select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota').get();
+          console.log(`Found ${drivesResponse.value?.length || 0} drives to search`);
+
+          // Prioritize business drives over personal drives
+          const allDrives = drivesResponse.value || [];
+          const businessDrives = allDrives.filter(isBusinessDrive);
+          const personalDrives = allDrives.filter((drive: any) => !isBusinessDrive(drive));
+          const searchOrder = [...businessDrives, ...personalDrives];
+
+          let fileMetadata = null;
+          let driveContext = null;
+
+          for (const drive of searchOrder) {
+            try {
+              console.log(`🔍 Searching drive: ${drive.name} (${drive.driveType})`);
+              fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
+              driveContext = drive;
+              console.log(`📄 Found file in drive ${drive.name}:`, {
+                name: fileMetadata.name,
+                mimeType: fileMetadata.file?.mimeType,
+                webUrl: fileMetadata.webUrl
+              });
+              break;
+            } catch (driveError: any) {
+              console.log(`🔍 File not found in drive ${drive.name}:`, driveError.message || 'Unknown error');
+            }
+          }
+
+          if (!fileMetadata || !driveContext) {
+            throw new Error(`File with ID ${fileId} not found in any accessible drive`);
+          }
+
+          const mimeType = fileMetadata.file?.mimeType || 'application/octet-stream';
+          const fileName = fileMetadata.name;
+          const fileExtension = fileName.split('.').pop()?.toLowerCase();
+
+          console.log('📄 File details:', { fileName, mimeType, fileExtension });
+
+          // Office file types that support Microsoft Graph preview
+          const officeExtensions = ['docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt'];
+          const officeMimeTypes = [
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/msword',
+            'application/vnd.ms-excel',
+            'application/vnd.ms-powerpoint'
+          ];
+
+          const isOfficeFile = (fileExtension && officeExtensions.includes(fileExtension)) ||
+                               officeMimeTypes.includes(mimeType);
+
+          if (isOfficeFile) {
+            try {
+              // Get Microsoft Graph preview URL
+              console.log('🎯 Getting Microsoft Graph preview for Office file...');
+              const previewResponse = await graphClient.api(`/drives/${driveContext.id}/items/${fileId}/preview`).post({});
+
+              if (previewResponse.getUrl) {
+                console.log('✅ Microsoft Graph preview URL obtained');
+                res.json({
+                  success: true,
+                  data: {
+                    fileId,
+                    fileName,
+                    mimeType,
+                    previewType: 'microsoft-office',
+                    previewUrl: previewResponse.getUrl,
+                    embedUrl: previewResponse.getUrl,
+                    downloadUrl: fileMetadata.webUrl,
+                    directPreview: true,
+                    metadata: {
+                      size: fileMetadata.size,
+                      lastModified: fileMetadata.lastModifiedDateTime,
+                      extension: fileExtension
+                    }
+                  }
+                });
+                return;
+              }
+            } catch (previewError: any) {
+              console.error('❌ Microsoft Graph preview failed:', previewError.message);
+              // Fall back to alternative preview methods
+            }
+          }
+
+          // Alternative preview methods for different file types
+          if (fileExtension === 'pdf') {
+            // For PDFs, use the content endpoint with binary format
+            const contentUrl = `${req.protocol}://${req.get('host')}/api/sharepoint-advanced/files/${fileId}/content?format=binary`;
+            res.json({
+              success: true,
+              data: {
+                fileId,
+                fileName,
+                mimeType,
+                previewType: 'pdf',
+                contentUrl,
+                downloadUrl: fileMetadata.webUrl,
+                directPreview: false,
+                metadata: {
+                  size: fileMetadata.size,
+                  lastModified: fileMetadata.lastModifiedDateTime,
+                  extension: fileExtension
+                }
+              }
+            });
+            return;
+          }
+
+          const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+          if (fileExtension && imageExtensions.includes(fileExtension)) {
+            // For images, use the content endpoint
+            const contentUrl = `${req.protocol}://${req.get('host')}/api/sharepoint-advanced/files/${fileId}/content`;
+            res.json({
+              success: true,
+              data: {
+                fileId,
+                fileName,
+                mimeType,
+                previewType: 'image',
+                contentUrl,
+                downloadUrl: fileMetadata.webUrl,
+                directPreview: false,
+                metadata: {
+                  size: fileMetadata.size,
+                  lastModified: fileMetadata.lastModifiedDateTime,
+                  extension: fileExtension
+                }
+              }
+            });
+            return;
+          }
+
+          // For other file types, try Office Online viewer as fallback
+          if (isOfficeFile) {
+            const encodedUrl = encodeURIComponent(fileMetadata.webUrl);
+            const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodedUrl}`;
+
+            res.json({
+              success: true,
+              data: {
+                fileId,
+                fileName,
+                mimeType,
+                previewType: 'office-online',
+                previewUrl: officeViewerUrl,
+                embedUrl: officeViewerUrl,
+                downloadUrl: fileMetadata.webUrl,
+                directPreview: true,
+                metadata: {
+                  size: fileMetadata.size,
+                  lastModified: fileMetadata.lastModifiedDateTime,
+                  extension: fileExtension
+                }
+              }
+            });
+            return;
+          }
+
+          // Generic fallback - no preview available
+          res.json({
+            success: true,
+            data: {
+              fileId,
+              fileName,
+              mimeType,
+              previewType: 'download-only',
+              downloadUrl: fileMetadata.webUrl,
+              directPreview: false,
+              message: 'Preview not available for this file type',
+              metadata: {
+                size: fileMetadata.size,
+                lastModified: fileMetadata.lastModifiedDateTime,
+                extension: fileExtension
+              }
+            }
+          });
+
+        } catch (apiError: any) {
+          console.error('❌ Graph API error getting file preview:', apiError);
+          res.status(500).json({
+            success: false,
+            error: {
+              code: 'FILE_PREVIEW_ERROR',
+              message: 'Failed to get file preview',
+              details: apiError.message
+            }
+          });
+        }
+      } else {
+        // Mock response for development
+        res.json({
+          success: true,
+          data: {
+            fileId,
+            fileName: `mock-file-${fileId}.docx`,
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            previewType: 'mock',
+            message: 'Mock preview URL - real SharePoint integration disabled',
+            directPreview: false
+          }
+        });
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error getting file preview:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'PREVIEW_ERROR',
+          message: 'Failed to get file preview',
+          details: error.message
+        }
+      });
+    }
+  });
+
 
   return router;
 };

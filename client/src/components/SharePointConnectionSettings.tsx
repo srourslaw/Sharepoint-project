@@ -235,16 +235,18 @@ export const SharePointConnectionSettings: React.FC<SharePointConnectionSettings
                     </Box>
                     <Box>
                       <Tooltip title="Test Connection">
-                        <IconButton
-                          onClick={() => handleTestConnection(connection)}
-                          disabled={testingConnections.has(connection.id)}
-                        >
-                          {testingConnections.has(connection.id) ? (
-                            <CircularProgress size={20} />
-                          ) : (
-                            <TestIcon />
-                          )}
-                        </IconButton>
+                        <span>
+                          <IconButton
+                            onClick={() => handleTestConnection(connection)}
+                            disabled={testingConnections.has(connection.id)}
+                          >
+                            {testingConnections.has(connection.id) ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              <TestIcon />
+                            )}
+                          </IconButton>
+                        </span>
                       </Tooltip>
                       <IconButton
                         onClick={() => handleEditConnection(connection)}

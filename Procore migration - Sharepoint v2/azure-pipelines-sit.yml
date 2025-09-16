@@ -1,0 +1,59 @@
+# Node.js with React
+# Build a Node.js project that uses React.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+
+trigger:
+- sit/release/v*
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '18.x'
+  displayName: 'Install Node.js'
+
+- bash: node -v
+  displayName: 'Show NodeJS version'
+
+- bash: az --version
+  displayName: 'Show Azure CLI version'
+
+- script: |
+    cat > .env <<EOF
+    REACT_APP_SSO_URL=$(REACT_APP_SSO_URL)
+    REACT_APP_TOKEN_URL=$(REACT_APP_TOKEN_URL)
+    REACT_APP_TOKEN_CLIENT_ID=$(REACT_APP_TOKEN_CLIENT_ID)
+    REACT_APP_TOKEN_SCOPE=$(REACT_APP_TOKEN_SCOPE)
+    REACT_APP_TOKEN_REDIRECT=$(REACT_APP_TOKEN_REDIRECT)
+    REACT_APP_TENANT_ID=$(REACT_APP_TENANT_ID)
+    REACT_APP_TENANT_NAME=$(REACT_APP_TENANT_NAME)
+    REACT_APP_HUB_NAME=$(REACT_APP_HUB_NAME)
+    EOF
+    cat .env
+  displayName: 'Generating Environment Variable file'
+
+- script: |
+    apt install jq -y
+    npm install -g @azure/static-web-apps-cli
+    npm install
+    npm run build
+  displayName: 'npm install and build'
+
+- script: |
+    ls -alh
+  displayName: 'Directory Listing'
+  
+- script: |
+    az login --service-principal --username $(appId) --password $(password) --tenant $(tenant)
+    az account show
+    az group list --output table
+    swa login --subscription-id $(subscriptionid) --resource-group $(resource-group) --app-name $(name)
+  displayName: 'Azure Access Check'
+  
+- script: |
+    token=$(az staticwebapp secrets list --name $(name) --query "properties" | jq -r '.apiKey')
+    swa deploy ./build --deployment-token $token --env Production
+  displayName: 'Azure Web Static Page deployment'

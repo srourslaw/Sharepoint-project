@@ -256,16 +256,46 @@ export const useFilePreview = (fileId: string | null): UseFilePreviewReturn => {
       const fileExtension = fileData.extension.toLowerCase();
       const mimeType = fileData.mimeType;
       
-      // Office documents - get text content
+      // Office documents - use Microsoft Graph preview URLs
       const officeExtensions = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
       if (officeExtensions.includes(fileExtension)) {
-        console.log('📄 useFilePreview: Processing Office document');
+        console.log('📄 useFilePreview: Processing Office document with Microsoft Graph preview');
         try {
+          // First try to get Microsoft Graph preview URL
+          const previewResponse = await api.get<ApiResponse<any>>(
+            `/api/sharepoint-advanced/files/${id}/preview`
+          );
+
+          console.log('📄 useFilePreview: Got preview response:', previewResponse.data);
+
+          if (previewResponse.data.success && previewResponse.data.data) {
+            const previewData = previewResponse.data.data;
+
+            if (previewData.previewUrl && previewData.directPreview) {
+              // Use Microsoft Graph preview URL
+              console.log('📄 useFilePreview: Using Microsoft Graph preview URL');
+              if (currentFileIdRef.current === id) {
+                setContent(previewData.previewUrl);
+              }
+              return;
+            }
+
+            if (previewData.contentUrl) {
+              // Use content endpoint for preview
+              console.log('📄 useFilePreview: Using content URL for preview');
+              if (currentFileIdRef.current === id) {
+                setContent(previewData.contentUrl);
+              }
+              return;
+            }
+          }
+
+          // Fallback to text content extraction
           const contentResponse = await api.get(
             `/api/sharepoint-advanced/files/${id}/content`,
             { responseType: 'text' }
           );
-          
+
           console.log('📄 useFilePreview: Got Office text response, length:', contentResponse.data?.length);
           if (currentFileIdRef.current === id) {
             setContent(contentResponse.data || 'Document content available - please use AI features to analyze this file.');

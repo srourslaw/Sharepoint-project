@@ -64,6 +64,25 @@ export class SharePointClient {
   async downloadFile(downloadUrl: string): Promise<Buffer> {
     return this.executeWithRetry(async () => {
       try {
+        // Use Graph client's built-in authentication by extracting file ID from download URL
+        // and using the Graph API endpoint instead of direct download
+        const fileIdMatch = downloadUrl.match(/\/drives\/([^\/]+)\/items\/([^\/\?]+)/);
+        if (fileIdMatch) {
+          const driveId = fileIdMatch[1];
+          const itemId = fileIdMatch[2];
+
+          const response = await this.graphClient
+            .api(`/drives/${driveId}/items/${itemId}/content`)
+            .getStream();
+
+          const chunks: Buffer[] = [];
+          for await (const chunk of response) {
+            chunks.push(chunk);
+          }
+          return Buffer.concat(chunks);
+        }
+
+        // Fallback to direct download if we can't parse the URL
         const response = await fetch(downloadUrl, {
           method: 'GET',
           headers: await this.getAuthHeaders(),
@@ -293,11 +312,9 @@ export class SharePointClient {
    */
   private async getAuthHeaders(): Promise<Record<string, string>> {
     try {
-      // Get access token from the Graph client's authentication provider
-      const accessToken = await this.getAccessToken();
-      
+      // Use the Graph client's built-in authentication by making a simple request
+      // This bypasses the need to extract tokens manually
       return {
-        'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       };
@@ -305,39 +322,6 @@ export class SharePointClient {
       throw new SharePointError(
         'AUTH_ERROR',
         'Failed to get authentication headers',
-        401
-      );
-    }
-  }
-
-  /**
-   * Extract access token from Graph client
-   */
-  private async getAccessToken(): Promise<string> {
-    try {
-      // Access the Graph client's internal authentication provider
-      // Note: This is a workaround since the Graph SDK doesn't expose auth provider directly
-      const clientInternal = this.graphClient as any;
-      
-      if (clientInternal._authenticationProvider && 
-          typeof clientInternal._authenticationProvider.getAccessToken === 'function') {
-        return await clientInternal._authenticationProvider.getAccessToken();
-      }
-      
-      // Alternative approach: try to use the middleware pattern for auth
-      // In production, the access token would typically be passed from middleware
-      throw new SharePointError(
-        'AUTH_TOKEN_UNAVAILABLE',
-        'Unable to retrieve access token from Graph client. Ensure authentication middleware is properly configured.',
-        401
-      );
-    } catch (error) {
-      if (error instanceof SharePointError) {
-        throw error;
-      }
-      throw new SharePointError(
-        'AUTH_TOKEN_EXTRACTION_FAILED',
-        `Failed to extract access token: ${error instanceof Error ? error.message : 'Unknown error'}`,
         401
       );
     }

@@ -37,99 +37,55 @@ export const useSharePointFiles = (options: UseSharePointFilesOptions): UseShare
     setError(null);
 
     try {
-      // For now, always return mock data to avoid the p.length error
-      // TODO: Implement proper API calls once the underlying issue is resolved
-      
-      console.log('useSharePointFiles.safe: Using mock data due to API error prevention');
-      
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-      
-      const mockFiles = [
-        {
-          id: 'safe-file-1',
-          name: 'Business Plan.docx',
-          displayName: 'Business Plan.docx',
-          size: 32768,
-          webUrl: 'https://company.sharepoint.com/sites/portal/documents/business-plan.docx',
-          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          extension: 'docx',
-          createdDateTime: '2023-01-01T00:00:00Z',
-          lastModifiedDateTime: new Date().toISOString(),
-          parentPath: path || '/Documents',
-          isFolder: false,
-          lastModifiedBy: {
-            displayName: 'John Doe',
-            email: 'john.doe@company.com'
-          }
+      console.log('useSharePointFiles: Fetching files from path:', path, 'page:', page);
+
+      // Make actual API call to SharePoint
+      const searchParams = new URLSearchParams({
+        path: path || '',
+        page: page.toString(),
+        ...filters,
+      });
+
+      const response = await fetch(`/api/sharepoint-advanced/files?${searchParams}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          id: 'safe-file-2',
-          name: 'Financial Report.xlsx',
-          displayName: 'Financial Report.xlsx',
-          size: 65536,
-          webUrl: 'https://company.sharepoint.com/sites/portal/documents/financial-report.xlsx',
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          extension: 'xlsx',
-          createdDateTime: '2023-02-01T00:00:00Z',
-          lastModifiedDateTime: new Date().toISOString(),
-          parentPath: path || '/Documents',
-          isFolder: false,
-          lastModifiedBy: {
-            displayName: 'Jane Smith',
-            email: 'jane.smith@company.com'
-          }
-        },
-        {
-          id: 'safe-folder-1',
-          name: 'Archive',
-          displayName: 'Archive',
-          size: 0,
-          webUrl: 'https://company.sharepoint.com/sites/portal/documents/archive',
-          mimeType: 'application/folder',
-          extension: '',
-          createdDateTime: '2023-01-01T00:00:00Z',
-          lastModifiedDateTime: new Date().toISOString(),
-          parentPath: path || '/Documents',
-          isFolder: true,
-          lastModifiedBy: {
-            displayName: 'System',
-            email: 'system@company.com'
-          }
-        },
-        {
-          id: 'safe-file-3',
-          name: 'Presentation.pptx',
-          displayName: 'Presentation.pptx',
-          size: 98304,
-          webUrl: 'https://company.sharepoint.com/sites/portal/documents/presentation.pptx',
-          mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-          extension: 'pptx',
-          createdDateTime: '2023-03-01T00:00:00Z',
-          lastModifiedDateTime: new Date().toISOString(),
-          parentPath: path || '/Documents',
-          isFolder: false,
-          lastModifiedBy: {
-            displayName: 'Bob Johnson',
-            email: 'bob.johnson@company.com'
-          }
-        }
-      ];
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch files: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to fetch files');
+      }
+
+      const fetchedFiles = result.data || [];
 
       if (!append) {
-        setFiles(mockFiles);
-        setTotalCount(mockFiles.length);
-        setCurrentPage(1);
-        setTotalPages(1);
+        setFiles(fetchedFiles);
+        setCurrentPage(page);
+      } else {
+        setFiles(prev => [...prev, ...fetchedFiles]);
+        setCurrentPage(page);
       }
-      
+
+      setTotalCount(result.totalCount || fetchedFiles.length);
+      setTotalPages(result.totalPages || 1);
       setError(null);
     } catch (err: any) {
-      console.error('Error in safe SharePoint files hook:', err);
-      setError('Unable to load files at this time');
-      setFiles([]);
-      setTotalCount(0);
-      setCurrentPage(1);
-      setTotalPages(0);
+      console.error('Error fetching SharePoint files:', err);
+      setError(err.message || 'Unable to load files at this time');
+      if (!append) {
+        setFiles([]);
+        setTotalCount(0);
+        setCurrentPage(1);
+        setTotalPages(0);
+      }
     } finally {
       setLoading(false);
     }
