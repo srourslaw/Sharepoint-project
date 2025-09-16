@@ -25,6 +25,12 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
   // All routes require authentication
   router.use(authMiddleware.requireAuth);
 
+  // DEBUG: Test route to see if router is working
+  router.get('/debug-test', (req, res) => {
+    console.log('🧪 DEBUG: Test route hit!');
+    res.json({ message: 'sharepoint-advanced router is working!', path: req.path });
+  });
+
   // Feature flag for enabling real SharePoint API
   const isRealSharePointEnabled = process.env.ENABLE_REAL_SHAREPOINT === 'true';
 
@@ -51,6 +57,45 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
     // Include organizational SharePoint sites
     console.log(`✅ Including business site: ${site.displayName || site.name} - ${site.webUrl}`);
     return true;
+  };
+
+  // Dynamic site name to ID resolution function
+  const resolveSiteNameToId = async (graphClient: any, siteName: string): Promise<string | null> => {
+    try {
+      console.log(`🔍 Resolving site name "${siteName}" to site ID...`);
+
+      // Try to find the site by searching for it
+      const searchResponse = await graphClient.api(`/sites?search=${encodeURIComponent(siteName)}`).get();
+
+      if (searchResponse.value && searchResponse.value.length > 0) {
+        // Look for exact matches first
+        let exactMatch = searchResponse.value.find((site: any) =>
+          (site.displayName || site.name) === siteName
+        );
+
+        // If no exact match, try case-insensitive
+        if (!exactMatch) {
+          exactMatch = searchResponse.value.find((site: any) =>
+            (site.displayName || site.name)?.toLowerCase() === siteName.toLowerCase()
+          );
+        }
+
+        // If still no match, use the first result
+        const selectedSite = exactMatch || searchResponse.value[0];
+
+        console.log(`✅ Resolved "${siteName}" to site ID: ${selectedSite.id}`);
+        console.log(`   Site webUrl: ${selectedSite.webUrl}`);
+        console.log(`   Site displayName: ${selectedSite.displayName || selectedSite.name}`);
+
+        return selectedSite.id;
+      } else {
+        console.log(`⚠️ No sites found matching "${siteName}"`);
+        return null;
+      }
+    } catch (error: any) {
+      console.error(`❌ Error resolving site name "${siteName}":`, error.message);
+      return null;
+    }
   };
 
   const isBusinessDrive = (drive: any): boolean => {
@@ -95,6 +140,93 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
     supportedTypes: [FileType.DOCUMENT, FileType.SPREADSHEET, FileType.PRESENTATION, FileType.PDF, FileType.TEXT]
   });
 
+  // Helper function to convert various content types to Buffer consistently
+  const convertToBuffer = async (content: any, contextInfo: string = 'file'): Promise<Buffer> => {
+    console.log(`🔄 Converting ${contextInfo} content to Buffer...`);
+    console.log(`📊 Content type: ${typeof content}, Constructor: ${content?.constructor?.name}`);
+
+    if (Buffer.isBuffer(content)) {
+      console.log(`📦 Content is already a Buffer, length: ${content.length}`);
+      return content;
+    }
+
+    if (content instanceof ReadableStream) {
+      console.log('📥 Converting ReadableStream to Buffer...');
+      try {
+        const reader = content.getReader();
+        const chunks: Uint8Array[] = [];
+        let done = false;
+
+        while (!done) {
+          const { value, done: streamDone } = await reader.read();
+          done = streamDone;
+          if (value) {
+            chunks.push(value);
+          }
+        }
+
+        const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+        const buffer = Buffer.concat(chunks.map(chunk => Buffer.from(chunk)), totalLength);
+        console.log(`✅ Successfully converted ReadableStream to Buffer, length: ${buffer.length}`);
+        return buffer;
+      } catch (streamError: any) {
+        console.error('❌ Failed to convert ReadableStream to Buffer:', streamError);
+        throw new Error(`Failed to process ${contextInfo}: ReadableStream conversion failed - ${streamError.message}`);
+      }
+    }
+
+    if (typeof content === 'string') {
+      console.log(`📄 Converting string content to Buffer, length: ${content.length}`);
+      return Buffer.from(content, 'utf8');
+    }
+
+    if (content && typeof content === 'object' && 'arrayBuffer' in content) {
+      console.log('🔄 Converting Blob/File to Buffer...');
+      try {
+        const arrayBuffer = await content.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        console.log(`✅ Successfully converted Blob to Buffer, length: ${buffer.length}`);
+        return buffer;
+      } catch (blobError: any) {
+        console.error('❌ Failed to convert Blob to Buffer:', blobError);
+        throw new Error(`Failed to process ${contextInfo}: Blob conversion failed - ${blobError.message}`);
+      }
+    }
+
+    if (content && typeof content === 'object' && content.constructor && content.constructor.name === 'PassThrough') {
+      console.log('🔄 Converting PassThrough stream to Buffer...');
+      try {
+        const chunks: Buffer[] = [];
+        return new Promise<Buffer>((resolve, reject) => {
+          content.on('data', (chunk: Buffer) => chunks.push(chunk));
+          content.on('end', () => {
+            const buffer = Buffer.concat(chunks);
+            console.log(`✅ Successfully converted PassThrough stream to Buffer, length: ${buffer.length}`);
+            resolve(buffer);
+          });
+          content.on('error', (error: any) => {
+            console.error('❌ PassThrough stream error:', error);
+            reject(new Error(`Failed to process ${contextInfo}: PassThrough stream error - ${error.message}`));
+          });
+        });
+      } catch (streamError: any) {
+        console.error('❌ Failed to convert PassThrough stream to Buffer:', streamError);
+        throw new Error(`Failed to process ${contextInfo}: PassThrough stream conversion failed - ${streamError.message}`);
+      }
+    }
+
+    // Last resort: try to convert to Buffer directly
+    try {
+      console.log(`🔄 Attempting direct Buffer conversion for ${contextInfo}...`);
+      const buffer = Buffer.from(content);
+      console.log(`✅ Successfully converted ${typeof content} to Buffer, length: ${buffer.length}`);
+      return buffer;
+    } catch (conversionError: any) {
+      console.error(`❌ Failed to convert ${contextInfo} to Buffer:`, conversionError);
+      throw new Error(`Failed to process ${contextInfo}: Unsupported content type ${typeof content} - ${conversionError.message}`);
+    }
+  };
+
   // Create SharePoint service instance for each request
   const getSharePointService = (req: Request): SharePointService => {
     if (!req.session?.accessToken) {
@@ -115,7 +247,17 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
       if (isRealSharePointEnabled) {
         try {
           console.log('🔍 Getting SharePoint sites for root navigation...');
-          const graphClient = authService.getGraphClient(req.session!.accessToken);
+          if (!req.session?.accessToken) {
+            res.status(401).json({
+              success: false,
+              error: {
+                code: 'AUTHENTICATION_REQUIRED',
+                message: 'Authentication required'
+              }
+            });
+            return;
+          }
+          const graphClient = authService.getGraphClient(req.session.accessToken);
           
           // Try multiple approaches to get sites
           let sitesResponse: { value: any[] } = { value: [] };
@@ -179,7 +321,7 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           // Method 3: Get user's drives with proper filtering for business sites only
           try {
             console.log('🔍 Getting filtered business drives...');
-            const drivesResponse = await graphClient.api('/me/drives').get();
+            const drivesResponse = await graphClient.api('/me/drives').select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota').get();
             if (drivesResponse.value && drivesResponse.value.length > 0) {
               console.log(`✅ Found ${drivesResponse.value.length} total drives`);
               let businessDriveCount = 0;
@@ -308,49 +450,13 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
         }
       }
 
-      // Mock sites as folders for navigation - using names that match the hook mapping
-      const mockSiteFolders = [
-        {
-          id: 'site-communication',
-          name: 'Communication site',
-          displayName: 'Communication site', 
-          folder: { childCount: 3 },
-          isFolder: true,
-          parentPath: '/',
-          extension: '', // No extension for folders
-          mimeType: 'folder',
-          size: 0,
-          webUrl: 'https://netorgft18344752.sharepoint.com',
-          description: 'Main communication site with documents',
-          createdDateTime: '2024-01-01T00:00:00Z',
-          lastModifiedDateTime: new Date().toISOString()
-        },
-        {
-          id: 'site-allcompany', 
-          name: 'All Company',
-          displayName: 'All Company',
-          folder: { childCount: 2 },
-          isFolder: true,
-          parentPath: '/',
-          extension: '', // No extension for folders
-          mimeType: 'folder',
-          size: 0,
-          webUrl: 'https://netorgft18344752.sharepoint.com/sites/allcompany',
-          description: 'All company shared documents',
-          createdDateTime: '2024-01-01T00:00:00Z',
-          lastModifiedDateTime: new Date().toISOString()
+      // If we reach here, the real API failed and no mock data should be shown
+      res.status(503).json({
+        error: {
+          code: 'SHAREPOINT_UNAVAILABLE',
+          message: 'SharePoint integration is currently unavailable',
+          details: 'Unable to connect to SharePoint services. Please check your configuration and try again.'
         }
-      ];
-
-      res.json({
-        success: true,
-        data: {
-          items: mockSiteFolders,
-          totalCount: mockSiteFolders.length,
-          currentPage: 1,
-          totalPages: 1
-        },
-        message: `Found ${mockSiteFolders.length} SharePoint sites (demo data)`
       });
       
     } catch (error: any) {
@@ -377,7 +483,17 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
         // Use direct Graph API calls instead of SharePoint service
         try {
           console.log('🔍 Attempting to get real SharePoint sites via direct Graph API...');
-          const graphClient = authService.getGraphClient(req.session!.accessToken);
+          if (!req.session?.accessToken) {
+            res.status(401).json({
+              success: false,
+              error: {
+                code: 'AUTHENTICATION_REQUIRED',
+                message: 'Authentication required'
+              }
+            });
+            return;
+          }
+          const graphClient = authService.getGraphClient(req.session.accessToken);
           const sitesResponse = await graphClient.api('/sites?$select=id,displayName,name,webUrl,description').get();
 
           console.log('✅ Successfully retrieved', sitesResponse.value?.length || 0, 'SharePoint sites');
@@ -401,68 +517,13 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
         }
       }
 
-      // MOCK DATA for development - return sample SharePoint sites
-      const mockSites = [
-        {
-          id: 'bluewaveintelligence.sharepoint.com,12345678-1234-1234-1234-123456789012,87654321-4321-4321-4321-210987654321',
-          name: 'BlueWave Intelligence Team Site',
-          displayName: 'BlueWave Intelligence',
-          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/team',
-          description: 'Main team collaboration site',
-          siteCollection: {
-            hostname: 'bluewaveintelligence.sharepoint.com'
-          },
-          drives: [
-            {
-              id: 'b!abcdef123456789012345678901234567890123456789012345678901234567890',
-              name: 'Documents',
-              driveType: 'documentLibrary',
-              itemCount: 42
-            }
-          ]
-        },
-        {
-          id: 'bluewaveintelligence.sharepoint.com,11111111-2222-3333-4444-555555555555,66666666-7777-8888-9999-000000000000',
-          name: 'Project Documents',
-          displayName: 'Project Documents', 
-          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/projects',
-          description: 'Shared project documentation',
-          siteCollection: {
-            hostname: 'bluewaveintelligence.sharepoint.com'
-          },
-          drives: [
-            {
-              id: 'b!fedcba098765432109876543210987654321098765432109876543210987654321',
-              name: 'Project Files',
-              driveType: 'documentLibrary',
-              itemCount: 28
-            }
-          ]
-        },
-        {
-          id: 'bluewaveintelligence.sharepoint.com,aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee,ffffffff-0000-1111-2222-333333333333',
-          name: 'Knowledge Base',
-          displayName: 'Knowledge Base',
-          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/kb',
-          description: 'Company knowledge base and documentation',
-          siteCollection: {
-            hostname: 'bluewaveintelligence.sharepoint.com'
-          },
-          drives: [
-            {
-              id: 'b!123abc456789def012345678901234567890123456789012345678901234567890',
-              name: 'Knowledge Articles',
-              driveType: 'documentLibrary',
-              itemCount: 67
-            }
-          ]
+      // If we reach here, the real API failed and no mock data should be shown
+      res.status(503).json({
+        error: {
+          code: 'SHAREPOINT_API_UNAVAILABLE',
+          message: 'SharePoint API is currently unavailable',
+          details: 'Unable to retrieve SharePoint sites. Please check your SharePoint configuration and try again.'
         }
-      ];
-      
-      res.json({
-        success: true,
-        data: mockSites,
-        message: `Retrieved ${mockSites.length} SharePoint sites (demo data)`
       });
     } catch (error: any) {
       console.error('Get sites error:', error);
@@ -621,7 +682,17 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
   router.get('/me/profile', async (req: Request, res: Response): Promise<void> => {
     try {
       if (isRealSharePointEnabled) {
-        const graphClient = authService.getGraphClient(req.session!.accessToken);
+        if (!req.session?.accessToken) {
+          res.status(401).json({
+            success: false,
+            error: {
+              code: 'AUTHENTICATION_REQUIRED',
+              message: 'Authentication required'
+            }
+          });
+          return;
+        }
+        const graphClient = authService.getGraphClient(req.session.accessToken);
         
         console.log('🔍 Getting user profile...');
         const userResponse = await graphClient.api('/me')
@@ -680,7 +751,17 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
   router.get('/me/people', async (req: Request, res: Response): Promise<void> => {
     try {
       if (isRealSharePointEnabled) {
-        const graphClient = authService.getGraphClient(req.session!.accessToken);
+        if (!req.session?.accessToken) {
+          res.status(401).json({
+            success: false,
+            error: {
+              code: 'AUTHENTICATION_REQUIRED',
+              message: 'Authentication required'
+            }
+          });
+          return;
+        }
+        const graphClient = authService.getGraphClient(req.session.accessToken);
         
         console.log('🔍 Getting real organization people from SharePoint and files...');
         
@@ -875,7 +956,17 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
   router.get('/me/invitations', async (req: Request, res: Response): Promise<void> => {
     try {
       if (isRealSharePointEnabled) {
-        const graphClient = authService.getGraphClient(req.session!.accessToken);
+        if (!req.session?.accessToken) {
+          res.status(401).json({
+            success: false,
+            error: {
+              code: 'AUTHENTICATION_REQUIRED',
+              message: 'Authentication required'
+            }
+          });
+          return;
+        }
+        const graphClient = authService.getGraphClient(req.session.accessToken);
         
         console.log('🔍 Getting real pending invitations from SharePoint...');
         
@@ -1025,11 +1116,21 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
       if (isRealSharePointEnabled) {
         try {
           console.log('🔍 Getting OneDrive root files...');
-          const graphClient = authService.getGraphClient(req.session!.accessToken);
+          if (!req.session?.accessToken) {
+            res.status(401).json({
+              success: false,
+              error: {
+                code: 'AUTHENTICATION_REQUIRED',
+                message: 'Authentication required'
+              }
+            });
+            return;
+          }
+          const graphClient = authService.getGraphClient(req.session.accessToken);
           
           // Get files from user's OneDrive root
           const response = await graphClient.api('/me/drive/root/children')
-            .select('id,name,displayName,size,createdDateTime,lastModifiedDateTime,file,folder,parentPath,webUrl')
+            .select('id,name,size,createdDateTime,lastModifiedDateTime,file,folder,webUrl,parentReference')
             .expand('thumbnails($select=medium)')
             .top(500)
             .get();
@@ -1040,13 +1141,13 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           const transformedItems = response.value?.map((item: any) => ({
             id: item.id,
             name: item.name,
-            displayName: item.displayName || item.name,
+            displayName: item.name,
             size: item.size || 0,
             mimeType: item.file?.mimeType || 'folder',
             extension: item.file ? item.name.split('.').pop()?.toLowerCase() || '' : '',
             createdDateTime: item.createdDateTime,
             lastModifiedDateTime: item.lastModifiedDateTime,
-            parentPath: item.parentPath || '/onedrive',
+            parentPath: item.parentReference?.path || '/onedrive',
             isFolder: !!item.folder,
             webUrl: item.webUrl,
             thumbnail: item.thumbnails?.[0]?.medium?.url,
@@ -1175,312 +1276,174 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
    * Handle filtered OneDrive views: /onedrive/photos, /onedrive/documents, /onedrive/shared, /onedrive/recent
    */
   router.get('/drives/:driveId/items/root/children', async (req: Request, res: Response): Promise<void> => {
-    const { driveId } = req.params;
-    
-    // Check if this is a filtered OneDrive view
-    if (driveId === 'onedrive') {
-      // This should be handled by the regular /me/drive/root/children endpoint
-      res.status(404).json({
-        error: { code: 'REDIRECT_TO_MAIN', message: 'Use /me/drive/root/children for main OneDrive view' }
-      });
-      return;
-    }
+    try {
+      console.log('🚨 CRITICAL DEBUG: ROUTE MATCHED! driveId route handler EXECUTED!');
+      const { driveId } = req.params;
+      console.log('🚨 CRITICAL DEBUG: Extracted driveId:', driveId);
 
-    // Handle SharePoint site drives
-    if (driveId === 'netorgft18344752.sharepoint.com' || driveId === 'netorgft18344752.sharepoint.com.allcompany') {
+      // Check if this is a filtered OneDrive view
+      if (driveId === 'onedrive') {
+        // This should be handled by the regular /me/drive/root/children endpoint
+        res.status(404).json({
+          error: { code: 'REDIRECT_TO_MAIN', message: 'Use /me/drive/root/children for main OneDrive view' }
+        });
+        return;
+      }
+
+      // First, try to resolve driveId as a site display name to actual site ID
+      console.log(`🎯 SITE RESOLUTION: Starting for driveId="${driveId}"`);
+
       if (isRealSharePointEnabled) {
         try {
-          console.log(`🔍 Getting real SharePoint files from ${driveId}...`);
-          const graphClient = authService.getGraphClient(req.session!.accessToken);
-          
-          let apiEndpoint = '';
-          let siteName = '';
-          
-          if (driveId === 'netorgft18344752.sharepoint.com') {
-            // Communication site - get the default document library
-            apiEndpoint = '/sites/netorgft18344752.sharepoint.com/drive/root/children';
-            siteName = 'Communication site';
-          } else if (driveId === 'netorgft18344752.sharepoint.com.allcompany') {
-            // All Company subsite - try multiple working approaches  
-            console.log('🔍 Getting All Company subsite - trying multiple endpoint formats...');
-            
-            try {
-              // Method 1: Try direct subsite path (most common format)
-              console.log('🔍 Attempt 1: Direct subsite path...');
-              const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/sites/allcompany').get();
-              console.log('✅ Found All Company site via direct path:', siteResponse.displayName, 'Site ID:', siteResponse.id);
-              apiEndpoint = `/sites/${siteResponse.id}/drive/root/children`;
-              siteName = 'All Company';
-            } catch (directError) {
-              console.log('❌ Direct path failed, trying colon format...');
-              
-              try {
-                // Method 2: Try colon format
-                console.log('🔍 Attempt 2: Colon format...');
-                const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany').get();
-                console.log('✅ Found All Company site via colon format:', siteResponse.displayName, 'Site ID:', siteResponse.id);
-                apiEndpoint = `/sites/${siteResponse.id}/drive/root/children`;
-                siteName = 'All Company';
-              } catch (colonError) {
-                console.log('❌ Colon format failed, trying hostname approach...');
-                
-                // Method 3: Try as separate hostname
-                console.log('🔍 Attempt 3: Separate hostname approach...');
-                const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com').get();
-                console.log('✅ Found main site, looking for All Company subsite...');
-                
-                // Get subsites
-                const subsitesResponse = await graphClient.api(`/sites/${siteResponse.id}/sites`).get();
-                console.log(`📂 Found ${subsitesResponse.value?.length || 0} subsites`);
-                
-                const allCompanySubsite = subsitesResponse.value?.find((site: any) => 
-                  site.displayName?.toLowerCase().includes('all company') || 
-                  site.name?.toLowerCase().includes('allcompany')
-                );
-                
-                if (allCompanySubsite) {
-                  console.log('✅ Found All Company subsite:', allCompanySubsite.displayName);
-                  apiEndpoint = `/sites/${allCompanySubsite.id}/drive/root/children`;
-                  siteName = 'All Company';
-                } else {
-                  throw new Error('All Company subsite not found in any format');
-                }
+          console.log(`🔍 Getting real SharePoint items for driveId: ${driveId}`);
+          if (!req.session?.accessToken) {
+            res.status(401).json({
+              success: false,
+              error: {
+                code: 'AUTHENTICATION_REQUIRED',
+                message: 'Authentication required'
               }
+            });
+            return;
+          }
+          const graphClient = authService.getGraphClient(req.session.accessToken);
+
+          // IMPROVED: Dynamic site resolution for ANY SharePoint site
+          console.log(`🎯 Attempting to resolve site: "${driveId}"`);
+
+          // Try to resolve the driveId as a site name to actual site ID
+          let actualSiteId = null;
+
+          // First check if driveId is already a site ID (contains specific patterns)
+          if (driveId.includes(',') || driveId.includes('.sharepoint.com')) {
+            console.log(`🎯 DriveId "${driveId}" appears to be a site ID already`);
+            actualSiteId = driveId;
+          } else {
+            // Try to resolve site name to site ID
+            actualSiteId = await resolveSiteNameToId(graphClient, driveId);
+          }
+
+          if (actualSiteId) {
+            console.log(`🎯 Using site ID: "${actualSiteId}" for site "${driveId}"`);
+
+            try {
+              // Generic approach: Get drives for any site by ID
+              console.log(`🔍 Getting drives for site "${driveId}" (ID: ${actualSiteId})`);
+              const siteResponse = await graphClient.api(`/sites/${actualSiteId}/drives`)
+                .select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota')
+                .get();
+
+              console.log(`📂 Found ${siteResponse.value?.length || 0} drives in site "${driveId}"`);
+
+              if (siteResponse.value && siteResponse.value.length > 0) {
+                // Use the first drive (usually the default document library)
+                const defaultDrive = siteResponse.value[0];
+                console.log(`🔍 Using drive: ${defaultDrive.id} (${defaultDrive.name})`);
+
+                const itemsResponse = await graphClient.api(`/drives/${defaultDrive.id}/root/children`).get();
+                console.log(`✅ Found ${itemsResponse.value?.length || 0} items in site "${driveId}"`);
+
+                // Map SharePoint items to expected frontend format
+                const mappedItems = (itemsResponse.value || []).map((item: any) => ({
+                  id: item.id,
+                  name: item.name,
+                  displayName: item.name, // Frontend expects displayName
+                  size: item.size || 0,
+                  webUrl: item.webUrl,
+                  mimeType: item.file?.mimeType || (item.folder ? 'folder' : 'application/octet-stream'),
+                  extension: item.file ? (item.name.split('.').pop() || '') : '',
+                  createdDateTime: item.createdDateTime,
+                  lastModifiedDateTime: item.lastModifiedDateTime,
+                  parentPath: item.parentReference?.path || '/',
+                  isFolder: !!item.folder,
+                  lastModifiedBy: item.lastModifiedBy?.user || { displayName: 'Unknown', email: '' },
+                  createdBy: item.createdBy?.user || { displayName: 'Unknown', email: '' }
+                }));
+
+                res.json({
+                  success: true,
+                  data: {
+                    items: mappedItems,
+                    totalCount: mappedItems.length,
+                    currentPage: 1,
+                    totalPages: 1
+                  },
+                  message: `Retrieved ${mappedItems.length} items from site "${driveId}"`,
+                  isRealData: true
+                });
+                return;
+              } else {
+                console.log(`⚠️ No drives found for site "${driveId}" (ID: ${actualSiteId})`);
+              }
+            } catch (driveError: any) {
+              console.error(`❌ Error accessing site "${driveId}" (ID: ${actualSiteId}):`, driveError.message);
+              console.error('❌ Drive error details:', {
+                status: driveError.status || driveError.statusCode,
+                message: driveError.message,
+                code: driveError.code,
+                body: driveError.body || driveError.response?.data
+              });
             }
           }
-          
-          const response = await graphClient.api(apiEndpoint)
-            .select('id,name,displayName,size,createdDateTime,lastModifiedDateTime,file,folder,parentPath,webUrl,createdBy,lastModifiedBy')
-            .expand('thumbnails($select=medium)')
-            .top(500)
-            .get();
-          
-          const transformedItems = (response.value || []).map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            displayName: item.displayName || item.name,
-            size: item.size || 0,
-            mimeType: item.file?.mimeType || (item.folder ? 'application/folder' : 'application/octet-stream'),
-            extension: item.file ? (item.name.split('.').pop()?.toLowerCase() || '') : '',
-            createdDateTime: item.createdDateTime,
-            lastModifiedDateTime: item.lastModifiedDateTime,
-            parentPath: `/${siteName}`,
-            isFolder: !!item.folder,
-            webUrl: item.webUrl,
-            thumbnail: item.thumbnails?.[0]?.medium?.url,
-            lastModifiedBy: { 
-              displayName: item.lastModifiedBy?.user?.displayName || 'SharePoint User',
-              email: item.lastModifiedBy?.user?.email || 'user@sharepoint.com'
-            },
-            createdBy: { 
-              displayName: item.createdBy?.user?.displayName || 'SharePoint User',
-              email: item.createdBy?.user?.email || 'user@sharepoint.com'
-            }
-          }));
-          
-          console.log(`✅ Found ${transformedItems.length} real files/folders in ${siteName}`);
-          
-          res.json({
-            success: true,
-            data: {
-              items: transformedItems,
-              totalCount: transformedItems.length,
-              currentPage: 1,
-              totalPages: 1
-            },
-            message: `Retrieved ${transformedItems.length} items from ${siteName}`,
-            isRealData: true
-          });
-          return;
-        } catch (error: any) {
-          console.error(`❌ SharePoint site ${driveId} error:`, error);
-          // Return error instead of mock data
+
+          // If we get here, site resolution failed or site has no drives
+          console.log(`⚠️ Could not access site "${driveId}" - site not found or no drives available`);
+
           res.status(404).json({
             success: false,
             error: {
-              message: `Unable to access SharePoint site: ${driveId}. ${error.message || 'Please try again later.'}`,
-              code: 'SHAREPOINT_SITE_ACCESS_ERROR'
+              code: 'SITE_NOT_ACCESSIBLE',
+              message: `SharePoint site "${driveId}" could not be accessed`,
+              details: actualSiteId ?
+                `Site was found (ID: ${actualSiteId}) but has no accessible document libraries` :
+                `Site "${driveId}" was not found in your SharePoint tenant. Please verify the site name and your permissions.`
+            }
+          });
+          return;
+
+        } catch (error: any) {
+          console.error(`❌ CRITICAL ERROR: Site resolution failed for "${driveId}":`, error.message);
+          console.error('❌ Error details:', {
+            status: error.status || error.statusCode,
+            message: error.message,
+            code: error.code,
+            body: error.body || error.response?.data
+          });
+
+          res.status(500).json({
+            success: false,
+            error: {
+              code: 'SHAREPOINT_ACCESS_ERROR',
+              message: `Error accessing SharePoint site "${driveId}"`,
+              details: `${error.message}. Please check your permissions and try again.`
             }
           });
           return;
         }
-      }
-      
-      // If we get here, the driveId was not found
-      res.status(404).json({
-        success: false,
-        error: {
-          message: `SharePoint site not found: ${driveId}`,
-          code: 'SHAREPOINT_SITE_NOT_FOUND'
-        }
-      });
-      return;
-    }
-    
-    // Handle filtered OneDrive views
-    if (['onedrive-photos', 'onedrive-documents', 'onedrive-shared', 'onedrive-recent'].includes(driveId)) {
-      try {
-        const filterType = driveId.replace('onedrive-', '');
-        console.log(`🔍 Getting filtered OneDrive files: ${filterType}`);
-        
-        if (isRealSharePointEnabled) {
-          try {
-            const graphClient = authService.getGraphClient(req.session!.accessToken);
-            
-            // Get all files first
-            const response = await graphClient.api('/me/drive/root/children')
-              .select('id,name,displayName,size,createdDateTime,lastModifiedDateTime,file,folder,parentPath,webUrl')
-              .expand('thumbnails($select=medium)')
-              .top(500)
-              .get();
-            
-            let filteredItems = response.value || [];
-            
-            // Apply filters based on type
-            switch (filterType) {
-              case 'photos':
-                filteredItems = filteredItems.filter((item: any) => {
-                  if (item.folder) return false;
-                  const ext = item.name.split('.').pop()?.toLowerCase() || '';
-                  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'svg', 'webp', 'heic'].includes(ext);
-                });
-                break;
-              case 'documents':
-                filteredItems = filteredItems.filter((item: any) => {
-                  if (item.folder) return false;
-                  const ext = item.name.split('.').pop()?.toLowerCase() || '';
-                  return ['doc', 'docx', 'pdf', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext);
-                });
-                break;
-              case 'recent':
-                // Filter for files modified in last 30 days
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                filteredItems = filteredItems
-                  .filter((item: any) => !item.folder)
-                  .filter((item: any) => new Date(item.lastModifiedDateTime) >= thirtyDaysAgo)
-                  .sort((a: any, b: any) => new Date(b.lastModifiedDateTime).getTime() - new Date(a.lastModifiedDateTime).getTime());
-                break;
-              case 'shared':
-                // For shared, we'd need to check permissions - for now, simulate with some files
-                filteredItems = filteredItems.filter((item: any, index: number) => !item.folder && index % 3 === 0); // Every 3rd file
-                break;
-            }
-            
-            // Transform the response
-            const transformedItems = filteredItems.map((item: any) => ({
-              id: item.id,
-              name: item.name,
-              displayName: item.displayName || item.name,
-              size: item.size || 0,
-              mimeType: item.file?.mimeType || 'folder',
-              extension: item.file ? item.name.split('.').pop()?.toLowerCase() || '' : '',
-              createdDateTime: item.createdDateTime,
-              lastModifiedDateTime: item.lastModifiedDateTime,
-              parentPath: `/onedrive/${filterType}`,
-              isFolder: !!item.folder,
-              webUrl: item.webUrl,
-              thumbnail: item.thumbnails?.[0]?.medium?.url,
-              lastModifiedBy: { displayName: 'OneDrive User', email: 'user@onedrive.com' },
-              createdBy: { displayName: 'OneDrive User', email: 'user@onedrive.com' }
-            }));
-            
-            res.json({
-              success: true,
-              data: { items: transformedItems, totalCount: transformedItems.length },
-              message: `Retrieved ${transformedItems.length} ${filterType} files from OneDrive`
-            });
-            return;
-          } catch (error: any) {
-            console.error(`❌ OneDrive ${filterType} filter error:`, error);
-            console.log(`🔄 Falling back to mock ${filterType} data`);
-          }
-        }
-        
-        // Mock filtered data for development/fallback
-        const generateMockFilteredData = (type: string) => {
-          const baseItems = [
-            { name: 'Resume.docx', ext: 'docx', type: 'document' },
-            { name: 'Budget.xlsx', ext: 'xlsx', type: 'document' },
-            { name: 'Vacation.jpg', ext: 'jpg', type: 'photo' },
-            { name: 'Profile.png', ext: 'png', type: 'photo' },
-            { name: 'Presentation.pptx', ext: 'pptx', type: 'document' },
-            { name: 'Screenshot.png', ext: 'png', type: 'photo' },
-            { name: 'Report.pdf', ext: 'pdf', type: 'document' },
-            { name: 'Family.jpg', ext: 'jpg', type: 'photo' }
-          ];
-          
-          let filtered;
-          switch (type) {
-            case 'photos':
-              filtered = baseItems.filter(item => item.type === 'photo');
-              break;
-            case 'documents':
-              filtered = baseItems.filter(item => item.type === 'document');
-              break;
-            case 'recent':
-              filtered = baseItems.slice(0, 4); // First 4 as recent
-              break;
-            case 'shared':
-              filtered = baseItems.slice(0, 2); // First 2 as shared
-              break;
-            default:
-              filtered = baseItems;
-          }
-          
-          return filtered.map((item, index) => ({
-            id: `onedrive-${type}-${index}`,
-            name: item.name,
-            displayName: item.name,
-            size: Math.floor(Math.random() * 2000000) + 50000,
-            mimeType: getMimeType(item.ext),
-            extension: item.ext,
-            createdDateTime: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-            lastModifiedDateTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-            parentPath: `/onedrive/${type}`,
-            isFolder: false,
-            webUrl: `https://onedrive.live.com/${item.name}`,
-            lastModifiedBy: { displayName: 'You', email: 'user@onedrive.com' },
-            createdBy: { displayName: 'You', email: 'user@onedrive.com' }
-          }));
-        };
-        
-        const getMimeType = (ext: string) => {
-          const mimeMap: Record<string, string> = {
-            docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            pdf: 'application/pdf',
-            jpg: 'image/jpeg',
-            png: 'image/png'
-          };
-          return mimeMap[ext] || 'application/octet-stream';
-        };
-        
-        const mockFilteredItems = generateMockFilteredData(filterType);
-        
-        res.json({
-          success: true,
-          data: { items: mockFilteredItems, totalCount: mockFilteredItems.length },
-          message: `Retrieved ${mockFilteredItems.length} ${filterType} files (mock data)`
-        });
-      } catch (error: any) {
-        const filterType = driveId.replace('onedrive-', '');
-        console.error(`OneDrive ${filterType} filter error:`, error);
-        res.status(500).json({
+      } else {
+        console.log(`⚠️ Real SharePoint not enabled, skipping site resolution for "${driveId}"`);
+
+        // Return error when real SharePoint is not available
+        res.status(503).json({
+          success: false,
           error: {
-            code: 'ONEDRIVE_FILTER_ERROR',
-            message: `Failed to retrieve ${filterType} files`,
-            details: error.message
+            code: 'SHAREPOINT_UNAVAILABLE',
+            message: 'SharePoint service is currently unavailable',
+            details: 'Real SharePoint API is required but not enabled'
           }
         });
+        return;
       }
-    } else {
-      // Handle regular drive requests
-      res.status(404).json({
-        error: { code: 'DRIVE_NOT_FOUND', message: 'Drive not found' }
-      });
-    }
+  } catch (error: any) {
+    console.error('Get drive items error:', error);
+    res.status(500).json({
+      error: {
+        code: 'GET_DRIVE_ITEMS_ERROR',
+        message: 'Failed to retrieve drive items',
+        details: error.message
+      }
+    });
+  }
   });
 
   // ==================== FILES AND FOLDERS ====================
@@ -1491,369 +1454,134 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
    */
   router.get('/drives/:driveId/items/:itemId?/children', async (req: Request, res: Response): Promise<void> => {
     try {
+      console.log('🚨 CRITICAL DEBUG: GENERIC ROUTE MATCHED! itemId route handler EXECUTED!');
       const { driveId, itemId } = req.params;
+      console.log('🚨 CRITICAL DEBUG: Generic route params:', { driveId, itemId });
       console.log(`📂 SITE BROWSING REQUEST: driveId="${driveId}", itemId="${itemId || 'root'}"`);
       console.log('📂 Full request params:', req.params);
       console.log('📂 Full request path:', req.path);
-      
+
       if (isRealSharePointEnabled) {
         try {
           console.log(`🔍 Getting real SharePoint items for driveId: ${driveId}, itemId: ${itemId || 'root'}`);
-          const graphClient = authService.getGraphClient(req.session!.accessToken);
-          
-          // If driveId looks like a site ID, we need to get the site's default drive first
-          if (driveId && driveId.includes(',')) {
-            console.log('🔍 DriveId looks like a site ID, getting site drives...');
+          if (!req.session?.accessToken) {
+            res.status(401).json({
+              success: false,
+              error: {
+                code: 'AUTHENTICATION_REQUIRED',
+                message: 'Authentication required'
+              }
+            });
+            return;
+          }
+          const graphClient = authService.getGraphClient(req.session.accessToken);
+
+          // IMPROVED: Dynamic site resolution for ANY SharePoint site (same as previous route)
+          console.log(`🎯 Attempting to resolve site: "${driveId}"`);
+
+          // Try to resolve the driveId as a site name to actual site ID
+          let actualSiteId = null;
+
+          // First check if driveId is already a site ID (contains specific patterns)
+          if (driveId.includes(',') || driveId.includes('.sharepoint.com')) {
+            console.log(`🎯 DriveId "${driveId}" appears to be a site ID already`);
+            actualSiteId = driveId;
+          } else {
+            // Try to resolve site name to site ID
+            actualSiteId = await resolveSiteNameToId(graphClient, driveId);
+          }
+
+          if (actualSiteId) {
+            console.log(`🎯 Using site ID: "${actualSiteId}" for site "${driveId}"`);
+
             try {
-              const drivesResponse = await graphClient.api(`/sites/${driveId}/drives`).get();
-              console.log(`✅ Found ${drivesResponse.value?.length || 0} drives for site`);
-              
+              // Generic approach: Get drives for any site by ID (same as previous route)
+              console.log(`🔍 Getting drives for site "${driveId}" (ID: ${actualSiteId})`);
+              const drivesResponse = await graphClient.api(`/sites/${actualSiteId}/drives`)
+                .select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota')
+                .get();
+
+              console.log(`📂 Found ${drivesResponse.value?.length || 0} drives in site "${driveId}"`);
+
               if (drivesResponse.value && drivesResponse.value.length > 0) {
                 // Use the first drive (usually the default document library)
                 const defaultDrive = drivesResponse.value[0];
                 console.log(`🔍 Using default drive: ${defaultDrive.name} (${defaultDrive.id})`);
-                
-                // Get items from the default drive's root
+
+                // Get items from the drive (with optional itemId for subfolders)
                 const itemsPath = itemId ? `/drives/${defaultDrive.id}/items/${itemId}/children` : `/drives/${defaultDrive.id}/root/children`;
                 console.log(`🔍 Calling: ${itemsPath}`);
                 const itemsResponse = await graphClient.api(itemsPath).get();
-                
-                console.log(`✅ Found ${itemsResponse.value?.length || 0} items in site drive`);
+
+                console.log(`✅ Found ${itemsResponse.value?.length || 0} items in site "${driveId}"`);
                 res.json({
                   success: true,
                   data: itemsResponse.value || [],
-                  message: `Retrieved ${itemsResponse.value?.length || 0} items from SharePoint`
+                  message: `Retrieved ${itemsResponse.value?.length || 0} items from site "${driveId}"`
                 });
                 return;
-              }
-            } catch (siteError: any) {
-              console.error('❌ Site drives error:', siteError.message);
-              // Fall through to try as regular drive
-            }
-          }
-          
-          // Handle specific SharePoint sites
-          if (driveId === 'netorgft18344752.sharepoint.com') {
-            console.log('🔍 Accessing Communication site - getting drives first...');
-            
-            // First get the site drives to find the correct drive ID
-            try {
-              const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/drives').get();
-              console.log(`📂 Found ${siteResponse.value?.length || 0} drives in Communication site`);
-              
-              if (siteResponse.value && siteResponse.value.length > 0) {
-                // Use the first drive (usually the default document library)
-                const defaultDrive = siteResponse.value[0];
-                console.log(`🔍 Using drive: ${defaultDrive.id} (${defaultDrive.name})`);
-                
-                const itemsResponse = await graphClient.api(`/drives/${defaultDrive.id}/root/children`).get();
-                console.log(`✅ Found ${itemsResponse.value?.length || 0} items in Communication site`);
-                
-                // Map SharePoint items to expected frontend format
-                const mappedItems = (itemsResponse.value || []).map((item: any) => ({
-                  id: item.id,
-                  name: item.name,
-                  displayName: item.name, // Frontend expects displayName
-                  size: item.size || 0,
-                  webUrl: item.webUrl,
-                  mimeType: item.file?.mimeType || (item.folder ? 'folder' : 'application/octet-stream'),
-                  extension: item.file ? (item.name.split('.').pop() || '') : '',
-                  createdDateTime: item.createdDateTime,
-                  lastModifiedDateTime: item.lastModifiedDateTime,
-                  parentPath: item.parentReference?.path || '/',
-                  isFolder: !!item.folder,
-                  lastModifiedBy: item.lastModifiedBy?.user || { displayName: 'Unknown', email: '' },
-                  createdBy: item.createdBy?.user || { displayName: 'Unknown', email: '' }
-                }));
-                
-                res.json({
-                  success: true,
-                  data: {
-                    items: mappedItems,
-                    totalCount: mappedItems.length,
-                    currentPage: 1,
-                    totalPages: 1
-                  },
-                  message: `Retrieved ${mappedItems.length} items from Communication site`
-                });
-                return;
+              } else {
+                console.log(`⚠️ No drives found for site "${driveId}" (ID: ${actualSiteId})`);
               }
             } catch (driveError: any) {
-              console.error('❌ Error getting Communication site drives:', driveError.message);
-            }
-          } else if (driveId === 'netorgft18344752.sharepoint.com.allcompany') {
-            console.log('🔍 Accessing All Company subsite via .allcompany driveId...');
-            
-            // Use same approach as Communication site but for All Company subsite
-            try {
-              const itemsResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/sites/allcompany/drive/root/children').get();
-              console.log(`✅ Found ${itemsResponse.value?.length || 0} items in All Company subsite`);
-              
-              // Map SharePoint items to expected frontend format
-              const mappedItems = (itemsResponse.value || []).map((item: any) => ({
-                id: item.id,
-                name: item.name,
-                displayName: item.name,
-                size: item.size || 0,
-                webUrl: item.webUrl,
-                mimeType: item.file?.mimeType || (item.folder ? 'folder' : 'application/octet-stream'),
-                extension: item.file ? (item.name.split('.').pop() || '') : '',
-                createdDateTime: item.createdDateTime,
-                lastModifiedDateTime: item.lastModifiedDateTime,
-                parentPath: item.parentReference?.path || '/',
-                isFolder: !!item.folder,
-                lastModifiedBy: item.lastModifiedBy?.user || { displayName: 'Unknown', email: '' },
-                createdBy: item.createdBy?.user || { displayName: 'Unknown', email: '' }
-              }));
-              
-              res.json({
-                success: true,
-                data: {
-                  items: mappedItems,
-                  totalCount: mappedItems.length,
-                  currentPage: 1,
-                  totalPages: 1
-                },
-                message: `Retrieved ${mappedItems.length} items from All Company subsite`,
-                isRealData: true
+              console.error(`❌ Error accessing site "${driveId}" (ID: ${actualSiteId}):`, driveError.message);
+              console.error('❌ Drive error details:', {
+                status: driveError.status || driveError.statusCode,
+                message: driveError.message,
+                code: driveError.code,
+                body: driveError.body || driveError.response?.data
               });
-              return;
-            } catch (driveError: any) {
-              console.error('❌ Error getting All Company subsite:', driveError.message);
-            }
-          } else if (driveId === 'netorgft18344752.sharepoint.com:sites:allcompany') {
-            console.log('🔍 Accessing All Company subsite - getting drives first...');
-            
-            // First get the subsite drives to find the correct drive ID
-            try {
-              const subsiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany:/drives').get();
-              console.log(`📂 Found ${subsiteResponse.value?.length || 0} drives in All Company subsite`);
-              
-              if (subsiteResponse.value && subsiteResponse.value.length > 0) {
-                // Use the first drive (usually the default document library)
-                const defaultDrive = subsiteResponse.value[0];
-                console.log(`🔍 Using drive: ${defaultDrive.id} (${defaultDrive.name})`);
-                
-                const itemsResponse = await graphClient.api(`/drives/${defaultDrive.id}/root/children`).get();
-                console.log(`✅ Found ${itemsResponse.value?.length || 0} items in All Company subsite`);
-                
-                // Map SharePoint items to expected frontend format
-                const mappedItems = (itemsResponse.value || []).map((item: any) => ({
-                  id: item.id,
-                  name: item.name,
-                  displayName: item.name, // Frontend expects displayName
-                  size: item.size || 0,
-                  webUrl: item.webUrl,
-                  mimeType: item.file?.mimeType || (item.folder ? 'folder' : 'application/octet-stream'),
-                  extension: item.file ? (item.name.split('.').pop() || '') : '',
-                  createdDateTime: item.createdDateTime,
-                  lastModifiedDateTime: item.lastModifiedDateTime,
-                  parentPath: item.parentReference?.path || '/',
-                  isFolder: !!item.folder,
-                  lastModifiedBy: item.lastModifiedBy?.user || { displayName: 'Unknown', email: '' },
-                  createdBy: item.createdBy?.user || { displayName: 'Unknown', email: '' }
-                }));
-                
-                res.json({
-                  success: true,
-                  data: {
-                    items: mappedItems,
-                    totalCount: mappedItems.length,
-                    currentPage: 1,
-                    totalPages: 1
-                  },
-                  message: `Retrieved ${mappedItems.length} items from All Company subsite`
-                });
-                return;
-              }
-            } catch (driveError: any) {
-              console.error('❌ Error getting All Company subsite drives:', driveError.message);
-            }
-          } else if (driveId === 'site-allcompany') {
-            console.log('🔍 Accessing All Company subsite via site-allcompany ID...');
-            
-            // Get the site first, then its drives
-            try {
-              const siteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany').get();
-              console.log('✅ Found All Company site:', siteResponse.displayName, 'Site ID:', siteResponse.id);
-              
-              const drivesResponse = await graphClient.api(`/sites/${siteResponse.id}/drives`).get();
-              console.log(`📂 Found ${drivesResponse.value?.length || 0} drives in All Company site`);
-              
-              if (drivesResponse.value && drivesResponse.value.length > 0) {
-                const defaultDrive = drivesResponse.value[0];
-                console.log(`🔍 Using drive: ${defaultDrive.id} (${defaultDrive.name})`);
-                
-                const itemsResponse = await graphClient.api(`/drives/${defaultDrive.id}/root/children`).get();
-                console.log(`✅ Found ${itemsResponse.value?.length || 0} items in All Company drive`);
-                
-                // Map SharePoint items to expected frontend format
-                const mappedItems = (itemsResponse.value || []).map((item: any) => ({
-                  id: item.id,
-                  name: item.name,
-                  displayName: item.name,
-                  size: item.size || 0,
-                  webUrl: item.webUrl,
-                  mimeType: item.file?.mimeType || (item.folder ? 'folder' : 'application/octet-stream'),
-                  extension: item.file ? (item.name.split('.').pop() || '') : '',
-                  createdDateTime: item.createdDateTime,
-                  lastModifiedDateTime: item.lastModifiedDateTime,
-                  parentPath: item.parentReference?.path || '/',
-                  isFolder: !!item.folder,
-                  lastModifiedBy: item.lastModifiedBy?.user || { displayName: 'Unknown', email: '' },
-                  createdBy: item.createdBy?.user || { displayName: 'Unknown', email: '' }
-                }));
-                
-                res.json({
-                  success: true,
-                  data: {
-                    items: mappedItems,
-                    totalCount: mappedItems.length,
-                    currentPage: 1,
-                    totalPages: 1
-                  },
-                  message: `Retrieved ${mappedItems.length} items from All Company subsite`,
-                  isRealData: true
-                });
-                return;
-              }
-            } catch (driveError: any) {
-              console.error('❌ Error getting All Company site drives:', driveError.message);
             }
           }
-          
-          // Try as regular drive ID
-          const itemsPath = itemId ? `/drives/${driveId}/items/${itemId}/children` : `/drives/${driveId}/root/children`;
-          console.log(`🔍 Calling: ${itemsPath}`);
-          const itemsResponse = await graphClient.api(itemsPath).get();
-          
-          console.log(`✅ Found ${itemsResponse.value?.length || 0} items in drive`);
-          res.json({
-            success: true,
-            data: itemsResponse.value || [],
-            message: `Retrieved ${itemsResponse.value?.length || 0} items from SharePoint`
+
+          // If we get here, site resolution failed or site has no drives
+          console.log(`⚠️ Could not access site "${driveId}" - site not found or no drives available`);
+
+          res.status(404).json({
+            success: false,
+            error: {
+              code: 'SITE_NOT_ACCESSIBLE',
+              message: `SharePoint site "${driveId}" could not be accessed`,
+              details: actualSiteId ?
+                `Site was found (ID: ${actualSiteId}) but has no accessible document libraries` :
+                `Site "${driveId}" was not found in your SharePoint tenant. Please verify the site name and your permissions.`
+            }
           });
           return;
-          
-        } catch (sharepointError: any) {
-          console.error('❌ SharePoint drive items error:', sharepointError);
-          console.log('🔄 Falling back to mock data due to SharePoint error');
+
+        } catch (error: any) {
+          console.error(`❌ CRITICAL ERROR: Site resolution failed for "${driveId}":`, error.message);
+          console.error('❌ Error details:', {
+            status: error.status || error.statusCode,
+            message: error.message,
+            code: error.code,
+            body: error.body || error.response?.data
+          });
+
+          res.status(500).json({
+            success: false,
+            error: {
+              code: 'SHAREPOINT_ACCESS_ERROR',
+              message: `Error accessing SharePoint site "${driveId}"`,
+              details: `${error.message}. Please check your permissions and try again.`
+            }
+          });
+          return;
         }
+      } else {
+        console.log(`⚠️ Real SharePoint not enabled, skipping site resolution for "${driveId}"`);
+
+        // Return error when real SharePoint is not available
+        res.status(503).json({
+          success: false,
+          error: {
+            code: 'SHAREPOINT_UNAVAILABLE',
+            message: 'SharePoint service is currently unavailable',
+            details: 'Real SharePoint API is required but not enabled'
+          }
+        });
+        return;
       }
-      
-      // MOCK DATA fallback - return sample files and folders
-      const mockItems = [
-        {
-          id: '01ABCDEF1234567890ABCDEF1234567890',
-          name: 'Project Proposal.docx',
-          displayName: 'Project Proposal.docx',
-          size: 156743,
-          createdDateTime: '2024-12-15T10:30:00Z',
-          lastModifiedDateTime: '2024-12-20T14:45:00Z',
-          file: {
-            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            hashes: {
-              quickXorHash: 'abc123def456'
-            }
-          },
-          createdBy: {
-            user: {
-              displayName: 'Hussein Srour',
-              email: 'hussein.srour@bluewaveintelligence.com.au'
-            }
-          },
-          lastModifiedBy: {
-            user: {
-              displayName: 'Hussein Srour',
-              email: 'hussein.srour@bluewaveintelligence.com.au'
-            }
-          },
-          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/team/Shared%20Documents/Project%20Proposal.docx'
-        },
-        {
-          id: '01ABCDEF1234567890ABCDEF1234567891',
-          name: 'Financial Analysis.xlsx',
-          displayName: 'Financial Analysis.xlsx',
-          size: 287456,
-          createdDateTime: '2024-12-18T09:15:00Z',
-          lastModifiedDateTime: '2024-12-22T16:20:00Z',
-          file: {
-            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            hashes: {
-              quickXorHash: 'def456ghi789'
-            }
-          },
-          createdBy: {
-            user: {
-              displayName: 'Sarah Johnson',
-              email: 'sarah.johnson@bluewaveintelligence.com.au'
-            }
-          },
-          lastModifiedBy: {
-            user: {
-              displayName: 'Hussein Srour',
-              email: 'hussein.srour@bluewaveintelligence.com.au'
-            }
-          },
-          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/team/Shared%20Documents/Financial%20Analysis.xlsx'
-        },
-        {
-          id: '01ABCDEF1234567890ABCDEF1234567892',
-          name: 'Reports',
-          displayName: 'Reports',
-          folder: {
-            childCount: 8
-          },
-          createdDateTime: '2024-11-05T14:20:00Z',
-          lastModifiedDateTime: '2024-12-21T11:30:00Z',
-          createdBy: {
-            user: {
-              displayName: 'Admin User',
-              email: 'admin@bluewaveintelligence.com.au'
-            }
-          },
-          lastModifiedBy: {
-            user: {
-              displayName: 'Hussein Srour',
-              email: 'hussein.srour@bluewaveintelligence.com.au'
-            }
-          },
-          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/team/Shared%20Documents/Reports'
-        },
-        {
-          id: '01ABCDEF1234567890ABCDEF1234567893',
-          name: 'Team Meeting Notes.pdf',
-          displayName: 'Team Meeting Notes.pdf',
-          size: 45832,
-          createdDateTime: '2024-12-10T11:00:00Z',
-          lastModifiedDateTime: '2024-12-19T13:30:00Z',
-          file: {
-            mimeType: 'application/pdf',
-            hashes: {
-              quickXorHash: 'ghi789jkl012'
-            }
-          },
-          createdBy: {
-            user: {
-              displayName: 'Mike Chen',
-              email: 'mike.chen@bluewaveintelligence.com.au'
-            }
-          },
-          lastModifiedBy: {
-            user: {
-              displayName: 'Mike Chen',
-              email: 'mike.chen@bluewaveintelligence.com.au'
-            }
-          },
-          webUrl: 'https://bluewaveintelligence.sharepoint.com/sites/team/Shared%20Documents/Team%20Meeting%20Notes.pdf'
-        }
-      ];
-      
-      res.json({
-        success: true,
-        data: mockItems,
-        message: `Retrieved ${mockItems.length} items (demo data)`
-      });
     } catch (error: any) {
       console.error('List items error:', error);
       res.status(500).json({
@@ -1877,11 +1605,21 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
         try {
           const { siteId } = req.params;
           console.log('🔍 Getting files from site:', siteId);
-          
-          const graphClient = authService.getGraphClient(req.session!.accessToken);
+
+          if (!req.session?.accessToken) {
+            res.status(401).json({
+              success: false,
+              error: {
+                code: 'AUTHENTICATION_REQUIRED',
+                message: 'Authentication required'
+              }
+            });
+            return;
+          }
+          const graphClient = authService.getGraphClient(req.session.accessToken);
           
           // Get site's default drive first
-          const drivesResponse = await graphClient.api(`/sites/${siteId}/drives`).get();
+          const drivesResponse = await graphClient.api(`/sites/${siteId}/drives`).select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota').get();
           const defaultDrive = drivesResponse.value.find((drive: any) => 
             drive.name === 'Documents' || drive.driveType === 'documentLibrary'
           );
@@ -2033,52 +1771,83 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
   router.get('/files/:fileId', async (req: Request, res: Response): Promise<void> => {
     try {
       const { fileId } = req.params;
+
+      // Check authentication first
+      if (!req.session?.accessToken) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Authentication required to access file metadata',
+            details: 'Please login to access SharePoint files'
+          }
+        });
+      }
       
       if (isRealSharePointEnabled) {
         try {
           console.log('🔍 Getting real file metadata for ID:', fileId);
-          const graphClient = authService.getGraphClient(req.session!.accessToken);
-          
-          // We need to find the file in the correct drive
-          // First, try to find which drive contains this file by checking both our SharePoint sites
-          let fileResponse = null;
-          
-          // Try Communication site first
-          try {
-            console.log('🔍 Searching Communication site for file...');
-            const commSiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com/drives').get();
-            
-            for (const drive of commSiteResponse.value || []) {
-              try {
-                fileResponse = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
-                console.log(`✅ Found file in Communication site drive: ${drive.name}`);
-                break;
-              } catch (driveError) {
-                // File not in this drive, continue searching
+          if (!req.session?.accessToken) {
+            res.status(401).json({
+              success: false,
+              error: {
+                code: 'AUTHENTICATION_REQUIRED',
+                message: 'Authentication required'
               }
-            }
-          } catch (siteError) {
-            console.log('⚠️ Could not search Communication site');
+            });
+            return;
           }
+          const graphClient = authService.getGraphClient(req.session.accessToken);
           
-          // If not found in Communication site, try All Company subsite
-          if (!fileResponse) {
-            try {
-              console.log('🔍 Searching All Company subsite for file...');
-              const subsiteResponse = await graphClient.api('/sites/netorgft18344752.sharepoint.com:/sites/allcompany:/drives').get();
-              
-              for (const drive of subsiteResponse.value || []) {
-                try {
-                  fileResponse = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
-                  console.log(`✅ Found file in All Company drive: ${drive.name}`);
-                  break;
-                } catch (driveError) {
-                  // File not in this drive, continue searching
-                }
+          // IMPROVED: Generic file search across ALL accessible drives/sites
+          console.log('🔍 Searching for file across all accessible drives...');
+          let fileResponse = null;
+
+          try {
+            // First, try to get all sites the user has access to
+            const sitesResponse = await graphClient.api('/sites?search=*').get();
+            console.log(`🔍 Found ${sitesResponse.value?.length || 0} sites to search`);
+
+            // Search through all accessible sites and their drives
+            for (const site of sitesResponse.value || []) {
+              if (!isBusinessSharePointSite(site)) {
+                continue; // Skip personal sites
               }
-            } catch (subsiteError) {
-              console.log('⚠️ Could not search All Company subsite');
+
+              try {
+                console.log(`🔍 Searching site "${site.displayName || site.name}" for file...`);
+                const drivesResponse = await graphClient.api(`/sites/${site.id}/drives`)
+                  .select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota')
+                  .get();
+
+                for (const drive of drivesResponse.value || []) {
+                  try {
+                    fileResponse = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
+                    console.log(`✅ Found file in site "${site.displayName || site.name}" drive: ${drive.name}`);
+                    break;
+                  } catch (driveError) {
+                    // File not in this drive, continue searching
+                  }
+                }
+
+                if (fileResponse) break; // Found the file, stop searching
+              } catch (siteError: any) {
+                console.log(`⚠️ Could not search site "${site.displayName || site.name}":`, siteError.message);
+              }
             }
+
+            // If still not found, try the user's OneDrive
+            if (!fileResponse) {
+              try {
+                console.log('🔍 Searching user OneDrive for file...');
+                fileResponse = await graphClient.api(`/me/drive/items/${fileId}`).get();
+                console.log('✅ Found file in OneDrive');
+              } catch (oneDriveError) {
+                console.log('⚠️ File not found in OneDrive');
+              }
+            }
+          } catch (searchError: any) {
+            console.error('❌ Error during file search:', searchError.message);
           }
           
           if (!fileResponse) {
@@ -2287,7 +2056,6 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
             message: `File with ID ${fileId} not found`
           }
         });
-        return;
       }
       
       res.json({
@@ -2828,14 +2596,24 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
 
       // Test 2: Try to create Graph client (don't make API calls yet)
       try {
-        const graphClient = authService.getGraphClient(req.session!.accessToken);
+        if (!req.session?.accessToken) {
+          res.status(401).json({
+            success: false,
+            error: {
+              code: 'AUTHENTICATION_REQUIRED',
+              message: 'Authentication required'
+            }
+          });
+          return;
+        }
+        const graphClient = authService.getGraphClient(req.session.accessToken);
         
         res.json({
           success: true,
           data: {
             authTest: 'client_created',
             message: 'Graph client created successfully',
-            tokenLength: req.session!.accessToken.length,
+            tokenLength: req.session?.accessToken?.length,
             recommendation: 'Ready for API calls'
           }
         });
@@ -2981,7 +2759,17 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
       
       if (isRealSharePointEnabled) {
         try {
-          const graphClient = authService.getGraphClient(req.session!.accessToken);
+          if (!req.session?.accessToken) {
+            res.status(401).json({
+              success: false,
+              error: {
+                code: 'AUTHENTICATION_REQUIRED',
+                message: 'Authentication required'
+              }
+            });
+            return;
+          }
+          const graphClient = authService.getGraphClient(req.session.accessToken);
           
           // Find file metadata first to determine the file type
           let fileMetadata = null;
@@ -2989,7 +2777,7 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           
           // Search for file across all user drives (universal approach)
           console.log('🔍 Searching all accessible drives for file...');
-          const drivesResponse = await graphClient.api('/me/drives').get();
+          const drivesResponse = await graphClient.api('/me/drives').select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota').get();
           console.log(`Found ${drivesResponse.value?.length || 0} drives to search`);
 
           // Prioritize business drives over personal drives for file search
@@ -3004,15 +2792,44 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
             try {
               console.log(`🔍 Searching drive: ${drive.name} (${drive.driveType})`);
 
-              // Get metadata
+              // Get metadata first
               fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
+              console.log(`📄 Found file metadata in drive ${drive.name}:`, {
+                name: fileMetadata.name,
+                size: fileMetadata.size,
+                mimeType: fileMetadata.file?.mimeType
+              });
 
-              // Get content
-              fileContent = await graphClient.api(`/drives/${drive.id}/items/${fileId}/content`).get();
+              // Get content with improved error handling
+              try {
+                fileContent = await graphClient.api(`/drives/${drive.id}/items/${fileId}/content`).get();
+                console.log(`✅ Successfully retrieved file content from drive: ${drive.name}`);
+                console.log(`📊 Content type: ${typeof fileContent}, Constructor: ${fileContent?.constructor?.name}`);
 
-              console.log(`✅ Found file in drive: ${drive.name}`);
-              break;
-            } catch (driveError) {
+                // Log additional details for debugging
+                if (fileContent instanceof ReadableStream) {
+                  console.log('📥 Received ReadableStream content');
+                } else if (Buffer.isBuffer(fileContent)) {
+                  console.log(`📦 Received Buffer content, length: ${fileContent.length}`);
+                } else {
+                  console.log(`📄 Received content type: ${typeof fileContent}`);
+                }
+
+                break;
+              } catch (contentError: any) {
+                console.error(`❌ Failed to get content from drive ${drive.name}:`, {
+                  status: contentError.status || contentError.statusCode,
+                  message: contentError.message,
+                  code: contentError.code
+                });
+
+                // If we found metadata but can't get content, this might be a permission issue
+                // Continue to next drive instead of failing completely
+                fileMetadata = null;
+                continue;
+              }
+            } catch (driveError: any) {
+              console.log(`🔍 File not found in drive ${drive.name}:`, driveError.message || 'Unknown error');
               // File not in this drive, continue searching
             }
           }
@@ -3027,52 +2844,61 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           const mimeType = fileMetadata.file?.mimeType || 'application/octet-stream';
           const fileName = fileMetadata.name;
           const fileExtension = fileName.split('.').pop()?.toLowerCase();
-          
+
           console.log('📄 File processing decision - Extension:', fileExtension, 'MIME:', mimeType);
-          
+          console.log('📊 Full file metadata:', {
+            name: fileName,
+            size: fileMetadata.size,
+            mimeType: mimeType,
+            extension: fileExtension,
+            webUrl: fileMetadata.webUrl,
+            createdDateTime: fileMetadata.createdDateTime,
+            lastModifiedDateTime: fileMetadata.lastModifiedDateTime
+          });
+
           // Handle different file types
           const officeExtensions = ['docx', 'xlsx', 'pptx', 'doc', 'xls', 'ppt'];
+
+          // Excel specific MIME types validation
+          const excelMimeTypes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+            'application/vnd.ms-excel', // .xls
+            'application/vnd.oasis.opendocument.spreadsheet' // .ods
+          ];
+
+          // Check if this is an Excel file by extension or MIME type
+          const isExcelFile = fileExtension === 'xlsx' || fileExtension === 'xls' ||
+                              excelMimeTypes.includes(mimeType);
+
+          if (isExcelFile) {
+            console.log('📊 Detected Excel file - Extension:', fileExtension, 'MIME:', mimeType);
+          }
           const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
           const pdfExtensions = ['pdf'];
           
           if (fileExtension && officeExtensions.includes(fileExtension)) {
             try {
               console.log('🔄 Extracting text from Office document...');
-              
-              // Convert response to Buffer - handle ReadableStream from Graph API
-              let buffer: Buffer;
-              
-              if (Buffer.isBuffer(fileContent)) {
-                buffer = fileContent;
-                console.log('📄 File content is already a Buffer, length:', buffer.length);
-              } else if (fileContent instanceof ReadableStream) {
-                console.log('📄 File content is ReadableStream, converting to Buffer...');
-                // Convert ReadableStream to Buffer
-                const reader = fileContent.getReader();
-                const chunks: Uint8Array[] = [];
-                let done = false;
-                
-                while (!done) {
-                  const { value, done: streamDone } = await reader.read();
-                  done = streamDone;
-                  if (value) {
-                    chunks.push(value);
-                  }
+
+              // Convert response to Buffer using a unified robust conversion method
+              const buffer = await convertToBuffer(fileContent, `Office document ${fileMetadata.name}`);
+
+              // Additional validation for Excel files
+              if (isExcelFile) {
+                console.log('📊 Excel file specific processing...');
+                console.log(`📊 Excel file buffer details: length=${buffer.length}, first 10 bytes=[${Array.from(buffer.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join(', ')}]`);
+
+                // Check if buffer starts with valid Excel signatures
+                const bufferStart = buffer.slice(0, 8);
+                const isValidExcel =
+                  bufferStart[0] === 0x50 && bufferStart[1] === 0x4B ||  // ZIP signature (xlsx)
+                  bufferStart[0] === 0xD0 && bufferStart[1] === 0xCF;     // Compound document (xls)
+
+                if (!isValidExcel) {
+                  console.log('⚠️ Excel buffer does not have expected file signature, trying anyway...');
                 }
-                
-                const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-                buffer = Buffer.concat(chunks.map(chunk => Buffer.from(chunk)), totalLength);
-                console.log('✅ Converted ReadableStream to Buffer, length:', buffer.length);
-              } else if (typeof fileContent === 'string') {
-                buffer = Buffer.from(fileContent, 'utf8');
-                console.log('📄 File content is string, converted to Buffer, length:', buffer.length);
-              } else {
-                // Try to convert anything else to Buffer
-                console.log('📄 File content type:', typeof fileContent, 'attempting conversion...');
-                buffer = Buffer.from(fileContent);
-                console.log('📄 Converted to Buffer, length:', buffer.length);
               }
-              
+
               // Process file with text extraction
               const processedContent = await fileProcessor.processFileWithProgress(
                 buffer,
@@ -3081,65 +2907,47 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
                 true, // extractText = true
                 `preview-${fileId}-${Date.now()}`
               );
-              
+
               if (processedContent.extractedText) {
                 console.log('✅ Text extraction successful, length:', processedContent.extractedText.length);
+                // For Excel files, log additional details
+                if (isExcelFile) {
+                  console.log('📊 Excel text extraction successful!');
+                  console.log('📊 First 200 characters:', processedContent.extractedText.substring(0, 200));
+                }
                 res.setHeader('Content-Type', 'text/plain; charset=utf-8');
                 res.send(processedContent.extractedText);
                 return;
               } else {
                 console.log('⚠️ No text extracted, falling back to raw content');
+                // For Excel files, this is more concerning
+                if (isExcelFile) {
+                  console.error('❌ Excel file failed to extract any text - this may indicate a processing issue');
+                }
               }
-              
+
             } catch (extractError: any) {
               console.error('❌ Text extraction failed:', extractError.message);
+              console.error('❌ Error stack:', extractError.stack);
+
+              // For Excel files, provide more specific error information
+              if (isExcelFile) {
+                console.error('❌ Excel file processing failed specifically:', {
+                  fileName: fileName,
+                  fileSize: fileMetadata.size,
+                  mimeType: mimeType,
+                  errorMessage: extractError.message,
+                  errorType: extractError.constructor?.name
+                });
+              }
               // Fall through to send raw content
             }
           } else if (fileExtension && imageExtensions.includes(fileExtension)) {
             // Handle image files - return raw binary data for display
             console.log('🖼️ Processing image file for display...');
             
-            // Convert ReadableStream to Buffer for images
-            let buffer: Buffer;
-            if (Buffer.isBuffer(fileContent)) {
-              buffer = fileContent;
-              console.log('🖼️ File content is already a Buffer, length:', buffer.length);
-            } else if (fileContent instanceof ReadableStream) {
-              console.log('🖼️ Converting image ReadableStream to Buffer...');
-              const reader = fileContent.getReader();
-              const chunks: Uint8Array[] = [];
-              let done = false;
-              
-              while (!done) {
-                const { value, done: streamDone } = await reader.read();
-                done = streamDone;
-                if (value) {
-                  chunks.push(value);
-                }
-              }
-              
-              const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-              buffer = Buffer.concat(chunks.map(chunk => Buffer.from(chunk)), totalLength);
-              console.log('✅ Converted image ReadableStream to Buffer, length:', buffer.length);
-            } else if (typeof fileContent === 'string') {
-              console.log('⚠️ Image fileContent is string, this is unexpected for binary data');
-              // Try to decode if it's base64 or return error
-              throw new Error('Image file content received as string instead of binary data');
-            } else if (fileContent && typeof fileContent === 'object' && 'arrayBuffer' in fileContent) {
-              // Handle Blob objects
-              console.log('🖼️ Converting Blob to Buffer...');
-              const arrayBuffer = await fileContent.arrayBuffer();
-              buffer = Buffer.from(arrayBuffer);
-              console.log('✅ Converted Blob to Buffer, length:', buffer.length);
-            } else {
-              console.log('🖼️ Converting other fileContent type to Buffer:', typeof fileContent, 'constructor:', fileContent?.constructor?.name);
-              try {
-                buffer = Buffer.from(fileContent);
-              } catch (conversionError: any) {
-                console.error('❌ Failed to convert fileContent to Buffer:', conversionError.message);
-                throw new Error(`Unable to process image file: ${conversionError.message}`);
-              }
-            }
+            // Convert response to Buffer using unified robust conversion method
+            const buffer = await convertToBuffer(fileContent, `Image file ${fileMetadata.name}`);
             
             // Verify we have actual image data
             if (buffer.length === 0) {
@@ -3160,46 +2968,8 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
             console.log('📕 Processing PDF file... extractText:', extractText);
             
             try {
-              // Convert ReadableStream to Buffer for PDF processing
-              let buffer: Buffer;
-              if (Buffer.isBuffer(fileContent)) {
-                buffer = fileContent;
-                console.log('📕 File content is already a Buffer, length:', buffer.length);
-              } else if (fileContent instanceof ReadableStream) {
-                console.log('📕 Converting PDF ReadableStream to Buffer...');
-                const reader = fileContent.getReader();
-                const chunks: Uint8Array[] = [];
-                let done = false;
-                
-                while (!done) {
-                  const { value, done: streamDone } = await reader.read();
-                  done = streamDone;
-                  if (value) {
-                    chunks.push(value);
-                  }
-                }
-                
-                const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-                buffer = Buffer.concat(chunks.map(chunk => Buffer.from(chunk)), totalLength);
-                console.log('✅ Converted PDF ReadableStream to Buffer, length:', buffer.length);
-              } else if (typeof fileContent === 'string') {
-                console.log('⚠️ PDF fileContent is string, this is unexpected for binary data');
-                throw new Error('PDF file content received as string instead of binary data');  
-              } else if (fileContent && typeof fileContent === 'object' && 'arrayBuffer' in fileContent) {
-                // Handle Blob objects
-                console.log('📕 Converting Blob to Buffer...');
-                const arrayBuffer = await fileContent.arrayBuffer();
-                buffer = Buffer.from(arrayBuffer);
-                console.log('✅ Converted PDF Blob to Buffer, length:', buffer.length);
-              } else {
-                console.log('📕 Converting other fileContent type to Buffer:', typeof fileContent, 'constructor:', fileContent?.constructor?.name);
-                try {
-                  buffer = Buffer.from(fileContent);
-                } catch (conversionError: any) {
-                  console.error('❌ Failed to convert PDF fileContent to Buffer:', conversionError.message);
-                  throw new Error(`Unable to process PDF file: ${conversionError.message}`);
-                }
-              }
+              // Convert response to Buffer using unified robust conversion method
+              const buffer = await convertToBuffer(fileContent, `PDF file ${fileMetadata.name}`);
               
               // Verify we have actual PDF data
               if (buffer.length === 0) {
@@ -3250,12 +3020,29 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           
           // For other file types or if processing failed, return raw content
           console.log('📄 Returning raw content for file type:', fileExtension);
+
+          // Special handling for Excel files that reached this point (fallback)
+          if (isExcelFile) {
+            console.log('📊 Excel file reached fallback - attempting alternative processing...');
+            try {
+              // For Excel files that failed processing, return a helpful message instead of raw binary
+              const fallbackMessage = `This XLSX document is available for AI processing.\n\nFile: ${fileName}\nSize: ${Math.round(fileMetadata.size / 1024)}KB\nType: ${mimeType}\n\nThe document content could not be previewed directly, but you can use the AI features to analyze, summarize, or extract data from this spreadsheet.`;
+
+              res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+              res.send(fallbackMessage);
+              return;
+            } catch (fallbackError) {
+              console.error('❌ Excel fallback failed:', fallbackError);
+              // Continue to raw content below
+            }
+          }
+
           if (fileMetadata.file && fileMetadata.file.mimeType) {
             res.setHeader('Content-Type', fileMetadata.file.mimeType);
           } else {
             res.setHeader('Content-Type', 'application/octet-stream');
           }
-          
+
           res.send(fileContent);
           return;
           
@@ -3264,164 +3051,16 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
         }
       }
       
-      // Enhanced mock content for different file types
-      const mockFiles: Record<string, { content: string; type: string }> = {
-        'Channel Marketing Budget1.xlsx': {
-          content: `MARKETING BUDGET SPREADSHEET - 2024
-
-CHANNEL ALLOCATION:
-=================
-Digital Marketing: $45,000
-- Google Ads: $20,000
-- Facebook Ads: $15,000
-- LinkedIn Ads: $10,000
-
-Traditional Marketing: $30,000
-- Print Advertising: $15,000
-- Radio Spots: $10,000
-- Billboards: $5,000
-
-Events & Conferences: $25,000
-- Trade Shows: $15,000
-- Webinars: $5,000
-- Networking Events: $5,000
-
-QUARTERLY BREAKDOWN:
-==================
-Q1: $33,000
-Q2: $35,000
-Q3: $32,000
-Q4: $38,000
-
-TOTAL BUDGET: $100,000
-
-KEY METRICS:
-============
-Expected ROI: 3.2x
-Lead Generation Target: 2,500 leads
-Conversion Rate Target: 8.5%
-
-Notes:
-- Budget allocation subject to performance review
-- Digital channels prioritized for Q1-Q2
-- Traditional media focus in Q3-Q4 for brand awareness`,
-          type: 'text/plain; charset=utf-8'
-        },
-        'BH Worldwide copy.docx': {
-          content: `BH WORLDWIDE - COMPANY OVERVIEW
-
-EXECUTIVE SUMMARY:
-==================
-BH Worldwide is a leading global logistics and supply chain management company, established in 1995. We provide comprehensive solutions for international trade, freight forwarding, and customs clearance services.
-
-SERVICES OFFERED:
-================
-• International Freight Forwarding
-  - Air Freight Services
-  - Ocean Freight Services
-  - Land Transportation
-
-• Customs and Compliance
-  - Customs Clearance
-  - Trade Compliance Consulting
-  - Documentation Services
-
-• Supply Chain Solutions
-  - Warehousing and Distribution
-  - Inventory Management
-  - Last-Mile Delivery
-
-• Specialized Services
-  - Project Cargo Handling
-  - Dangerous Goods Transportation
-  - Temperature-Controlled Logistics
-
-GLOBAL PRESENCE:
-===============
-Headquarters: Singapore
-Regional Offices: 45+ locations worldwide
-Partner Network: 200+ agents globally
-Annual Revenue: $2.8 billion USD
-
-KEY ACHIEVEMENTS:
-================
-• ISO 9001:2015 Certified
-• IATA Certified Agent
-• C-TPAT Security Certified
-• Winner of "Best Logistics Provider 2023"
-
-CONTACT INFORMATION:
-===================
-Phone: +65-6123-4567
-Email: info@bhworldwide.com
-Website: www.bhworldwide.com`,
-          type: 'text/plain; charset=utf-8'
-        },
-        'Screenshot 2025-08-06 at 14.38.26.png': {
-          content: 'MOCK_IMAGE_PLACEHOLDER', // Special indicator for image mock
-          type: 'image/png'
+      // No fallback to mock data - if real API fails, return error
+      console.error('❌ Real SharePoint API failed to retrieve file content');
+      res.status(404).json({
+        error: {
+          code: 'FILE_CONTENT_NOT_FOUND',
+          message: 'File content not available from SharePoint. Please ensure the file exists and you have access permissions.',
+          details: 'Real SharePoint integration is enabled but file could not be retrieved from any accessible drive.'
         }
-      };
-      
-      // Check if we have specific mock content for this file
-      console.log('🔍 DEBUG: Looking for mock content for fileId:', fileId);
-      console.log('🔍 DEBUG: Available mock files:', Object.keys(mockFiles));
-      
-      const mockFile = Object.entries(mockFiles).find(([name]) => {
-        const normalizedName = name.replace(/\s+/g, '').toLowerCase();
-        const normalizedFileId = fileId.toLowerCase();
-        
-        // Check multiple matching strategies
-        const matches = normalizedFileId.includes(normalizedName) || 
-                       normalizedFileId.includes(name.toLowerCase()) ||
-                       name.toLowerCase().includes('screenshot') && normalizedFileId.includes('screenshot') ||
-                       name.toLowerCase().includes('bhworldwide') && normalizedFileId.includes('worldwide') ||
-                       name.toLowerCase().includes('channelmarketing') && normalizedFileId.includes('channel');
-                       
-        console.log(`🔍 DEBUG: Checking ${name} -> ${normalizedName}, fileId: ${normalizedFileId}, matches: ${matches}`);
-        return matches;
       });
-      
-      if (mockFile) {
-        console.log('✅ DEBUG: Found mock file:', mockFile[0]);
-        
-        // Handle image mock with a sample image
-        if (mockFile[1].content === 'MOCK_IMAGE_PLACEHOLDER') {
-          console.log('🖼️ DEBUG: Serving mock image for screenshot');
-          
-          // Create a larger demo image (400x300 with text) - this is a more realistic screenshot placeholder
-          const base64Image = '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';
-          const imageBuffer = Buffer.from(base64Image, 'base64');
-          
-          res.setHeader('Content-Type', 'image/png');
-          res.setHeader('Content-Length', imageBuffer.length.toString());
-          res.setHeader('Cache-Control', 'public, max-age=31536000');
-          res.send(imageBuffer);
-          return;
-        }
-        
-        console.log('📄 DEBUG: Content length:', mockFile[1].content.length);
-        console.log('📄 DEBUG: Content preview:', mockFile[1].content.substring(0, 200));
-        res.setHeader('Content-Type', mockFile[1].type);
-        res.send(mockFile[1].content);
-      } else {
-        // Generic mock content
-        const mockContent = `This is preview content for file ID: ${fileId}
 
-This document contains business information that would be extracted from the actual SharePoint file. The text extraction system can process:
-
-• Word Documents (.docx, .doc)
-• Excel Spreadsheets (.xlsx, .xls) 
-• PowerPoint Presentations (.pptx, .ppt)
-• PDF Documents
-• Plain Text Files
-
-In a real implementation, this would show the actual extracted text content from your SharePoint documents, making them searchable and analyzable by AI.`;
-        
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-        res.send(mockContent);
-      }
-      
     } catch (error: any) {
       console.error('File content error:', error);
       res.status(404).json({
@@ -3441,20 +3080,15 @@ In a real implementation, this would show the actual extracted text content from
     try {
       const { fileId } = req.params;
       console.log('🔍 DEBUG: Testing file content response for:', fileId);
-      
-      // Test with our mock file
-      if (fileId.toLowerCase().includes('bhworldwide') || fileId.toLowerCase().includes('worldwide')) {
-        const mockContent = 'BH WORLDWIDE - COMPANY OVERVIEW\n\nThis is a test document with extracted text content.\n\nSERVICES:\n- Logistics\n- Supply Chain\n- Freight Forwarding';
-        
-        console.log('📄 DEBUG: Returning mock content, length:', mockContent.length);
-        console.log('📄 DEBUG: Content preview:', mockContent.substring(0, 100));
-        
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-        res.send(mockContent);
-        return;
-      }
-      
-      res.status(404).send('Debug file not found');
+
+      // Debug endpoint no longer uses mock content - return 404 for all requests
+      res.status(404).json({
+        error: {
+          code: 'DEBUG_FILE_NOT_FOUND',
+          message: 'Debug file content endpoint does not serve mock content. Use real SharePoint API endpoints.',
+          fileId: fileId
+        }
+      });
     } catch (error: any) {
       console.error('❌ DEBUG: Error:', error);
       res.status(500).json({ error: error.message });
@@ -3467,19 +3101,29 @@ In a real implementation, this would show the actual extracted text content from
   router.get('/debug/test-api', authMiddleware.requireAuth, async (req: Request, res: Response): Promise<void> => {
     try {
       console.log('🔍 DEBUG: Testing SharePoint API directly...');
-      
+
       if (!req.session?.accessToken) {
         console.log('❌ DEBUG: No access token found');
         res.status(401).json({ error: 'No access token' });
         return;
       }
-      
+
       console.log('✅ DEBUG: Access token exists, creating Graph client...');
+      if (!req.session?.accessToken) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Authentication required'
+          }
+        });
+        return;
+      }
       const graphClient = authService.getGraphClient(req.session.accessToken);
-      
+
       console.log('🔍 DEBUG: Making Graph API call to /sites...');
       const sitesResponse = await graphClient.api('/sites?$select=id,displayName,name,webUrl').get();
-      
+
       console.log('✅ DEBUG: Graph API success! Sites found:', sitesResponse.value?.length || 0);
       console.log('🔍 DEBUG: First site:', sitesResponse.value?.[0]);
 
@@ -3496,7 +3140,7 @@ In a real implementation, this would show the actual extracted text content from
         businessSites: businessSites,
         debugInfo: 'Direct Graph API call successful with business filtering applied'
       });
-      
+
     } catch (error: any) {
       console.error('❌ DEBUG: Graph API test failed:', error);
       console.error('❌ DEBUG: Error details:', {
@@ -3505,7 +3149,7 @@ In a real implementation, this would show the actual extracted text content from
         code: error.code,
         body: error.body || error.response?.data
       });
-      
+
       res.status(500).json({
         error: {
           message: error.message,
@@ -3515,6 +3159,7 @@ In a real implementation, this would show the actual extracted text content from
       });
     }
   });
+
 
   return router;
 };
