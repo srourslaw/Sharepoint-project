@@ -134,6 +134,24 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
     return false;
   };
 
+  const isBusinessSite = (site: any): boolean => {
+    // Filter out personal sites and focus on organizational sites
+    if (!site || !site.webUrl) return false;
+
+    // Include sites that are clearly organizational
+    if (site.webUrl && !site.webUrl.includes('/personal/')) {
+      return true;
+    }
+
+    // Exclude personal sites
+    if (site.webUrl && site.webUrl.includes('/personal/')) {
+      console.log(`🚫 Filtering out personal site: ${site.displayName} - ${site.webUrl}`);
+      return false;
+    }
+
+    return true;
+  };
+
   // Initialize file processor for content extraction
   const fileProcessor = new AdvancedFileProcessor({
     maxFileSize: 50 * 1024 * 1024, // 50MB limit for preview
@@ -1805,8 +1823,10 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
 
           try {
             // First, try to get all sites the user has access to
+            console.log('🔍 DEBUG: Making /sites?search=* API call for file metadata...');
             const sitesResponse = await graphClient.api('/sites?search=*').get();
             console.log(`🔍 Found ${sitesResponse.value?.length || 0} sites to search`);
+            console.log('🔍 DEBUG: Raw sites response:', JSON.stringify(sitesResponse, null, 2));
 
             // Search through all accessible sites and their drives
             for (const site of sitesResponse.value || []) {
@@ -2750,13 +2770,14 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
   /**
    * GET /api/sharepoint-advanced/files/:fileId/content
    * Get file content for preview with text extraction or raw binary
+   * Uses direct access approach like file listing instead of searching all drives
    */
   router.get('/files/:fileId/content', async (req: Request, res: Response): Promise<void> => {
     try {
       const { fileId } = req.params;
-      const { extractText = 'false', format = 'binary' } = req.query;
-      console.log('🔍 Getting file content for preview:', fileId, 'extractText:', extractText, 'format:', format);
-      
+      const { extractText = 'false', format = 'binary', driveId } = req.query;
+      console.log('🔍 Getting file content for preview:', fileId, 'extractText:', extractText, 'format:', format, 'driveId:', driveId);
+
       if (isRealSharePointEnabled) {
         try {
           if (!req.session?.accessToken) {
@@ -2770,70 +2791,139 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
             return;
           }
           const graphClient = authService.getGraphClient(req.session.accessToken);
-          
-          // Find file metadata first to determine the file type
+
           let fileMetadata = null;
           let fileContent = null;
-          
-          // Search for file across all user drives (universal approach)
-          console.log('🔍 Searching all accessible drives for file...');
-          const drivesResponse = await graphClient.api('/me/drives').select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota').get();
-          console.log(`Found ${drivesResponse.value?.length || 0} drives to search`);
 
-          // Prioritize business drives over personal drives for file search
-          const allDrives = drivesResponse.value || [];
-          const businessDrives = allDrives.filter(isBusinessDrive);
-          const personalDrives = allDrives.filter((drive: any) => !isBusinessDrive(drive));
-          const searchOrder = [...businessDrives, ...personalDrives];
-
-          console.log(`Search order: ${businessDrives.length} business drives first, then ${personalDrives.length} personal drives`);
-
-          for (const drive of searchOrder) {
+          // If driveId is provided, use direct access approach (like file listing)
+          if (driveId && typeof driveId === 'string') {
+            console.log(`🎯 Using direct access with driveId: ${driveId}`);
             try {
-              console.log(`🔍 Searching drive: ${drive.name} (${drive.driveType})`);
-
               // Get metadata first
-              fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
-              console.log(`📄 Found file metadata in drive ${drive.name}:`, {
+              fileMetadata = await graphClient.api(`/drives/${driveId}/items/${fileId}`).get();
+              console.log(`📄 Found file metadata in drive ${driveId}:`, {
                 name: fileMetadata.name,
                 size: fileMetadata.size,
                 mimeType: fileMetadata.file?.mimeType
               });
 
-              // Get content with improved error handling
-              try {
-                fileContent = await graphClient.api(`/drives/${drive.id}/items/${fileId}/content`).get();
-                console.log(`✅ Successfully retrieved file content from drive: ${drive.name}`);
-                console.log(`📊 Content type: ${typeof fileContent}, Constructor: ${fileContent?.constructor?.name}`);
+              // Get content
+              fileContent = await graphClient.api(`/drives/${driveId}/items/${fileId}/content`).get();
+              console.log(`✅ Successfully retrieved file content using direct access`);
+              console.log(`📊 Content type: ${typeof fileContent}, Constructor: ${fileContent?.constructor?.name}`);
 
-                // Log additional details for debugging
-                if (fileContent instanceof ReadableStream) {
-                  console.log('📥 Received ReadableStream content');
-                } else if (Buffer.isBuffer(fileContent)) {
-                  console.log(`📦 Received Buffer content, length: ${fileContent.length}`);
-                } else {
-                  console.log(`📄 Received content type: ${typeof fileContent}`);
-                }
-
-                break;
-              } catch (contentError: any) {
-                console.error(`❌ Failed to get content from drive ${drive.name}:`, {
-                  status: contentError.status || contentError.statusCode,
-                  message: contentError.message,
-                  code: contentError.code
-                });
-
-                // If we found metadata but can't get content, this might be a permission issue
-                // Continue to next drive instead of failing completely
-                fileMetadata = null;
-                continue;
-              }
-            } catch (driveError: any) {
-              console.log(`🔍 File not found in drive ${drive.name}:`, driveError.message || 'Unknown error');
-              // File not in this drive, continue searching
+            } catch (directAccessError: any) {
+              console.error(`❌ Direct access failed for driveId ${driveId}:`, {
+                status: directAccessError.status || directAccessError.statusCode,
+                message: directAccessError.message,
+                code: directAccessError.code
+              });
+              // Fall through to search approach
             }
           }
-          
+
+          // If direct access failed or no driveId provided, fall back to search approach
+          if (!fileContent || !fileMetadata) {
+            console.log('🔄 Falling back to search approach across all accessible drives...');
+
+            // Step 1: Get user drives
+            const drivesResponse = await graphClient.api('/me/drives').select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota').get();
+            console.log(`Found ${drivesResponse.value?.length || 0} user drives to search`);
+
+            // Step 2: Search organizational sites directly (like working file listing approach)
+            console.log('🔍 Searching organizational sites directly for file...');
+            const orgSiteDrives: any[] = [];
+            try {
+              // Use the EXACT same API call that works in file listing
+              console.log('🔍 DEBUG FILE CONTENT: Making /sites?search=* API call...');
+              const sitesResponse = await graphClient.api('/sites?search=*').get();
+              console.log(`🔍 DEBUG FILE CONTENT: Found ${sitesResponse.value?.length || 0} organizational sites to search`);
+              console.log('🔍 DEBUG FILE CONTENT: Raw sites response:', JSON.stringify(sitesResponse, null, 2));
+
+              for (const site of sitesResponse.value || []) {
+                if (isBusinessSite(site)) {
+                  try {
+                    const siteId = site.id;
+                    // Use the same approach as working file listing: get site drives and find Documents library
+                    const siteDrivesResponse = await graphClient.api(`/sites/${siteId}/drives`).select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota').get();
+                    const defaultDrive = siteDrivesResponse.value?.find((drive: any) =>
+                      drive.name === 'Documents' || drive.driveType === 'documentLibrary'
+                    );
+
+                    if (defaultDrive) {
+                      defaultDrive.siteName = site.displayName;
+                      defaultDrive.siteUrl = site.webUrl;
+                      defaultDrive.siteId = siteId;
+                      orgSiteDrives.push(defaultDrive);
+                      console.log(`✅ Added site drive: ${defaultDrive.name} from ${site.displayName}`);
+                    } else {
+                      console.log(`⚠️ No default drive found in site ${site.displayName}`);
+                    }
+                  } catch (siteDriveError: any) {
+                    console.log(`⚠️ Could not get drives for site ${site.displayName}:`, siteDriveError.message);
+                  }
+                }
+              }
+            } catch (sitesError: any) {
+              console.log('⚠️ Could not get organizational sites for file search:', sitesError.message);
+            }
+
+            // Combine all drives: user drives + site drives (prioritize site drives first)
+            const allUserDrives = drivesResponse.value || [];
+            const userBusinessDrives = allUserDrives.filter(isBusinessDrive);
+            const personalDrives = allUserDrives.filter((drive: any) => !isBusinessDrive(drive));
+            const searchOrder = [...orgSiteDrives, ...userBusinessDrives, ...personalDrives];
+
+            console.log(`🔍 Search order: ${orgSiteDrives.length} site drives + ${userBusinessDrives.length} user business drives + ${personalDrives.length} personal drives = ${searchOrder.length} total`);
+
+            for (const drive of searchOrder) {
+              try {
+                const driveLabel = drive.siteName ? `${drive.name} in site "${drive.siteName}"` : drive.name;
+                console.log(`🔍 Searching drive: ${driveLabel} (${drive.driveType})`);
+
+                // Get metadata first
+                fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
+                console.log(`📄 Found file metadata in drive ${drive.name}:`, {
+                  name: fileMetadata.name,
+                  size: fileMetadata.size,
+                  mimeType: fileMetadata.file?.mimeType
+                });
+
+                // Get content with improved error handling
+                try {
+                  fileContent = await graphClient.api(`/drives/${drive.id}/items/${fileId}/content`).get();
+                  console.log(`✅ Successfully retrieved file content from drive: ${driveLabel}`);
+                  console.log(`📊 Content type: ${typeof fileContent}, Constructor: ${fileContent?.constructor?.name}`);
+
+                  // Log additional details for debugging
+                  if (fileContent instanceof ReadableStream) {
+                    console.log('📥 Received ReadableStream content');
+                  } else if (Buffer.isBuffer(fileContent)) {
+                    console.log(`📦 Received Buffer content, length: ${fileContent.length}`);
+                  } else {
+                    console.log(`📄 Received content type: ${typeof fileContent}`);
+                  }
+
+                  break;
+                } catch (contentError: any) {
+                  console.error(`❌ Failed to get content from drive ${driveLabel}:`, {
+                    status: contentError.status || contentError.statusCode,
+                    message: contentError.message,
+                    code: contentError.code
+                  });
+
+                  // If we found metadata but can't get content, this might be a permission issue
+                  // Continue to next drive instead of failing completely
+                  fileMetadata = null;
+                  continue;
+                }
+              } catch (driveError: any) {
+                console.log(`🔍 File not found in drive ${drive.name}:`, driveError.message || 'Unknown error');
+                // File not in this drive, continue searching
+              }
+            }
+          }
+
           if (!fileContent || !fileMetadata) {
             throw new Error(`File with ID ${fileId} not found in any accessible drive`);
           }
@@ -3183,33 +3273,75 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
           }
           const graphClient = authService.getGraphClient(req.session.accessToken);
 
-          // Search for file across all user drives to get correct drive/site context
+          // Search for file across organizational sites + user drives (same as working file listing)
           console.log('🔍 Searching all accessible drives for file...');
-          const drivesResponse = await graphClient.api('/me/drives').select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota').get();
-          console.log(`Found ${drivesResponse.value?.length || 0} drives to search`);
 
-          // Prioritize business drives over personal drives
-          const allDrives = drivesResponse.value || [];
-          const businessDrives = allDrives.filter(isBusinessDrive);
-          const personalDrives = allDrives.filter((drive: any) => !isBusinessDrive(drive));
-          const searchOrder = [...businessDrives, ...personalDrives];
+          // Step 1: Get user drives
+          const drivesResponse = await graphClient.api('/me/drives').select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota').get();
+          console.log(`Found ${drivesResponse.value?.length || 0} user drives to search`);
+
+          // Step 2: Get organizational site drives (same as working file listing approach)
+          console.log('🔍 Getting organizational sites for file preview...');
+          const orgSiteDrives: any[] = [];
+          try {
+            // Use the EXACT same API call that works in file listing
+            const sitesResponse = await graphClient.api('/sites?search=*').get();
+            console.log(`✅ Found ${sitesResponse.value?.length || 0} organizational sites for preview`);
+
+            for (const site of sitesResponse.value || []) {
+              if (isBusinessSite(site)) {
+                try {
+                  const siteId = site.id;
+                  // Use the same approach as working file listing: get site drives and find Documents library
+                  const siteDrivesResponse = await graphClient.api(`/sites/${siteId}/drives`).select('id,name,description,webUrl,createdDateTime,lastModifiedDateTime,driveType,quota').get();
+                  const defaultDrive = siteDrivesResponse.value?.find((drive: any) =>
+                    drive.name === 'Documents' || drive.driveType === 'documentLibrary'
+                  );
+
+                  if (defaultDrive) {
+                    defaultDrive.siteName = site.displayName;
+                    defaultDrive.siteUrl = site.webUrl;
+                    defaultDrive.siteId = siteId;
+                    orgSiteDrives.push(defaultDrive);
+                    console.log(`✅ Added site drive for preview: ${defaultDrive.name} from ${site.displayName}`);
+                  } else {
+                    console.log(`⚠️ No default drive found in site ${site.displayName}`);
+                  }
+                } catch (siteDriveError: any) {
+                  console.log(`⚠️ Could not get drives for site ${site.displayName}:`, siteDriveError.message);
+                }
+              }
+            }
+          } catch (sitesError: any) {
+            console.log('⚠️ Could not get organizational sites for preview:', sitesError.message);
+          }
+
+          // Combine all drives: organizational sites + user drives (prioritize site drives)
+          const allUserDrives = drivesResponse.value || [];
+          const userBusinessDrives = allUserDrives.filter(isBusinessDrive);
+          const personalDrives = allUserDrives.filter((drive: any) => !isBusinessDrive(drive));
+          const searchOrder = [...orgSiteDrives, ...userBusinessDrives, ...personalDrives];
+
+          console.log(`🔍 Preview search order: ${orgSiteDrives.length} site drives + ${userBusinessDrives.length} user business drives + ${personalDrives.length} personal drives = ${searchOrder.length} total`);
 
           let fileMetadata = null;
           let driveContext = null;
 
           for (const drive of searchOrder) {
             try {
-              console.log(`🔍 Searching drive: ${drive.name} (${drive.driveType})`);
+              const driveLabel = drive.siteName ? `${drive.name} in site "${drive.siteName}"` : drive.name;
+              console.log(`🔍 Searching drive for preview: ${driveLabel} (${drive.driveType})`);
               fileMetadata = await graphClient.api(`/drives/${drive.id}/items/${fileId}`).get();
               driveContext = drive;
-              console.log(`📄 Found file in drive ${drive.name}:`, {
+              console.log(`📄 Found file for preview in drive ${driveLabel}:`, {
                 name: fileMetadata.name,
                 mimeType: fileMetadata.file?.mimeType,
                 webUrl: fileMetadata.webUrl
               });
               break;
             } catch (driveError: any) {
-              console.log(`🔍 File not found in drive ${drive.name}:`, driveError.message || 'Unknown error');
+              const driveLabel = drive.siteName ? `${drive.name} in site "${drive.siteName}"` : drive.name;
+              console.log(`🔍 File not found in drive ${driveLabel}:`, driveError.message || 'Unknown error');
             }
           }
 
