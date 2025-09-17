@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Box, Typography, IconButton, Paper, Tabs, Tab, Menu, MenuItem, ListItemIcon, Button, Slider } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography, IconButton, Paper, Tabs, Tab, Menu, MenuItem, ListItemIcon, Button } from '@mui/material';
 import { DataGrid, GridColDef, GridRowsProp } from '@mui/x-data-grid';
 import { 
   Close as CloseIcon,
@@ -36,17 +36,8 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   
   const [activeTab, setActiveTab] = useState<PreviewTab>('preview');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [editMode, setEditMode] = useState(false);
-
-  // Edit mode states
-  const [selectedTool, setSelectedTool] = useState<'draw' | 'highlight' | 'text' | 'none'>('none');
-  const [highlightColor, setHighlightColor] = useState('#FFFF00');
-  const [brushSize, setBrushSize] = useState(2);
-  const [annotations, setAnnotations] = useState<any[]>([]);
-
   const currentFileId = selectedFiles[0] || null;
   const { file, content, loading, error } = useFilePreview(currentFileId);
-
 
   console.log('🚀 FilePreview: File data:', { file: file?.name, content: content?.substring(0, 50), hasFile: !!file, hasContent: !!content });
 
@@ -652,34 +643,6 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   );
 
 
-  // SharePoint save functionality
-  const handleSaveToSharePoint = async (editedContent: Blob, annotations?: any[]) => {
-    if (!file) return;
-
-    try {
-      const formData = new FormData();
-      formData.append('file', editedContent, file.displayName);
-      if (annotations) {
-        formData.append('annotations', JSON.stringify(annotations));
-      }
-
-      const response = await fetch(`/api/sharepoint-advanced/files/${file.id}/update`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        console.log('✅ File saved to SharePoint successfully');
-        // Refresh the preview to show updated content
-        window.location.reload();
-      } else {
-        console.error('❌ Failed to save file to SharePoint');
-      }
-    } catch (error) {
-      console.error('❌ Error saving file:', error);
-    }
-  };
-
   const handleDownload = async () => {
     if (!file) return;
     
@@ -793,7 +756,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   const renderTabContent = () => {
     switch (activeTab) {
       case 'preview':
-        return renderPreviewWithEditMode();
+        return renderContent();
       case 'details':
         return renderFileDetails();
       case 'versions':
@@ -801,270 +764,6 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       default:
         return renderContent();
     }
-  };
-
-  // Enhanced preview with edit mode toggle
-  const renderPreviewWithEditMode = () => {
-    const isPDF = file?.extension?.toLowerCase() === 'pdf';
-    const isImage = file?.extension && ['png', 'jpg', 'jpeg', 'gif', 'bmp'].includes(file.extension.toLowerCase());
-    const isEditable = isPDF || isImage;
-
-    return (
-      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-        {/* Edit Mode Toggle - Only show for editable files */}
-        {isEditable && (
-          <Box sx={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            zIndex: 10,
-            display: 'flex',
-            gap: 1
-          }}>
-            <Button
-              size="small"
-              variant={editMode ? 'contained' : 'outlined'}
-              color="primary"
-              onClick={() => setEditMode(!editMode)}
-              sx={{
-                backgroundColor: editMode ? 'primary.main' : 'background.paper',
-                color: editMode ? 'white' : 'primary.main',
-                boxShadow: 2,
-                '&:hover': {
-                  backgroundColor: editMode ? 'primary.dark' : 'primary.light',
-                  color: 'white'
-                }
-              }}
-            >
-              {editMode ? '✏️ Exit Edit' : '✏️ Edit Mode'}
-            </Button>
-          </Box>
-        )}
-
-        {/* Original PDF/Image content */}
-        <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-          {renderContent()}
-
-          {/* Edit Mode Overlay - Only when edit mode is active */}
-          {editMode && isEditable && <EditModeOverlay />}
-        </Box>
-      </Box>
-    );
-  };
-
-  // EditModeOverlay Component - Floating toolbar and canvas
-  const EditModeOverlay: React.FC = () => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [isDrawing, setIsDrawing] = useState(false);
-
-    // Handle tool selection
-    const handleToolSelect = (tool: 'draw' | 'highlight' | 'text') => {
-      setSelectedTool(selectedTool === tool ? 'none' : tool);
-    };
-
-    // Handle save to SharePoint
-    const handleSave = async () => {
-      if (canvasRef.current && annotations.length > 0) {
-        canvasRef.current.toBlob((blob) => {
-          if (blob) {
-            handleSaveToSharePoint(blob, annotations);
-            console.log('✅ Saved annotations to SharePoint');
-          }
-        });
-      } else {
-        console.log('ℹ️ No annotations to save');
-      }
-    };
-
-    // Canvas drawing handlers
-    const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (selectedTool === 'draw' || selectedTool === 'highlight') {
-        setIsDrawing(true);
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const rect = canvas.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineWidth = selectedTool === 'highlight' ? 15 : brushSize;
-            ctx.strokeStyle = selectedTool === 'highlight' ?
-              hexToRgba(highlightColor, 0.4) : '#000000';
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-          }
-        }
-      }
-    };
-
-    const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (isDrawing && (selectedTool === 'draw' || selectedTool === 'highlight')) {
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const rect = canvas.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.lineTo(x, y);
-            ctx.stroke();
-          }
-        }
-      }
-    };
-
-    const handleCanvasMouseUp = () => {
-      if (isDrawing) {
-        setIsDrawing(false);
-        // Add annotation to array for saving
-        setAnnotations(prev => [...prev, {
-          type: selectedTool,
-          color: selectedTool === 'highlight' ? highlightColor : '#000000',
-          size: selectedTool === 'highlight' ? 15 : brushSize,
-          timestamp: new Date().toISOString()
-        }]);
-      }
-    };
-
-    // Helper function to convert hex to rgba
-    const hexToRgba = (hex: string, alpha: number) => {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    };
-
-    return (
-      <>
-        {/* Floating Toolbar */}
-        <Box sx={{
-          position: 'absolute',
-          top: 50,
-          left: 8,
-          zIndex: 20,
-          backgroundColor: 'background.paper',
-          borderRadius: 2,
-          boxShadow: 3,
-          p: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 0.5,
-          minWidth: 140
-        }}>
-          {/* Draw Tool */}
-          <Button
-            size="small"
-            variant={selectedTool === 'draw' ? 'contained' : 'outlined'}
-            onClick={() => handleToolSelect('draw')}
-            startIcon={<Typography>✏️</Typography>}
-            sx={{ justifyContent: 'flex-start', fontSize: '0.75rem' }}
-          >
-            Draw
-          </Button>
-
-          {/* Highlight Tool */}
-          <Button
-            size="small"
-            variant={selectedTool === 'highlight' ? 'contained' : 'outlined'}
-            onClick={() => handleToolSelect('highlight')}
-            startIcon={<Typography>🖍️</Typography>}
-            sx={{ justifyContent: 'flex-start', fontSize: '0.75rem' }}
-          >
-            Highlight
-          </Button>
-
-          {/* Color Picker for Highlight */}
-          {selectedTool === 'highlight' && (
-            <Box sx={{ px: 1, py: 0.5 }}>
-              <Typography variant="caption" sx={{ fontSize: '0.6rem' }}>Color:</Typography>
-              <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
-                {['#FFFF00', '#00FF00', '#FF0000', '#0000FF', '#FF00FF'].map(color => (
-                  <Box
-                    key={color}
-                    onClick={() => setHighlightColor(color)}
-                    sx={{
-                      width: 16,
-                      height: 16,
-                      backgroundColor: color,
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      border: highlightColor === color ? '2px solid #000' : '1px solid #ccc'
-                    }}
-                  />
-                ))}
-              </Box>
-            </Box>
-          )}
-
-          {/* Text Tool */}
-          <Button
-            size="small"
-            variant={selectedTool === 'text' ? 'contained' : 'outlined'}
-            onClick={() => handleToolSelect('text')}
-            startIcon={<Typography>📝</Typography>}
-            sx={{ justifyContent: 'flex-start', fontSize: '0.75rem' }}
-          >
-            Text
-          </Button>
-
-          {/* Save Button */}
-          <Button
-            size="small"
-            variant="contained"
-            color="success"
-            onClick={handleSave}
-            startIcon={<Typography>💾</Typography>}
-            sx={{
-              justifyContent: 'flex-start',
-              fontSize: '0.75rem',
-              mt: 1,
-              backgroundColor: 'success.main'
-            }}
-          >
-            Save
-          </Button>
-
-          {/* Annotations Count */}
-          {annotations.length > 0 && (
-            <Typography variant="caption" sx={{
-              textAlign: 'center',
-              fontSize: '0.6rem',
-              color: 'text.secondary',
-              mt: 0.5
-            }}>
-              {annotations.length} annotation{annotations.length !== 1 ? 's' : ''}
-            </Typography>
-          )}
-        </Box>
-
-        {/* Canvas Overlay */}
-        <canvas
-          ref={canvasRef}
-          width={800}
-          height={1000}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            zIndex: 15,
-            pointerEvents: selectedTool !== 'none' ? 'auto' : 'none',
-            cursor: selectedTool === 'draw' ? 'crosshair' :
-                    selectedTool === 'highlight' ? 'cell' :
-                    selectedTool === 'text' ? 'text' : 'default'
-          }}
-          onMouseDown={handleCanvasMouseDown}
-          onMouseMove={handleCanvasMouseMove}
-          onMouseUp={handleCanvasMouseUp}
-          onMouseLeave={handleCanvasMouseUp}
-        />
-      </>
-    );
   };
 
   return (
