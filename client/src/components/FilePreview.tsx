@@ -24,7 +24,7 @@ interface FilePreviewProps {
   onClose: () => void;
 }
 
-type PreviewTab = 'preview' | 'details' | 'versions' | 'edit';
+type PreviewTab = 'preview' | 'details' | 'versions';
 
 export const FilePreview: React.FC<FilePreviewProps> = ({
   selectedFiles,
@@ -36,182 +36,17 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   
   const [activeTab, setActiveTab] = useState<PreviewTab>('preview');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [editMode, setEditMode] = useState(false);
+
+  // Edit mode states
+  const [selectedTool, setSelectedTool] = useState<'draw' | 'highlight' | 'text' | 'none'>('none');
+  const [highlightColor, setHighlightColor] = useState('#FFFF00');
+  const [brushSize, setBrushSize] = useState(2);
+  const [annotations, setAnnotations] = useState<any[]>([]);
+
   const currentFileId = selectedFiles[0] || null;
   const { file, content, loading, error } = useFilePreview(currentFileId);
 
-  // PDF/Image Editor Component
-  const PDFImageEditor: React.FC<{ file: any; content: any; onSave: (content: Blob, annotations?: any[]) => void }> = ({ file, content, onSave }) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [isDrawing, setIsDrawing] = useState(false);
-    const [tool, setTool] = useState<'draw' | 'highlight' | 'text' | 'none'>('none');
-    const [zoom, setZoom] = useState(100);
-    const [annotations, setAnnotations] = useState<any[]>([]);
-
-    const handleToolSelect = (selectedTool: 'draw' | 'highlight' | 'text') => {
-      setTool(tool === selectedTool ? 'none' : selectedTool);
-    };
-
-    const handleZoom = (delta: number) => {
-      setZoom(prev => Math.max(25, Math.min(500, prev + delta)));
-    };
-
-    const handleSave = async () => {
-      if (canvasRef.current) {
-        canvasRef.current.toBlob((blob) => {
-          if (blob) {
-            onSave(blob, annotations);
-          }
-        });
-      }
-    };
-
-    const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (tool === 'draw' || tool === 'highlight') {
-        setIsDrawing(true);
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const rect = canvas.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineWidth = tool === 'highlight' ? 10 : 2;
-            ctx.strokeStyle = tool === 'highlight' ? 'rgba(255, 255, 0, 0.5)' : '#000000';
-            ctx.lineCap = 'round';
-          }
-        }
-      }
-    };
-
-    const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (isDrawing && (tool === 'draw' || tool === 'highlight')) {
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const rect = canvas.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.lineTo(x, y);
-            ctx.stroke();
-          }
-        }
-      }
-    };
-
-    const handleCanvasMouseUp = () => {
-      setIsDrawing(false);
-    };
-
-    return (
-      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* Functional Editing Toolbar */}
-        <Box sx={{
-          p: 1,
-          borderBottom: 1,
-          borderColor: 'divider',
-          backgroundColor: 'background.paper',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          flexWrap: 'wrap'
-        }}>
-          {/* Zoom Controls */}
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => handleZoom(-25)}
-            startIcon={<Typography>🔍-</Typography>}
-          >
-            Zoom Out
-          </Button>
-          <Typography variant="body2" sx={{ minWidth: '60px' }}>{zoom}%</Typography>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => handleZoom(25)}
-            startIcon={<Typography>🔍+</Typography>}
-          >
-            Zoom In
-          </Button>
-
-          {/* Annotation Tools */}
-          <Button
-            size="small"
-            variant={tool === 'draw' ? 'contained' : 'outlined'}
-            onClick={() => handleToolSelect('draw')}
-            startIcon={<Typography>✏️</Typography>}
-          >
-            Draw
-          </Button>
-          <Button
-            size="small"
-            variant={tool === 'highlight' ? 'contained' : 'outlined'}
-            onClick={() => handleToolSelect('highlight')}
-            startIcon={<Typography>🖍️</Typography>}
-          >
-            Highlight
-          </Button>
-          <Button
-            size="small"
-            variant={tool === 'text' ? 'contained' : 'outlined'}
-            onClick={() => handleToolSelect('text')}
-            startIcon={<Typography>📝</Typography>}
-          >
-            Text
-          </Button>
-
-          {/* Save to SharePoint */}
-          <Button
-            size="small"
-            variant="contained"
-            color="primary"
-            onClick={handleSave}
-            startIcon={<Typography>💾</Typography>}
-          >
-            Save to SharePoint
-          </Button>
-        </Box>
-
-        {/* Canvas Content Area */}
-        <Box sx={{ flex: 1, overflow: 'auto', position: 'relative' }}>
-          <Box sx={{
-            position: 'relative',
-            transform: `scale(${zoom / 100})`,
-            transformOrigin: 'top left',
-            cursor: tool !== 'none' ? 'crosshair' : 'default'
-          }}>
-            {/* Original content as background */}
-            <Box sx={{ position: 'absolute', top: 0, left: 0, zIndex: 1 }}>
-              {renderContent()}
-            </Box>
-
-            {/* Annotation canvas overlay */}
-            <canvas
-              ref={canvasRef}
-              width={800}
-              height={1000}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                zIndex: 2,
-                pointerEvents: tool !== 'none' ? 'auto' : 'none',
-              }}
-              onMouseDown={handleCanvasMouseDown}
-              onMouseMove={handleCanvasMouseMove}
-              onMouseUp={handleCanvasMouseUp}
-              onMouseLeave={handleCanvasMouseUp}
-            />
-          </Box>
-        </Box>
-      </Box>
-    );
-  };
 
   console.log('🚀 FilePreview: File data:', { file: file?.name, content: content?.substring(0, 50), hasFile: !!file, hasContent: !!content });
 
@@ -816,97 +651,6 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     </Box>
   );
 
-  const renderFileEditor = () => {
-    if (!file) return null;
-
-    // Show editor for file types that had editing tools yesterday
-    const editableTypes = ['txt', 'md', 'html', 'htm', 'docx', 'doc', 'pdf', 'xlsx', 'xls', 'pptx', 'ppt', 'png', 'jpg', 'jpeg'];
-    const isEditable = editableTypes.includes(file.extension?.toLowerCase() || '');
-
-    if (!isEditable) {
-      return (
-        <Box sx={{ p: 4, minHeight: '100%', overflow: 'auto', backgroundColor: '#fff', textAlign: 'center' }}>
-          <Typography variant="h6" gutterBottom color="text.secondary">
-            Editing Not Available
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            This file type cannot be edited in the browser. Use "Open in SharePoint" to edit with Office applications.
-          </Typography>
-        </Box>
-      );
-    }
-
-    const isPDF = file.extension?.toLowerCase() === 'pdf';
-    const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp'].includes(file.extension?.toLowerCase() || '');
-    const isOffice = ['xlsx', 'xls', 'pptx', 'ppt'].includes(file.extension?.toLowerCase() || '');
-
-    // For PDFs and images, show functional annotation/editing toolbar
-    if (isPDF || isImage) {
-      return <PDFImageEditor file={file} content={content} onSave={handleSaveToSharePoint} />;
-    }
-
-    // For Office files, show limited editing options
-    if (isOffice) {
-      return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{
-            p: 1,
-            borderBottom: 1,
-            borderColor: 'divider',
-            backgroundColor: 'background.paper',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}>
-            <Typography variant="body2" color="text.secondary">
-              📝 Use "Open in SharePoint" for full editing capabilities
-            </Typography>
-            <Button size="small" variant="contained" href={`${file.webUrl}`} target="_blank">
-              Open in SharePoint
-            </Button>
-          </Box>
-          <Box sx={{ flex: 1, overflow: 'hidden' }}>
-            {renderContent()}
-          </Box>
-        </Box>
-      );
-    }
-
-    // For text files, show a simplified text editor instead of the complex FileEditor
-    return (
-      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{
-          p: 1,
-          borderBottom: 1,
-          borderColor: 'divider',
-          backgroundColor: 'background.paper',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1
-        }}>
-          <Button size="small" variant="outlined" startIcon={<Typography>💾</Typography>}>Save</Button>
-          <Button size="small" variant="outlined" startIcon={<Typography>↩️</Typography>}>Undo</Button>
-          <Button size="small" variant="outlined" startIcon={<Typography>↪️</Typography>}>Redo</Button>
-          <Button size="small" variant="outlined" startIcon={<Typography>🔤</Typography>}>Bold</Button>
-          <Button size="small" variant="outlined" startIcon={<Typography>📐</Typography>}>Italic</Button>
-        </Box>
-        <Box sx={{ flex: 1, overflow: 'hidden', p: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            📝 Advanced text editing functionality will be available soon.
-            For now, use "Open in SharePoint" for full editing capabilities.
-          </Typography>
-          <Button
-            variant="contained"
-            href={`${file.webUrl}`}
-            target="_blank"
-            sx={{ mt: 2 }}
-          >
-            Open in SharePoint
-          </Button>
-        </Box>
-      </Box>
-    );
-  };
 
   // SharePoint save functionality
   const handleSaveToSharePoint = async (editedContent: Blob, annotations?: any[]) => {
@@ -1049,16 +793,278 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   const renderTabContent = () => {
     switch (activeTab) {
       case 'preview':
-        return renderContent();
+        return renderPreviewWithEditMode();
       case 'details':
         return renderFileDetails();
       case 'versions':
         return renderVersionHistory();
-      case 'edit':
-        return renderFileEditor();
       default:
         return renderContent();
     }
+  };
+
+  // Enhanced preview with edit mode toggle
+  const renderPreviewWithEditMode = () => {
+    const isPDF = file?.extension?.toLowerCase() === 'pdf';
+    const isImage = file?.extension && ['png', 'jpg', 'jpeg', 'gif', 'bmp'].includes(file.extension.toLowerCase());
+    const isEditable = isPDF || isImage;
+
+    return (
+      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        {/* Edit Mode Toggle - Only show for editable files */}
+        {isEditable && (
+          <Box sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 10,
+            display: 'flex',
+            gap: 1
+          }}>
+            <Button
+              size="small"
+              variant={editMode ? 'contained' : 'outlined'}
+              color="primary"
+              onClick={() => setEditMode(!editMode)}
+              sx={{
+                backgroundColor: editMode ? 'primary.main' : 'background.paper',
+                color: editMode ? 'white' : 'primary.main',
+                boxShadow: 2,
+                '&:hover': {
+                  backgroundColor: editMode ? 'primary.dark' : 'primary.light',
+                  color: 'white'
+                }
+              }}
+            >
+              {editMode ? '✏️ Exit Edit' : '✏️ Edit Mode'}
+            </Button>
+          </Box>
+        )}
+
+        {/* Original PDF/Image content */}
+        <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+          {renderContent()}
+
+          {/* Edit Mode Overlay - Only when edit mode is active */}
+          {editMode && isEditable && <EditModeOverlay />}
+        </Box>
+      </Box>
+    );
+  };
+
+  // EditModeOverlay Component - Floating toolbar and canvas
+  const EditModeOverlay: React.FC = () => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [isDrawing, setIsDrawing] = useState(false);
+
+    // Handle tool selection
+    const handleToolSelect = (tool: 'draw' | 'highlight' | 'text') => {
+      setSelectedTool(selectedTool === tool ? 'none' : tool);
+    };
+
+    // Handle save to SharePoint
+    const handleSave = async () => {
+      if (canvasRef.current && annotations.length > 0) {
+        canvasRef.current.toBlob((blob) => {
+          if (blob) {
+            handleSaveToSharePoint(blob, annotations);
+            console.log('✅ Saved annotations to SharePoint');
+          }
+        });
+      } else {
+        console.log('ℹ️ No annotations to save');
+      }
+    };
+
+    // Canvas drawing handlers
+    const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (selectedTool === 'draw' || selectedTool === 'highlight') {
+        setIsDrawing(true);
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const rect = canvas.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineWidth = selectedTool === 'highlight' ? 15 : brushSize;
+            ctx.strokeStyle = selectedTool === 'highlight' ?
+              hexToRgba(highlightColor, 0.4) : '#000000';
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+          }
+        }
+      }
+    };
+
+    const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (isDrawing && (selectedTool === 'draw' || selectedTool === 'highlight')) {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const rect = canvas.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.lineTo(x, y);
+            ctx.stroke();
+          }
+        }
+      }
+    };
+
+    const handleCanvasMouseUp = () => {
+      if (isDrawing) {
+        setIsDrawing(false);
+        // Add annotation to array for saving
+        setAnnotations(prev => [...prev, {
+          type: selectedTool,
+          color: selectedTool === 'highlight' ? highlightColor : '#000000',
+          size: selectedTool === 'highlight' ? 15 : brushSize,
+          timestamp: new Date().toISOString()
+        }]);
+      }
+    };
+
+    // Helper function to convert hex to rgba
+    const hexToRgba = (hex: string, alpha: number) => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    return (
+      <>
+        {/* Floating Toolbar */}
+        <Box sx={{
+          position: 'absolute',
+          top: 50,
+          left: 8,
+          zIndex: 20,
+          backgroundColor: 'background.paper',
+          borderRadius: 2,
+          boxShadow: 3,
+          p: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0.5,
+          minWidth: 140
+        }}>
+          {/* Draw Tool */}
+          <Button
+            size="small"
+            variant={selectedTool === 'draw' ? 'contained' : 'outlined'}
+            onClick={() => handleToolSelect('draw')}
+            startIcon={<Typography>✏️</Typography>}
+            sx={{ justifyContent: 'flex-start', fontSize: '0.75rem' }}
+          >
+            Draw
+          </Button>
+
+          {/* Highlight Tool */}
+          <Button
+            size="small"
+            variant={selectedTool === 'highlight' ? 'contained' : 'outlined'}
+            onClick={() => handleToolSelect('highlight')}
+            startIcon={<Typography>🖍️</Typography>}
+            sx={{ justifyContent: 'flex-start', fontSize: '0.75rem' }}
+          >
+            Highlight
+          </Button>
+
+          {/* Color Picker for Highlight */}
+          {selectedTool === 'highlight' && (
+            <Box sx={{ px: 1, py: 0.5 }}>
+              <Typography variant="caption" sx={{ fontSize: '0.6rem' }}>Color:</Typography>
+              <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+                {['#FFFF00', '#00FF00', '#FF0000', '#0000FF', '#FF00FF'].map(color => (
+                  <Box
+                    key={color}
+                    onClick={() => setHighlightColor(color)}
+                    sx={{
+                      width: 16,
+                      height: 16,
+                      backgroundColor: color,
+                      borderRadius: 1,
+                      cursor: 'pointer',
+                      border: highlightColor === color ? '2px solid #000' : '1px solid #ccc'
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* Text Tool */}
+          <Button
+            size="small"
+            variant={selectedTool === 'text' ? 'contained' : 'outlined'}
+            onClick={() => handleToolSelect('text')}
+            startIcon={<Typography>📝</Typography>}
+            sx={{ justifyContent: 'flex-start', fontSize: '0.75rem' }}
+          >
+            Text
+          </Button>
+
+          {/* Save Button */}
+          <Button
+            size="small"
+            variant="contained"
+            color="success"
+            onClick={handleSave}
+            startIcon={<Typography>💾</Typography>}
+            sx={{
+              justifyContent: 'flex-start',
+              fontSize: '0.75rem',
+              mt: 1,
+              backgroundColor: 'success.main'
+            }}
+          >
+            Save
+          </Button>
+
+          {/* Annotations Count */}
+          {annotations.length > 0 && (
+            <Typography variant="caption" sx={{
+              textAlign: 'center',
+              fontSize: '0.6rem',
+              color: 'text.secondary',
+              mt: 0.5
+            }}>
+              {annotations.length} annotation{annotations.length !== 1 ? 's' : ''}
+            </Typography>
+          )}
+        </Box>
+
+        {/* Canvas Overlay */}
+        <canvas
+          ref={canvasRef}
+          width={800}
+          height={1000}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 15,
+            pointerEvents: selectedTool !== 'none' ? 'auto' : 'none',
+            cursor: selectedTool === 'draw' ? 'crosshair' :
+                    selectedTool === 'highlight' ? 'cell' :
+                    selectedTool === 'text' ? 'text' : 'default'
+          }}
+          onMouseDown={handleCanvasMouseDown}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onMouseLeave={handleCanvasMouseUp}
+        />
+      </>
+    );
   };
 
   return (
@@ -1172,13 +1178,6 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
             label="Versions"
             value="versions"
             icon={<VersionsIcon fontSize="small" />}
-            iconPosition="start"
-            sx={{ minHeight: 48, textTransform: 'none', fontSize: '0.875rem' }}
-          />
-          <Tab
-            label="Edit"
-            value="edit"
-            icon={<EditIcon fontSize="small" />}
             iconPosition="start"
             sx={{ minHeight: 48, textTransform: 'none', fontSize: '0.875rem' }}
           />
