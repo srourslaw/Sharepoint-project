@@ -23,6 +23,8 @@ import {
   Tooltip,
   CircularProgress,
   Alert,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import {
   ViewModule as GridViewIcon,
@@ -43,12 +45,16 @@ import {
   Description as DocIcon,
   TableChart as ExcelIcon,
   Slideshow as PowerPointIcon,
+  ArrowBack as ArrowBackIcon,
+  Home as HomeIcon,
+  AutoAwesome as AIIcon,
 } from '@mui/icons-material';
 
 import { SharePointFile, ViewMode, SearchFilters } from '../types';
-import { SearchAndFilter } from './SearchAndFilter';
-import { useSharePointFiles } from '../hooks/useSharePointFiles';
 import { formatFileSize, formatDate, getFileIcon } from '../utils/formatters';
+// Use the safe version that doesn't make problematic API calls
+import { useSharePointFiles } from '../hooks/useSharePointFiles';
+import { AIFeaturesPanel } from './AIFeaturesPanel';
 
 interface MainContentProps {
   currentPath: string;
@@ -65,6 +71,8 @@ export const MainContent: React.FC<MainContentProps> = ({
   onNavigate,
   onPreviewToggle,
 }) => {
+  console.log('MainContent.step5 rendering...', JSON.stringify({ currentPath, selectedFiles: selectedFiles.length }, null, 2));
+
   const [viewMode, setViewMode] = useState<ViewMode>({
     type: 'grid',
     itemsPerPage: 50,
@@ -81,98 +89,110 @@ export const MainContent: React.FC<MainContentProps> = ({
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedFileForMenu, setSelectedFileForMenu] = useState<SharePointFile | null>(null);
+  const [showAIFeatures, setShowAIFeatures] = useState<boolean>(false);
 
+  // Use the safe version of the hook
   const { files, loading, error, totalCount, refreshFiles } = useSharePointFiles({
     path: currentPath,
     filters: searchFilters,
     viewMode,
   });
-  
-  // Debug log to see what data we're getting and validate objects
-  React.useEffect(() => {
-    if (files.length > 0) {
-      console.log('📄 MainContent: Files data received (count):', files.length);
-      files.forEach((file, index) => {
-        console.log(`📄 File ${index}:`, JSON.stringify({
-          id: typeof file.id, idValue: file.id,
-          name: typeof file.name, nameValue: file.name,
-          displayName: typeof file.displayName, displayNameValue: file.displayName,
-          size: typeof file.size, sizeValue: file.size,
-          lastModifiedDateTime: typeof file.lastModifiedDateTime, dateValue: file.lastModifiedDateTime,
-          lastModifiedBy: typeof file.lastModifiedBy, lastModifiedByValue: JSON.stringify(file.lastModifiedBy),
-          createdBy: typeof file.createdBy, createdByValue: JSON.stringify(file.createdBy),
-        }, null, 2));
-        
-        // Check if any objects are being passed to React text rendering
-        Object.keys(file).forEach(key => {
-          const value = (file as any)[key];
-          if (value && typeof value === 'object' && value !== null && !Array.isArray(value)) {
-            console.warn(`🚨 Object found in file.${key}:`, JSON.stringify(value, null, 2));
-            if (!value.toString || typeof value.toString !== 'function') {
-              console.error(`❌ Object ${key} has no toString method!`, JSON.stringify(value, null, 2));
-            }
-          }
-        });
-      });
-    }
-  }, [files]);
+
+  // Filter files based on search query
+  const filteredFiles = files.filter(file =>
+    (file.displayName || file.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleFileSelect = (fileId: string, isSelected: boolean) => {
     if (isSelected) {
-      onFileSelect([...selectedFiles, fileId]);
+      const newSelection = [...selectedFiles, fileId];
+      onFileSelect(newSelection);
+      // Auto-show AI features when first file is selected
+      if (selectedFiles.length === 0) {
+        setShowAIFeatures(true);
+      }
     } else {
-      onFileSelect(selectedFiles.filter(id => id !== fileId));
+      const newSelection = selectedFiles.filter(id => id !== fileId);
+      onFileSelect(newSelection);
+      // Hide AI features when no files are selected
+      if (newSelection.length === 0) {
+        setShowAIFeatures(false);
+      }
     }
   };
 
   const handleSelectAll = () => {
-    if (selectedFiles.length === files.length) {
+    if (selectedFiles.length === filteredFiles.length) {
       onFileSelect([]);
+      setShowAIFeatures(false);
     } else {
-      onFileSelect(files.map(file => file.id));
+      onFileSelect(filteredFiles.map(file => file.id));
+      setShowAIFeatures(true);
     }
   };
+
+  const handleGoBack = () => {
+    if (!currentPath || currentPath === '' || currentPath === '/') {
+      // If we're at root, can't go back further
+      return;
+    }
+
+    // Split the path and go up one level
+    const pathParts = currentPath.split('/').filter(Boolean);
+    if (pathParts.length === 0) {
+      // Go to root
+      onNavigate('');
+    } else {
+      // Remove the last part to go up one level
+      pathParts.pop();
+      const parentPath = pathParts.length > 0 ? '/' + pathParts.join('/') : '';
+      onNavigate(parentPath);
+    }
+  };
+
+  // Determine if we can go back (not at root level)
+  const canGoBack = currentPath && currentPath !== '' && currentPath !== '/';
 
   const handleViewModeChange = (type: ViewMode['type']) => {
     setViewMode(prev => ({ ...prev, type }));
   };
 
-  const handleSortChange = (sortBy: string) => {
-    setViewMode(prev => ({
-      ...prev,
-      sortBy,
-      sortOrder: prev.sortBy === sortBy && prev.sortOrder === 'asc' ? 'desc' : 'asc',
-    }));
-    setSortAnchorEl(null);
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+    setSelectedFileForMenu(null);
   };
 
-  const handleFileAction = (action: string, fileId: string) => {
-    switch (action) {
-      case 'download':
-        // Handle download
-        console.log('Download file:', fileId);
-        break;
-      case 'share':
-        // Handle share
-        console.log('Share file:', fileId);
-        break;
-      case 'edit':
-        // Handle edit
-        console.log('Edit file:', fileId);
-        break;
-      case 'delete':
-        // Handle delete
-        console.log('Delete file:', fileId);
-        break;
-      case 'preview':
-        onFileSelect([fileId]);
-        onPreviewToggle();
-        break;
-      default:
-        break;
+  const handleMenuAction = (action: string) => {
+    if (selectedFileForMenu) {
+      switch (action) {
+        case 'preview':
+          if (!selectedFileForMenu.isFolder) {
+            onFileSelect([selectedFileForMenu.id]);
+            onPreviewToggle();
+          }
+          break;
+        case 'select':
+          handleFileSelect(selectedFileForMenu.id, true);
+          break;
+        case 'download':
+          console.log('Download:', selectedFileForMenu.displayName);
+          // Implement download functionality
+          break;
+        case 'share':
+          console.log('Share:', selectedFileForMenu.displayName);
+          // Implement share functionality
+          break;
+        case 'delete':
+          console.log('Delete:', selectedFileForMenu.displayName);
+          // Implement delete functionality
+          break;
+        default:
+          break;
+      }
     }
-    setAnchorEl(null);
+    handleCloseMenu();
   };
 
   const renderFileIcon = (file: SharePointFile) => {
@@ -194,162 +214,225 @@ export const MainContent: React.FC<MainContentProps> = ({
   };
 
   const renderGridView = () => (
-    <Grid container spacing={2} sx={{ p: { xs: 1, sm: 2 } }}>
-      {files.map((file, index) => {
-        // Debug logging for each file - properly stringify objects
-        console.log(`🐛 Grid item ${index}:`, JSON.stringify({
-          id: file.id,
-          name: file.name,
-          displayName: file.displayName,
-          size: file.size,
-          lastModifiedDateTime: file.lastModifiedDateTime,
-          extension: file.extension,
-          isFolder: file.isFolder
-        }, null, 2));
-        
-        // Validate all properties that will be rendered
-        const safeDisplayName = String(file.displayName || file.name || 'Unknown');
-        const safeSize = typeof file.size === 'number' ? file.size : 0;
-        const safeDate = file.lastModifiedDateTime || new Date().toISOString();
-        
-        console.log(`🔍 Safe values for ${index}:`, JSON.stringify({
-          safeDisplayName,
-          safeSize,
-          safeDate: typeof safeDate
-        }, null, 2));
-        
-        return (
-          <Grid item xs={6} sm={4} md={3} lg={2} xl={2} key={String(file.id || `file-${index}`)}>
-            <Card
-              sx={{
-                cursor: 'pointer',
-                '&:hover': { boxShadow: 4 },
-                border: (file.id && selectedFiles.includes(String(file.id))) ? 2 : 0,
-                borderColor: 'primary.main',
-              }}
-              onClick={() => {
-                if (file.isFolder) {
-                  onNavigate(file.parentPath + '/' + file.name);
-                } else if (file.id) {
-                  // For files, select them and open preview
-                  console.log('Clicking file:', file.name, 'ID:', file.id);
-                  onFileSelect([String(file.id)]);
-                  onPreviewToggle();
+    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, bgcolor: 'background.default', minHeight: '100vh' }}>
+      <Grid container spacing={{ xs: 3, sm: 4, md: 4, lg: 5 }} sx={{ mb: 4 }}>
+        {filteredFiles.map((file) => (
+        <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={file.id}>
+          <Card
+            sx={{
+              cursor: 'pointer',
+              border: selectedFiles.includes(file.id) ? 2 : 1,
+              borderColor: selectedFiles.includes(file.id) ? 'primary.main' : 'divider',
+              backgroundColor: selectedFiles.includes(file.id) ? 'primary.50' : 'background.paper',
+              transition: 'all 0.3s ease-in-out',
+              display: 'flex',
+              flexDirection: 'column',
+              height: 'auto',
+              minHeight: { xs: 180, sm: 200 },
+              maxHeight: { xs: 220, sm: 240 },
+              width: '100%',
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              '&:hover': {
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                transform: 'translateY(-4px)',
+                borderColor: 'primary.light',
+              },
+              '&:active': {
+                transform: 'translateY(-2px)',
+              },
+            }}
+            onClick={() => {
+              if (file.isFolder) {
+                onNavigate(file.parentPath + '/' + file.name);
+              } else {
+                // Only trigger preview if file is not already selected
+                if (!selectedFiles.includes(file.id)) {
+                  onFileSelect([file.id]);
                 }
-              }}
-            >
-              <CardContent sx={{ pb: 1 }}>
-                <Box display="flex" alignItems="center" mb={1}>
-                  <Checkbox
-                    checked={file.id ? selectedFiles.includes(String(file.id)) : false}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleFileSelect(file.id, e.target.checked);
-                    }}
-                    size="small"
-                  />
-                  <Box flexGrow={1} />
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setAnchorEl(e.currentTarget);
-                    }}
-                  >
-                    <MoreIcon fontSize="small" />
-                  </IconButton>
+                onPreviewToggle();
+              }
+            }}
+          >
+            <CardContent sx={{
+              pb: 1,
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: 0
+            }}>
+              <Box display="flex" alignItems="center" mb={2}>
+                <Checkbox
+                  checked={selectedFiles.includes(file.id)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleFileSelect(file.id, e.target.checked);
+                  }}
+                  size="small"
+                />
+                <Box flexGrow={1} />
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAnchorEl(e.currentTarget);
+                    setSelectedFileForMenu(file);
+                  }}
+                >
+                  <MoreIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                textAlign="center"
+                justifyContent="center"
+                flexGrow={1}
+              >
+                <Box
+                  mb={{ xs: 1.5, sm: 2 }}
+                  sx={{
+                    p: { xs: 1, sm: 1.5 },
+                    borderRadius: 2,
+                    backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                    border: '1px solid rgba(25, 118, 210, 0.08)',
+                    transition: 'all 0.2s ease',
+                    '& > *': {
+                      fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
+                      color: 'primary.main',
+                      filter: 'drop-shadow(0 2px 4px rgba(25, 118, 210, 0.1))'
+                    }
+                  }}
+                >
+                  {renderFileIcon(file)}
                 </Box>
-                
-                <Box display="flex" flexDirection="column" alignItems="center" textAlign="center">
-                  <Box mb={1}>
-                    {renderFileIcon(file)}
-                  </Box>
-                  
-                  <Typography variant="body2" noWrap sx={{ width: '100%', fontWeight: 500 }}>
-                    {safeDisplayName}
-                  </Typography>
-                  
-                  <Typography variant="caption" color="text.secondary">
-                    {file.isFolder ? 'Folder' : formatFileSize(safeSize)}
-                  </Typography>
-                  
-                  <Typography variant="caption" color="text.secondary">
-                    {formatDate(safeDate)}
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        );
-      })}
-    </Grid>
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    width: '100%',
+                    fontWeight: 600,
+                    fontSize: { xs: '0.75rem', sm: '0.85rem', md: '0.9rem' },
+                    lineHeight: 1.3,
+                    wordBreak: 'break-word',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    mb: 0.5,
+                    color: 'text.primary'
+                  }}
+                >
+                  {file.displayName}
+                </Typography>
+
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{
+                    fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.02em',
+                    opacity: 0.8
+                  }}
+                >
+                  {file.isFolder ? 'Folder' : formatFileSize(file.size)}
+                </Typography>
+
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{
+                    fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
+                    display: { xs: 'none', md: 'block' }
+                  }}
+                >
+                  {formatDate(file.lastModifiedDateTime)}
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+      </Grid>
+    </Box>
   );
 
   const renderListView = () => (
-    <List sx={{ px: 1 }}>
-      {files.map((file) => (
+    <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+      {filteredFiles.map((file, index) => (
         <ListItem
-          key={String(file.id || Math.random())}
+          key={file.id}
           sx={{
-            border: (file.id && selectedFiles.includes(String(file.id))) ? 1 : 0,
-            borderColor: 'primary.main',
+            border: selectedFiles.includes(file.id) ? '2px solid' : '1px solid',
+            borderColor: selectedFiles.includes(file.id) ? 'primary.main' : 'divider',
+            backgroundColor: selectedFiles.includes(file.id) ? 'primary.50' : 'transparent',
+            mb: 1,
             borderRadius: 1,
-            mb: 0.5,
-            '&:hover': { bgcolor: 'action.hover' },
+            cursor: 'pointer',
+            '&:hover': { backgroundColor: 'action.hover' },
           }}
           onClick={() => {
             if (file.isFolder) {
               onNavigate(file.parentPath + '/' + file.name);
-            } else if (file.id) {
-              // For files, select them and open preview
-              console.log('Clicking file (list):', file.name, 'ID:', file.id);
-              onFileSelect([String(file.id)]);
+            } else {
+              // Only trigger preview if file is not already selected
+              if (!selectedFiles.includes(file.id)) {
+                onFileSelect([file.id]);
+              }
               onPreviewToggle();
             }
           }}
         >
-          <Checkbox
-            checked={file.id ? selectedFiles.includes(String(file.id)) : false}
-            onChange={(e) => {
-              e.stopPropagation();
-              handleFileSelect(file.id, e.target.checked);
-            }}
-            size="small"
-          />
-          
+          <ListItemIcon>
+            <Checkbox
+              edge="start"
+              checked={selectedFiles.includes(file.id)}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleFileSelect(file.id, e.target.checked);
+              }}
+              size="small"
+            />
+          </ListItemIcon>
           <ListItemIcon sx={{ minWidth: 48 }}>
             {renderFileIcon(file)}
           </ListItemIcon>
-          
           <ListItemText
-            primary={String(file.displayName || file.name || 'Unknown')}
+            primary={
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 500,
+                  wordBreak: 'break-word',
+                }}
+              >
+                {file.displayName}
+              </Typography>
+            }
             secondary={
-              <Box component="span">
-                <Typography component="span" variant="caption" color="text.secondary">
-                  {file.isFolder ? 'Folder' : `${formatFileSize(file.size || 0)} • `}
-                  {formatDate(file.lastModifiedDateTime || new Date())}
-                  {(file.lastModifiedBy && 
-                    typeof file.lastModifiedBy === 'object' && 
-                    file.lastModifiedBy !== null &&
-                    Object.keys(file.lastModifiedBy).length > 0 &&
-                    file.lastModifiedBy.displayName && 
-                    typeof file.lastModifiedBy.displayName === 'string') 
-                    ? ` • ${file.lastModifiedBy.displayName}` 
-                    : ''}
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  {file.isFolder ? 'Folder' : formatFileSize(file.size)} • {formatDate(file.lastModifiedDateTime)}
                 </Typography>
               </Box>
             }
           />
-          
           <ListItemSecondaryAction>
             <IconButton
-              edge="end"
+              size="small"
               onClick={(e) => {
                 e.stopPropagation();
                 setAnchorEl(e.currentTarget);
+                setSelectedFileForMenu(file);
               }}
             >
-              <MoreIcon />
+              <MoreIcon fontSize="small" />
             </IconButton>
           </ListItemSecondaryAction>
         </ListItem>
@@ -364,11 +447,52 @@ export const MainContent: React.FC<MainContentProps> = ({
         <Toolbar variant="dense" sx={{ minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } }}>
           <Box display="flex" alignItems="center" flexGrow={1} gap={{ xs: 0.5, sm: 1 }}>
             <Checkbox
-              checked={selectedFiles.length === files.length && files.length > 0}
-              indeterminate={selectedFiles.length > 0 && selectedFiles.length < files.length}
+              checked={selectedFiles.length === filteredFiles.length && filteredFiles.length > 0}
+              indeterminate={selectedFiles.length > 0 && selectedFiles.length < filteredFiles.length}
               onChange={handleSelectAll}
               size="small"
             />
+            
+            {canGoBack && (
+              <>
+                <Tooltip title="Go back / Up one level">
+                  <IconButton
+                    size="small"
+                    onClick={handleGoBack}
+                    sx={{ ml: 0.5 }}
+                  >
+                    <ArrowBackIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Go to Home">
+                  <IconButton
+                    size="small"
+                    onClick={() => onNavigate('')}
+                    sx={{ ml: 0.5 }}
+                  >
+                    <HomeIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+            
+            {/* Current Path Display */}
+            {currentPath && (
+              <Typography
+                variant="body2"
+                sx={{ 
+                  ml: 1, 
+                  color: 'text.secondary',
+                  display: { xs: 'none', md: 'block' },
+                  maxWidth: '200px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                📁 {currentPath.split('/').filter(Boolean).pop() || 'Root'}
+              </Typography>
+            )}
             
             {selectedFiles.length > 0 && (
               <Chip
@@ -378,22 +502,32 @@ export const MainContent: React.FC<MainContentProps> = ({
                 sx={{ ml: { xs: 0.5, sm: 1 }, display: { xs: 'none', sm: 'flex' } }}
               />
             )}
-            
+
+            {/* Search Input */}
+            <TextField
+              size="small"
+              placeholder="Search files..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{
+                minWidth: { xs: 120, sm: 200 },
+                ml: { xs: 0.5, sm: 1 },
+                '& .MuiOutlinedInput-root': {
+                  height: 32,
+                }
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
             <Box flexGrow={1} />
             
-            <Tooltip title="Search and Filter">
-              <IconButton size="small" onClick={() => setShowFilters(!showFilters)}>
-                <SearchIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Sort">
-              <IconButton size="small" onClick={(e) => setSortAnchorEl(e.currentTarget)}>
-                <SortIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            
-            <Box display="flex" ml={{ xs: 0.5, sm: 1 }}>
+            <Box display="flex" ml={{ xs: 0.5, sm: 1 }} gap={0.5}>
               <IconButton
                 size="small"
                 color={viewMode.type === 'grid' ? 'primary' : 'default'}
@@ -408,22 +542,35 @@ export const MainContent: React.FC<MainContentProps> = ({
               >
                 <ListViewIcon fontSize="small" />
               </IconButton>
+              <Tooltip title="AI Features">
+                <IconButton
+                  size="small"
+                  color={showAIFeatures ? 'primary' : 'default'}
+                  onClick={() => setShowAIFeatures(!showAIFeatures)}
+                  disabled={selectedFiles.length === 0}
+                >
+                  <AIIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Box>
           </Box>
         </Toolbar>
       </Paper>
 
-      {/* Search and Filter Panel */}
-      {showFilters && (
-        <SearchAndFilter
-          filters={searchFilters}
-          onFiltersChange={setSearchFilters}
-          onClose={() => setShowFilters(false)}
-        />
-      )}
-
       {/* Content Area */}
       <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+        {/* AI Features Panel */}
+        {showAIFeatures && selectedFiles.length > 0 && (
+          <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <AIFeaturesPanel
+              selectedFiles={selectedFiles}
+              onAnalysisComplete={(results) => {
+                console.log('Analysis completed:', results);
+              }}
+            />
+          </Box>
+        )}
+
         {loading ? (
           <Box display="flex" justifyContent="center" alignItems="center" height="200px">
             <CircularProgress />
@@ -432,18 +579,15 @@ export const MainContent: React.FC<MainContentProps> = ({
           <Alert severity="error" sx={{ m: 2 }}>
             {error}
           </Alert>
-        ) : files.length === 0 ? (
+        ) : filteredFiles.length === 0 ? (
           <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="200px">
             <FolderIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
             <Typography variant="h6" color="text.secondary">
               No files found
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              This folder is empty or no files match your filters
-            </Typography>
           </Box>
         ) : (
-          viewMode.type === 'grid' ? renderGridView() : renderListView()
+          viewMode.type === 'list' ? renderListView() : renderGridView()
         )}
       </Box>
 
@@ -451,40 +595,45 @@ export const MainContent: React.FC<MainContentProps> = ({
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
+        onClose={handleCloseMenu}
+        PaperProps={{
+          sx: { width: 200 }
+        }}
       >
-        <MenuItem onClick={() => handleFileAction('preview', selectedFiles[0] || '')}>
-          <ListItemIcon><SearchIcon fontSize="small" /></ListItemIcon>
-          Preview
+        {selectedFileForMenu && !selectedFileForMenu.isFolder && (
+          <MenuItem onClick={() => handleMenuAction('preview')}>
+            <ListItemIcon>
+              <SearchIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Preview</ListItemText>
+          </MenuItem>
+        )}
+        <MenuItem onClick={() => handleMenuAction('select')}>
+          <ListItemIcon>
+            <Checkbox size="small" />
+          </ListItemIcon>
+          <ListItemText>Select</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleFileAction('download', selectedFiles[0] || '')}>
-          <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
-          Download
+        {selectedFileForMenu && !selectedFileForMenu.isFolder && (
+          <MenuItem onClick={() => handleMenuAction('download')}>
+            <ListItemIcon>
+              <DownloadIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Download</ListItemText>
+          </MenuItem>
+        )}
+        <MenuItem onClick={() => handleMenuAction('share')}>
+          <ListItemIcon>
+            <ShareIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Share</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleFileAction('share', selectedFiles[0] || '')}>
-          <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
-          Share
+        <MenuItem onClick={() => handleMenuAction('delete')}>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Delete</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleFileAction('edit', selectedFiles[0] || '')}>
-          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          Edit
-        </MenuItem>
-        <MenuItem onClick={() => handleFileAction('delete', selectedFiles[0] || '')}>
-          <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
-          Delete
-        </MenuItem>
-      </Menu>
-
-      {/* Sort Menu */}
-      <Menu
-        anchorEl={sortAnchorEl}
-        open={Boolean(sortAnchorEl)}
-        onClose={() => setSortAnchorEl(null)}
-      >
-        <MenuItem onClick={() => handleSortChange('name')}>Name</MenuItem>
-        <MenuItem onClick={() => handleSortChange('lastModifiedDateTime')}>Modified</MenuItem>
-        <MenuItem onClick={() => handleSortChange('size')}>Size</MenuItem>
-        <MenuItem onClick={() => handleSortChange('extension')}>Type</MenuItem>
       </Menu>
     </Box>
   );

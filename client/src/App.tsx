@@ -5,7 +5,7 @@ import React from 'react';
 import { CssBaseline, Box, Typography, Button, CircularProgress } from '@mui/material';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-import { Dashboard } from './components/Dashboard.debug';
+import { Dashboard } from './components/Dashboard';
 import { SharePointTest } from './components/SharePointTest';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { MSALAuthProvider } from './contexts/MSALAuthContext';

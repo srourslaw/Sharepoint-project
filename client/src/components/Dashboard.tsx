@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Drawer,
@@ -6,25 +7,31 @@ import {
   Toolbar,
   Typography,
   CssBaseline,
-  Divider,
   IconButton,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  DragIndicator as DragIndicatorIcon,
 } from '@mui/icons-material';
 
 import { NavigationSidebar } from './NavigationSidebar';
 import { MainContent } from './MainContent';
-import { FileBrowser } from './FileBrowser';
+// import { FileBrowser } from './FileBrowser';
 import { AIPanel } from './AIPanel';
 import { FilePreview } from './FilePreview';
 import { BreadcrumbNavigation } from './BreadcrumbNavigation';
-import { ErrorBoundary } from './ErrorBoundary';
-import { ThakralFooter } from './ThakralFooter';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { PeoplePage } from './pages/PeoplePage';
+import { SettingsPage } from './pages/SettingsPage';
+import { RecentFilesPage } from './pages/RecentFilesPage';
+import { OneDrivePage } from './pages/OneDrivePage';
+import { BrandWatermark } from './BrandWatermark';
+import { UserProfileMenu } from './UserProfileMenu';
+import { useAuth } from '../contexts/AuthContext';
+import { useDynamicTheme } from '../contexts/DynamicThemeContext';
 import { LayoutState } from '../types';
 
 const getDrawerWidth = (theme: any, isMobile: boolean) => {
@@ -37,45 +44,70 @@ const getAIPanelWidth = (theme: any, isMobile: boolean) => {
   return theme.breakpoints.up('lg') ? 380 : 350;
 };
 
-// Stunning modern design: 13:06 - Dark navy to purple header + rich footer
+// AI Panel width constraints
+const AI_PANEL_MIN_WIDTH = 300;
+const AI_PANEL_MAX_WIDTH = 600;
+const AI_PANEL_DEFAULT_WIDTH = 380;
+
+// Get saved AI panel width from localStorage
+const getSavedAIPanelWidth = (): number => {
+  try {
+    const saved = localStorage.getItem('ai-panel-width');
+    if (saved) {
+      const width = parseInt(saved, 10);
+      if (width >= AI_PANEL_MIN_WIDTH && width <= AI_PANEL_MAX_WIDTH) {
+        return width;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load AI panel width from localStorage:', error);
+  }
+  return AI_PANEL_DEFAULT_WIDTH;
+};
+
+// Save AI panel width to localStorage
+const saveAIPanelWidth = (width: number) => {
+  try {
+    localStorage.setItem('ai-panel-width', width.toString());
+  } catch (error) {
+    console.warn('Failed to save AI panel width to localStorage:', error);
+  }
+};
+
 export const Dashboard: React.FC = () => {
   const theme = useTheme();
+  const { currentTheme } = useDynamicTheme();
+  const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+  const { user, logout } = useAuth();
+
   const drawerWidth = getDrawerWidth(theme, isMobile);
-  const aiPanelWidth = getAIPanelWidth(theme, isMobile);
-  
+  const defaultAIPanelWidth = getAIPanelWidth(theme, isMobile);
+  const savedAIPanelWidth = getSavedAIPanelWidth();
+
   const [layout, setLayout] = useState<LayoutState>({
     sidebarOpen: !isMobile,
     sidebarWidth: drawerWidth,
     aiPanelOpen: !isMobile,
-    aiPanelWidth: aiPanelWidth,
+    aiPanelWidth: isMobile ? defaultAIPanelWidth : savedAIPanelWidth,
     previewOpen: false,
-    previewHeight: window.innerHeight - 200, // Much taller preview
+    previewHeight: 500,
   });
 
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [currentPath, setCurrentPath] = useState<string>('');
-  const [useFileBrowser, setUseFileBrowser] = useState(true);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [actualSidebarWidth, setActualSidebarWidth] = useState<number>(drawerWidth);
 
-  // Update layout when screen size changes
-  React.useEffect(() => {
-    setLayout(prev => ({
-      ...prev,
-      sidebarOpen: !isMobile && !prev.previewOpen,
-      aiPanelOpen: !isMobile && !prev.previewOpen,
-      sidebarWidth: drawerWidth,
-      aiPanelWidth: aiPanelWidth,
-      previewHeight: window.innerHeight - 64,
-    }));
-  }, [isMobile, drawerWidth, aiPanelWidth]);
+  // AI Panel resizing state
+  const [isResizing, setIsResizing] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startWidth, setStartWidth] = useState(0);
+  const resizeRef = useRef<HTMLDivElement>(null);
 
-  const handleDrawerToggle = () => {
-    setLayout(prev => ({
-      ...prev,
-      sidebarOpen: !prev.sidebarOpen
-    }));
-  };
+  // Horizontal resizer state for preview
+  const [isHorizontalResizing, setIsHorizontalResizing] = useState(false);
+  const horizontalResizeRef = useRef<number>(0);
+
 
   const handleAIPanelToggle = () => {
     setLayout(prev => ({
@@ -85,14 +117,322 @@ export const Dashboard: React.FC = () => {
   };
 
   const handlePreviewToggle = () => {
-    console.log('🔥 handlePreviewToggle called! Current state:', layout.previewOpen);
-    console.log('🔥 Selected files:', selectedFiles);
     setLayout(prev => ({
       ...prev,
       previewOpen: !prev.previewOpen
     }));
-    console.log('🔥 Setting previewOpen to:', !layout.previewOpen);
   };
+
+  const handleSidebarWidthChange = (width: number) => {
+    setActualSidebarWidth(width);
+  };
+
+  // AI Panel resize handlers
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    console.log('🖱️ AI Sidebar resize started:', { clientX: e.clientX, currentWidth: layout.aiPanelWidth });
+    setIsResizing(true);
+    setStartX(e.clientX);
+    setStartWidth(layout.aiPanelWidth);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+    e.stopPropagation();
+  }, [layout.aiPanelWidth]);
+
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!isResizing) return;
+
+    const deltaX = startX - e.clientX; // Reverse direction for right-side panel
+    const newWidth = Math.max(
+      AI_PANEL_MIN_WIDTH,
+      Math.min(AI_PANEL_MAX_WIDTH, startWidth + deltaX)
+    );
+
+    setLayout(prev => ({
+      ...prev,
+      aiPanelWidth: newWidth
+    }));
+  }, [isResizing, startX, startWidth]);
+
+  const handleResizeEnd = useCallback(() => {
+    if (isResizing) {
+      setIsResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      saveAIPanelWidth(layout.aiPanelWidth);
+    }
+  }, [isResizing, layout.aiPanelWidth]);
+
+  // Horizontal resizer handlers for preview
+  const handleHorizontalMouseDown = useCallback((e: React.MouseEvent) => {
+    console.log('🖱️ Horizontal resizer started:', { clientY: e.clientY, currentHeight: layout.previewHeight });
+    e.preventDefault();
+    setIsHorizontalResizing(true);
+    horizontalResizeRef.current = e.clientY;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  }, [layout.previewHeight]);
+
+  const handleHorizontalMouseMove = useCallback((e: MouseEvent) => {
+    if (!isHorizontalResizing) return;
+
+    const deltaY = horizontalResizeRef.current - e.clientY;
+    const newHeight = Math.max(200, Math.min(window.innerHeight - 300, layout.previewHeight + deltaY));
+
+    setLayout(prev => ({
+      ...prev,
+      previewHeight: newHeight
+    }));
+
+    horizontalResizeRef.current = e.clientY;
+  }, [isHorizontalResizing, layout.previewHeight]);
+
+  const handleHorizontalMouseUp = useCallback(() => {
+    console.log('🖱️ Horizontal resizer ended');
+    setIsHorizontalResizing(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, []);
+
+  // Mouse event listeners for resizing
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
+
+  // Add horizontal resizer event listeners
+  useEffect(() => {
+    if (isHorizontalResizing) {
+      document.addEventListener('mousemove', handleHorizontalMouseMove);
+      document.addEventListener('mouseup', handleHorizontalMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleHorizontalMouseMove);
+        document.removeEventListener('mouseup', handleHorizontalMouseUp);
+      };
+    }
+  }, [isHorizontalResizing, handleHorizontalMouseMove, handleHorizontalMouseUp]);
+
+  // Render content based on current route
+  const renderMainContent = () => {
+    switch (location.pathname) {
+      case '/analytics':
+        return <AnalyticsPage />;
+      case '/people':
+        return <PeoplePage />;
+      case '/settings':
+        return <SettingsPage />;
+      case '/recent':
+        return <RecentFilesPage />;
+      case '/onedrive':
+        return <OneDrivePage />;
+      default:
+        // Home page - SharePoint sites and documents
+        return (
+          <>
+            {/* Beautiful Home Header */}
+            <Box sx={{
+              background: `linear-gradient(135deg, ${currentTheme.primary}08 0%, ${currentTheme.secondary}08 50%, ${currentTheme.accent}08 100%)`,
+              borderRadius: 3,
+              p: 4,
+              mb: 3,
+              border: `1px solid ${currentTheme.primary}15`,
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '4px',
+                background: `linear-gradient(90deg, ${currentTheme.primary}, ${currentTheme.secondary}, ${currentTheme.accent})`,
+              }
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Box sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '16px',
+                  background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: `0 8px 24px ${currentTheme.primary}40`,
+                }}>
+                  <Typography variant="h3" sx={{ color: 'white' }}>🏢</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="h5" sx={{
+                    fontWeight: 700,
+                    color: currentTheme.text.primary,
+                    mb: 0.5,
+                    background: `linear-gradient(45deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}>
+                    Your SharePoint Hub
+                  </Typography>
+                  <Typography variant="body1" sx={{
+                    color: currentTheme.text.secondary,
+                    fontSize: '1.1rem'
+                  }}>
+                    Access your sites, libraries, and documents in one place
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Quick Stats */}
+              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: currentTheme.primary,
+                  }} />
+                  <Typography variant="body2" sx={{ color: currentTheme.text.secondary }}>
+                    2 Active Sites
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: currentTheme.secondary,
+                  }} />
+                  <Typography variant="body2" sx={{ color: currentTheme.text.secondary }}>
+                    4 Document Libraries
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: currentTheme.accent,
+                  }} />
+                  <Typography variant="body2" sx={{ color: currentTheme.text.secondary }}>
+                    Recent Activity
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            <Box sx={{
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              height: '100%'
+            }}>
+              {/* Main Content Area - dynamic height based on preview state */}
+              <Box sx={{
+                height: layout.previewOpen
+                  ? `calc(100vh - 120px - ${layout.previewHeight}px - 12px)`
+                  : 'calc(100vh - 120px)',
+                overflow: 'auto',
+                flexShrink: 0
+              }}>
+                <MainContent
+                  currentPath={currentPath}
+                  selectedFiles={selectedFiles}
+                  onFileSelect={setSelectedFiles}
+                  onNavigate={setCurrentPath}
+                  onPreviewToggle={handlePreviewToggle}
+                />
+              </Box>
+
+              {/* Horizontal Resizer Bar */}
+              {layout.previewOpen && selectedFiles.length > 0 && (
+                <Box
+                  onMouseDown={handleHorizontalMouseDown}
+                  sx={{
+                    height: '12px',
+                    backgroundColor: '#f0f0f0',
+                    cursor: 'row-resize',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    zIndex: 1200,
+                    borderRadius: '0 0 4px 4px',
+                    border: '1px solid #ddd',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      left: '50%',
+                      top: '4px',
+                      transform: 'translateX(-50%)',
+                      width: '60px',
+                      height: '4px',
+                      backgroundColor: currentTheme.primary,
+                      opacity: 1,
+                      borderRadius: '2px',
+                      transition: 'all 0.2s ease',
+                    },
+                    '&:hover': {
+                      backgroundColor: `${currentTheme.primary}20`,
+                      '&::before': {
+                        opacity: 1,
+                        height: '6px',
+                        backgroundColor: currentTheme.primary,
+                      }
+                    },
+                    '&:active': {
+                      '&::before': {
+                        backgroundColor: currentTheme.primary,
+                        opacity: 1,
+                      }
+                    }
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontSize: '10px',
+                      color: '#666',
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)'
+                    }}
+                  >
+                    ↕ DRAG TO RESIZE
+                  </Typography>
+                </Box>
+              )}
+
+              {/* File Preview Panel */}
+              {layout.previewOpen && selectedFiles.length > 0 && (
+                <Box sx={{
+                  height: `${layout.previewHeight}px`,
+                  borderTop: layout.previewOpen ? 0 : 1,
+                  borderColor: 'divider',
+                  overflow: 'hidden',
+                  flexShrink: 0
+                }}>
+                  <FilePreview
+                    selectedFiles={selectedFiles}
+                    height={layout.previewHeight}
+                    onClose={handlePreviewToggle}
+                  />
+                </Box>
+              )}
+            </Box>
+          </>
+        );
+    }
+  };
+
+  console.log('Dashboard.debug rendering...');
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
@@ -102,13 +442,10 @@ export const Dashboard: React.FC = () => {
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: layout.sidebarOpen ? `calc(100% - ${layout.sidebarWidth}px)` : '100%' },
-          ml: { sm: layout.sidebarOpen ? `${layout.sidebarWidth}px` : 0 },
+          width: `calc(100% - ${actualSidebarWidth}px)`,
+          ml: `${actualSidebarWidth}px`,
           zIndex: theme.zIndex.drawer + 1,
-          background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 30%, #7c3aed 70%, #a855f7 100%)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(124, 58, 237, 0.2)',
-          boxShadow: '0 8px 32px rgba(124, 58, 237, 0.15)',
+          background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.secondary} 30%, ${currentTheme.accent} 70%, ${currentTheme.primary} 100%)`,
           transition: theme.transitions.create(['width', 'margin'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
@@ -116,211 +453,203 @@ export const Dashboard: React.FC = () => {
         }}
       >
         <Toolbar sx={{ minHeight: '64px', py: 1 }}>
-          <IconButton
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, color: '#ffffff' }}
-          >
-            <MenuIcon />
-          </IconButton>
           
-          {/* Thakral One Logo and Branding */}
+          {/* Compact Branding */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, mr: 2 }}>
-            <Box sx={{ 
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
-              borderRadius: '12px',
-              padding: '8px',
-              marginRight: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              backdropFilter: 'blur(10px)'
-            }}>
-              <img
-                src="https://www.thakralone.com/wp-content/uploads/2020/08/Thakral-One-Logo.png"
-                alt="Thakral One Logo"
-                style={{
-                  height: '24px',
-                  filter: 'brightness(0) invert(1)'
-                }}
-              />
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <Typography
-                variant="h6"
-                noWrap
-                component="div"
-                sx={{ 
-                  fontWeight: 700,
-                  letterSpacing: '0.5px',
-                  background: 'linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  fontSize: { xs: '1rem', sm: '1.2rem' },
-                  lineHeight: 1.2,
-                  textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-              >
-                🚀 SharePoint AI Dashboard
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{ 
-                  color: 'rgba(255,255,255,0.9)',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  display: { xs: 'none', sm: 'block' },
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-                  borderRadius: '6px',
-                  padding: '2px 8px',
-                  marginTop: '2px',
-                  backdropFilter: 'blur(5px)'
-                }}
-              >
-                Powered by Thakral One
-              </Typography>
-            </Box>
+            <img
+              src="https://www.thakralone.com/wp-content/uploads/2020/08/Thakral-One-Logo.png"
+              alt="Thakral One Logo"
+              style={{
+                height: '28px',
+                marginRight: '10px',
+                filter: 'brightness(0) invert(1)'
+              }}
+            />
+            <Typography
+              variant="h6"
+              noWrap
+              component="div"
+              sx={{
+                fontWeight: 600,
+                letterSpacing: '0.3px',
+                color: 'white',
+                fontSize: { xs: '1rem', sm: '1.1rem', md: '1.2rem' },
+                lineHeight: 1.1
+              }}
+            >
+              SharePoint AI Dashboard
+            </Typography>
           </Box>
 
-          {/* Copyright notice */}
-          <Typography
-            variant="caption"
-            sx={{ 
-              color: 'rgba(255,255,255,0.95)',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              mr: 2,
-              display: { xs: 'none', md: 'block' },
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-              borderRadius: '8px',
-              padding: '4px 12px',
-              backdropFilter: 'blur(5px)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              border: '1px solid rgba(255,255,255,0.1)'
-            }}
-          >
-            ✨ 2025 Premium AI Solution
-          </Typography>
-          
-          <IconButton
-            aria-label="toggle ai panel"
-            onClick={handleAIPanelToggle}
-            sx={{ color: '#ffffff' }}
-          >
-            {layout.aiPanelOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </IconButton>
+          {/* Right side - User Profile and Actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <UserProfileMenu
+              userName={user?.displayName || 'Unknown User'}
+              userEmail={user?.mail || user?.userPrincipalName || 'unknown@email.com'}
+              user={user}
+              onLogout={logout}
+              onSettings={() => console.log('Settings clicked')}
+            />
+
+            <IconButton
+              color="inherit"
+              aria-label="toggle ai panel"
+              onClick={handleAIPanelToggle}
+              sx={{
+                ml: 1,
+                color: 'rgba(255,255,255,0.9)',
+                '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+              }}
+            >
+              {layout.aiPanelOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+            </IconButton>
+          </Box>
         </Toolbar>
       </AppBar>
 
-      {/* Navigation Sidebar */}
-      <Box
-        component="nav"
-        sx={{ width: { sm: layout.sidebarOpen ? layout.sidebarWidth : 0 }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant={isMobile ? 'temporary' : 'persistent'}
-          open={layout.sidebarOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true,
-          }}
-          sx={{
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: layout.sidebarWidth,
-              mt: '64px',
-              height: 'calc(100% - 64px)',
-            },
-          }}
-        >
-          <NavigationSidebar
-            onNavigate={setCurrentPath}
-            currentPath={currentPath}
-          />
-        </Drawer>
-      </Box>
+      {/* Navigation Sidebar - New Fixed Position */}
+      <NavigationSidebar
+        onNavigate={setCurrentPath}
+        currentPath={currentPath}
+        onWidthChange={handleSidebarWidthChange}
+      />
 
-      {/* Main Content Area */}
+      {/* Main Content Area - Updated for Fixed Sidebar and Resizable AI Panel */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: 0,
-          width: { 
-            sm: layout.previewOpen 
-              ? '100vw'
-              : (layout.aiPanelOpen 
-                ? `calc(100% - ${layout.sidebarOpen ? layout.sidebarWidth : 0}px - ${layout.aiPanelWidth}px)`
-                : `calc(100% - ${layout.sidebarOpen ? layout.sidebarWidth : 0}px)`)
-          },
-          position: layout.previewOpen ? 'fixed' : 'relative',
-          top: layout.previewOpen ? 64 : 'auto',
-          left: layout.previewOpen ? 0 : 'auto',
-          zIndex: layout.previewOpen ? theme.zIndex.modal - 1 : 'auto',
-          height: layout.previewOpen ? 'calc(100vh - 64px)' : 'auto',
-          transition: theme.transitions.create(['width', 'position', 'height'], {
+          p: 2, // Reduced padding for better space utilization
+          ml: `calc(${actualSidebarWidth}px + 12px)`, // Reduced margin for more content space
+          mr: layout.aiPanelOpen ? `${layout.aiPanelWidth}px` : 0,
+          transition: theme.transitions.create(['margin-right'], {
             easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
+            duration: theme.transitions.duration.leavingScreen,
           }),
           display: 'flex',
           flexDirection: 'column',
+          height: '100vh',
+          overflow: 'hidden',
         }}
       >
         <Toolbar />
+
+        {/* Conditional Breadcrumb Navigation - only when navigating within folders */}
+        {location.pathname === '/' && currentPath && currentPath !== '/' && (
+          <BreadcrumbNavigation currentPath={currentPath} onNavigate={setCurrentPath} />
+        )}
         
-        {/* Breadcrumb Navigation */}
-        <BreadcrumbNavigation currentPath={currentPath} onNavigate={setCurrentPath} />
-        
-        {/* File Content Area */}
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          <ErrorBoundary>
-            <MainContent
-              currentPath={currentPath}
-              selectedFiles={selectedFiles}
-              onFileSelect={setSelectedFiles}
-              onNavigate={setCurrentPath}
-              onPreviewToggle={handlePreviewToggle}
-            />
-          </ErrorBoundary>
-          
-          {/* Thakral One Footer - only show when not in preview mode */}
-          {!layout.previewOpen && <ThakralFooter />}
-          
-          {/* File Preview Area */}
-          {layout.previewOpen && (
-            <FilePreview
-              selectedFiles={selectedFiles}
-              height={layout.previewHeight}
-              onClose={handlePreviewToggle}
-            />
-          )}
+        {/* Dynamic Content Based on Route */}
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', paddingBottom: '60px', height: 'calc(100vh - 120px)' }}>
+          {renderMainContent()}
         </Box>
       </Box>
 
-      {/* AI Interaction Panel */}
-      <Drawer
-        sx={{
-          width: layout.aiPanelOpen ? layout.aiPanelWidth : 0,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: layout.aiPanelWidth,
-            boxSizing: 'border-box',
-            mt: '64px',
-            height: 'calc(100% - 64px)',
-          },
-        }}
-        variant="persistent"
-        anchor="right"
-        open={layout.aiPanelOpen}
-      >
-        <AIPanel
-          selectedFiles={selectedFiles}
-          onClose={handleAIPanelToggle}
-        />
-      </Drawer>
+      {/* Subtle Brand Watermark */}
+      <BrandWatermark />
+
+      {/* AI Panel - FIXED RESIZABLE PANEL */}
+      {layout.aiPanelOpen && (
+        <Box
+          sx={{
+            position: 'fixed',
+            right: 0,
+            top: '64px',
+            width: `${layout.aiPanelWidth}px`,
+            height: 'calc(100vh - 64px)',
+            backgroundColor: (theme) => theme.palette.background.paper,
+            borderLeft: (theme) => `1px solid ${theme.palette.divider}`,
+            zIndex: theme.zIndex.drawer,
+            display: 'flex',
+            flexDirection: 'column',
+            transition: theme.transitions.create(['width'], {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.enteringScreen,
+            }),
+          }}
+        >
+          {/* Enhanced Resize Handle */}
+          <Box
+            ref={resizeRef}
+            onMouseDown={handleResizeStart}
+            sx={{
+              position: 'absolute',
+              left: '-6px',
+              top: 0,
+              width: '12px',
+              height: '100%',
+              cursor: 'col-resize',
+              backgroundColor: 'transparent',
+              zIndex: 1200,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '4px 0 0 4px',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: '4px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '4px',
+                height: '40px',
+                backgroundColor: currentTheme.primary,
+                opacity: 0.7,
+                borderRadius: '2px',
+                transition: 'all 0.2s ease',
+              },
+              '&:hover': {
+                backgroundColor: `${currentTheme.primary}15`,
+                '&::before': {
+                  opacity: 0.9,
+                  height: '60px',
+                  backgroundColor: currentTheme.primary,
+                },
+                '& .resize-indicator': {
+                  opacity: 1,
+                  transform: 'rotate(90deg) scale(1.1)',
+                },
+              },
+              '&:active': {
+                backgroundColor: `${currentTheme.primary}25`,
+                '&::before': {
+                  opacity: 1,
+                  height: '80px',
+                },
+              },
+              transition: 'background-color 0.2s ease',
+            }}
+          >
+            <Box
+              className="resize-indicator"
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0.6,
+                transition: 'all 0.2s ease',
+                transform: 'rotate(90deg)',
+                pointerEvents: 'none',
+                '& .MuiSvgIcon-root': {
+                  fontSize: '14px',
+                  color: currentTheme.primary,
+                  filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
+                },
+              }}
+            >
+              <DragIndicatorIcon />
+            </Box>
+          </Box>
+
+          {/* AI Panel Content */}
+          <AIPanel
+            selectedFiles={selectedFiles}
+            onFileSelect={setSelectedFiles}
+            currentPath={currentPath}
+          />
+        </Box>
+      )}
     </Box>
   );
 };

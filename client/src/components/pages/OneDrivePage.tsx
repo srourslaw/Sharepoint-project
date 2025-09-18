@@ -30,7 +30,7 @@ import {
   Description as DocumentIcon,
   Share as ShareIcon,
 } from '@mui/icons-material';
-import { MainContent } from '../MainContent.step5';
+import { MainContent } from '../MainContent';
 import { useOneDriveData } from '../../hooks/useOneDriveData';
 
 interface OneDrivePageProps {}

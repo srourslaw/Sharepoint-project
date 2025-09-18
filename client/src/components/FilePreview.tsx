@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Box, Typography, IconButton, Paper, Tabs, Tab, Menu, MenuItem, ListItemIcon, Button } from '@mui/material';
+import { Box, Typography, IconButton, Paper, Tabs, Tab, Menu, MenuItem, ListItemIcon, Button, alpha } from '@mui/material';
 import { DataGrid, GridColDef, GridRowsProp } from '@mui/x-data-grid';
-import { 
+import {
   Close as CloseIcon,
   Visibility as PreviewIcon,
   Info as InfoIcon,
@@ -17,6 +17,7 @@ import { SharePointFile } from '../types';
 import { useFilePreview } from '../hooks/useFilePreview';
 import { formatFileSize, formatDate } from '../utils/formatters';
 import { FileEditor } from './FileEditor';
+import { useDynamicTheme } from '../contexts/DynamicThemeContext';
 
 interface FilePreviewProps {
   selectedFiles: string[];
@@ -33,8 +34,11 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
 }) => {
   const actualHeight = typeof height === 'string' && height === '100%' ? '100%' : height;
   console.log('🚀 FilePreview: Rendering WITHIN dashboard with files:', selectedFiles, 'height:', height);
-  
+
+  const { currentTheme } = useDynamicTheme();
   const [activeTab, setActiveTab] = useState<PreviewTab>('preview');
+
+  console.log('🎨 FilePreview currentTheme:', currentTheme);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const currentFileId = selectedFiles[0] || null;
   const { file, content, loading, error } = useFilePreview(currentFileId);
@@ -795,14 +799,14 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
             onClick={handleDownload}
             size="small"
             sx={{
-              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)',
-              border: '1px solid #7c3aed',
+              background: `linear-gradient(135deg, ${alpha(currentTheme.primary, 0.1)} 0%, ${alpha(currentTheme.secondary, 0.1)} 100%)`,
+              border: `1px solid ${currentTheme.primary}`,
               '&:hover': {
-                background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)',
+                background: `linear-gradient(135deg, ${alpha(currentTheme.primary, 0.2)} 0%, ${alpha(currentTheme.secondary, 0.2)} 100%)`,
                 transform: 'translateY(-1px)',
-                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
+                boxShadow: `0 4px 12px ${alpha(currentTheme.primary, 0.3)}`
               },
-              color: '#7c3aed',
+              color: currentTheme.primary,
               width: 32,
               height: 32
             }}
@@ -814,14 +818,14 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
             onClick={(e) => setAnchorEl(e.currentTarget)}
             size="small"
             sx={{
-              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)',
-              border: '1px solid #7c3aed',
+              background: `linear-gradient(135deg, ${alpha(currentTheme.primary, 0.1)} 0%, ${alpha(currentTheme.secondary, 0.1)} 100%)`,
+              border: `1px solid ${currentTheme.primary}`,
               '&:hover': {
-                background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)',
+                background: `linear-gradient(135deg, ${alpha(currentTheme.primary, 0.2)} 0%, ${alpha(currentTheme.secondary, 0.2)} 100%)`,
                 transform: 'translateY(-1px)',
-                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
+                boxShadow: `0 4px 12px ${alpha(currentTheme.primary, 0.3)}`
               },
-              color: '#7c3aed',
+              color: currentTheme.primary,
               width: 32,
               height: 32
             }}
@@ -833,14 +837,14 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
             onClick={onClose}
             size="small"
             sx={{
-              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)',
-              border: '1px solid #7c3aed',
+              background: `linear-gradient(135deg, ${alpha(currentTheme.primary, 0.1)} 0%, ${alpha(currentTheme.secondary, 0.1)} 100%)`,
+              border: `1px solid ${currentTheme.primary}`,
               '&:hover': {
-                background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)',
+                background: `linear-gradient(135deg, ${alpha(currentTheme.primary, 0.2)} 0%, ${alpha(currentTheme.secondary, 0.2)} 100%)`,
                 transform: 'translateY(-1px)',
-                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
+                boxShadow: `0 4px 12px ${alpha(currentTheme.primary, 0.3)}`
               },
-              color: '#7c3aed',
+              color: currentTheme.primary,
               width: 32,
               height: 32
             }}
@@ -856,29 +860,59 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         <Tabs
           value={activeTab}
           onChange={(_, newValue) => setActiveTab(newValue)}
-          textColor="primary"
-          indicatorColor="primary"
+          sx={{
+            '& .MuiTabs-indicator': {
+              backgroundColor: currentTheme.primary + ' !important',
+            },
+            '& .MuiTab-root': {
+              color: 'text.secondary',
+              '&.Mui-selected': {
+                color: currentTheme.primary + ' !important',
+                '& .MuiSvgIcon-root': {
+                  color: currentTheme.primary + ' !important',
+                }
+              },
+              '&:hover': {
+                color: currentTheme.primary,
+              },
+              '& .MuiSvgIcon-root': {
+                color: 'inherit',
+              }
+            }
+          }}
         >
           <Tab
             label="Preview"
             value="preview"
             icon={<PreviewIcon fontSize="small" />}
             iconPosition="start"
-            sx={{ minHeight: 48, textTransform: 'none', fontSize: '0.875rem' }}
+            sx={{
+              minHeight: 48,
+              textTransform: 'none',
+              fontSize: '0.875rem'
+            }}
           />
           <Tab
             label="Details"
             value="details"
             icon={<InfoIcon fontSize="small" />}
             iconPosition="start"
-            sx={{ minHeight: 48, textTransform: 'none', fontSize: '0.875rem' }}
+            sx={{
+              minHeight: 48,
+              textTransform: 'none',
+              fontSize: '0.875rem'
+            }}
           />
           <Tab
             label="Versions"
             value="versions"
             icon={<VersionsIcon fontSize="small" />}
             iconPosition="start"
-            sx={{ minHeight: 48, textTransform: 'none', fontSize: '0.875rem' }}
+            sx={{
+              minHeight: 48,
+              textTransform: 'none',
+              fontSize: '0.875rem'
+            }}
           />
         </Tabs>
       </Box>

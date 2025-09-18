@@ -163,3 +163,83 @@ case 'edit':
 **Status**: 🎉 COMPLETE AND READY FOR TESTING
 
 ---
+
+## CHECKPOINT: FILEPREVIEW THEME COLOR FIX
+
+**Date**: September 18, 2025
+**Time**: 11:06 UTC+10
+
+## Issue: Hardcoded Purple Colors in FilePreview Icons
+
+### Modification #10: Import Alpha Function
+**File**: `client/src/components/FilePreview.tsx`
+**Line**: 2
+**Action**: Add alpha import for proper transparency
+**Before**: `import { Box, Typography, IconButton, Paper, Tabs, Tab, Menu, MenuItem, ListItemIcon, Button } from '@mui/material';`
+**After**: `import { Box, Typography, IconButton, Paper, Tabs, Tab, Menu, MenuItem, ListItemIcon, Button, alpha } from '@mui/material';`
+**Reason**: Need proper Material-UI alpha function for color transparency
+
+---
+
+### Modification #11: Fix Download Icon Theme Colors
+**File**: `client/src/components/FilePreview.tsx`
+**Lines**: 798-814
+**Action**: Replace hardcoded purple with dynamic theme colors
+**Before**:
+```typescript
+background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)',
+border: '1px solid #7c3aed',
+color: '#7c3aed',
+```
+**After**:
+```typescript
+background: `linear-gradient(135deg, ${alpha(currentTheme.primary, 0.1)} 0%, ${alpha(currentTheme.secondary, 0.1)} 100%)`,
+border: `1px solid ${currentTheme.primary}`,
+color: currentTheme.primary,
+```
+**Reason**: Make download icon match selected theme color
+
+---
+
+### Modification #12: Fix Menu Dots Icon Theme Colors
+**File**: `client/src/components/FilePreview.tsx`
+**Lines**: 817-833
+**Action**: Replace hardcoded purple with dynamic theme colors
+**Same pattern as download icon**
+**Reason**: Make menu dots icon match selected theme color
+
+---
+
+### Modification #13: Fix Close Button Icon Theme Colors
+**File**: `client/src/components/FilePreview.tsx`
+**Lines**: 836-852
+**Action**: Replace hardcoded purple with dynamic theme colors
+**Same pattern as download icon**
+**Reason**: Make close button icon match selected theme color
+
+---
+
+## Build & Deployment
+
+### Commands Executed:
+```bash
+FRONTEND_PORT=8080 CORS_ORIGIN="http://localhost:8080" docker-compose build --no-cache frontend
+FRONTEND_PORT=8080 CORS_ORIGIN="http://localhost:8080" docker-compose up -d frontend
+```
+
+### Build Output:
+- ✅ New bundle: `index-c5MHzjbk.js` (5,109.79 kB)
+- ✅ No TypeScript errors
+- ✅ Container restarted successfully
+
+## Verification Results:
+- ✅ Download icon: Now matches theme color
+- ✅ Menu dots icon: Now matches theme color
+- ✅ Close button icon: Now matches theme color
+- ✅ Tab icons: Continue working correctly
+- ✅ All icons update immediately when theme changes
+
+**Status**: ✅ THEME COLOR FIX COMPLETED
+**Wiki**: `WIKI_FILEPREVIEW_THEME_FIX.md`
+
+---
