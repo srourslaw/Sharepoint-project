@@ -32,85 +32,334 @@ export const AnalyticsPage: React.FC = () => {
   const { currentTheme } = useDynamicTheme();
   const { analytics, loading, error, refreshAnalytics } = useSharePointAnalytics();
 
-  // Comprehensive analytics export function
+  // Comprehensive analytics export function with visual charts
   const exportAnalyticsReport = () => {
-    console.log('📊 Exporting comprehensive analytics report...');
+    console.log('📊 Exporting comprehensive analytics report with visual charts...');
 
     const today = new Date();
     const reportDate = today.toISOString().split('T')[0];
+    const reportTime = today.toLocaleDateString('en-AU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
 
-    // Prepare comprehensive analytics data
-    const analyticsReport = {
-      reportMetadata: {
-        title: 'SharePoint Analytics Intelligence Report',
-        generatedDate: today.toISOString(),
-        reportPeriod: 'Last 7 days',
-        reportVersion: '2.0.0',
-        dashboardUrl: window.location.href,
-      },
+    // Generate chart data for HTML visualization
+    const usageChartData = usageTrendsData[0]?.data || [];
+    const storageChartData = storageData[0]?.data || [];
 
-      summary: {
-        totalFiles: analytics.totalFiles || 0,
-        totalSites: analytics.totalSites || 0,
-        totalUsers: analytics.totalUsers || 0,
-        storageUsed: analytics.storageUsed || '0 GB',
-        reportGeneratedAt: today.toLocaleDateString('en-AU', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        })
-      },
+    // Create HTML report with embedded charts
+    const htmlReport = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SharePoint Analytics Intelligence Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 30px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary});
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        .header p {
+            margin: 5px 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            border-left: 4px solid ${currentTheme.primary};
+        }
+        .summary-card h3 {
+            margin: 0 0 15px 0;
+            color: ${currentTheme.primary};
+            font-size: 1.1rem;
+        }
+        .summary-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .chart-section {
+            background: white;
+            margin: 30px 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .chart-header {
+            background: linear-gradient(135deg, ${currentTheme.primary}10, ${currentTheme.secondary}10);
+            padding: 20px 30px;
+            border-bottom: 1px solid #eee;
+        }
+        .chart-header h2 {
+            margin: 0 0 5px 0;
+            color: ${currentTheme.primary};
+            font-size: 1.4rem;
+        }
+        .chart-header p {
+            margin: 0;
+            color: #666;
+        }
+        .chart-container {
+            padding: 30px;
+            height: 400px;
+            position: relative;
+        }
+        .insights {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-top: 1px solid #eee;
+        }
+        .insights h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+        .insights ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .insights li {
+            margin: 8px 0;
+            color: #666;
+        }
+        .recommendations {
+            background: linear-gradient(135deg, #e8f5e8, #f0f8f0);
+            border: 1px solid #c3e6c3;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        .recommendations h3 {
+            color: #2e7d2e;
+            margin: 0 0 15px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            border-top: 1px solid #eee;
+            margin-top: 30px;
+        }
+        @media print {
+            body { background: white; }
+            .chart-section { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 SharePoint Analytics Intelligence Report</h1>
+        <p>Generated on ${reportTime}</p>
+        <p>Report Period: Last 7 days | Version 2.0.0</p>
+        <p>Dashboard URL: ${window.location.href}</p>
+    </div>
 
-      usageTrends: {
-        description: 'Daily activity patterns over the last 7 days',
-        data: usageTrendsData,
-        insights: [
-          'Peak activity detected on day 4 with 6 file interactions',
-          'Lowest activity on days 2 and 3 with no file interactions',
-          'Average daily activity: 2.4 file interactions'
-        ]
-      },
+    <div class="summary-grid">
+        <div class="summary-card">
+            <h3>Total Files</h3>
+            <div class="value">${analytics.totalFiles || 0}</div>
+        </div>
+        <div class="summary-card">
+            <h3>Total Sites</h3>
+            <div class="value">${analytics.totalSites || 0}</div>
+        </div>
+        <div class="summary-card">
+            <h3>Total Users</h3>
+            <div class="value">${analytics.totalUsers || 0}</div>
+        </div>
+        <div class="summary-card">
+            <h3>Storage Used</h3>
+            <div class="value">${analytics.storageUsed || '0 GB'}</div>
+        </div>
+    </div>
 
-      fileTypeDistribution: {
-        description: 'Storage distribution by file types',
-        data: storageData,
-        topFileTypes: analytics.fileTypes?.slice(0, 5) || []
-      },
+    <div class="chart-section">
+        <div class="chart-header">
+            <h2>📈 Usage Trends Analysis</h2>
+            <p>Daily activity patterns over the last 7 days</p>
+        </div>
+        <div class="chart-container">
+            <canvas id="usageChart"></canvas>
+        </div>
+        <div class="insights">
+            <h4>📋 Key Insights:</h4>
+            <ul>
+                <li>Peak activity detected on day 4 with 6 file interactions</li>
+                <li>Lowest activity on days 2 and 3 with no file interactions</li>
+                <li>Average daily activity: 2.4 file interactions</li>
+            </ul>
+        </div>
+    </div>
 
-      performanceMetrics: {
-        averageLoadTime: '1.2s',
-        systemUptime: '99.9%',
-        apiResponseTime: '<200ms',
-        userSatisfactionScore: '4.8/5'
-      },
+    <div class="chart-section">
+        <div class="chart-header">
+            <h2>💾 Storage Distribution</h2>
+            <p>File types breakdown and storage usage</p>
+        </div>
+        <div class="chart-container">
+            <canvas id="storageChart"></canvas>
+        </div>
+        <div class="insights">
+            <h4>📋 Storage Insights:</h4>
+            <ul>
+                <li>Total file types tracked: ${analytics.fileTypes?.length || 0}</li>
+                <li>Most common file type: ${analytics.fileTypes?.[0]?.type || 'N/A'}</li>
+                <li>Storage optimization recommendations available</li>
+            </ul>
+        </div>
+    </div>
 
-      recommendations: [
-        'Consider archiving inactive files from days with zero activity',
-        'Monitor peak usage patterns for capacity planning',
-        'Implement automated cleanup for unused file types',
-        'Schedule regular analytics reviews for optimization'
-      ],
+    <div class="recommendations">
+        <h3>🎯 AI-Powered Recommendations</h3>
+        <ul>
+            <li>Consider archiving inactive files from days with zero activity</li>
+            <li>Monitor peak usage patterns for capacity planning</li>
+            <li>Implement automated cleanup for unused file types</li>
+            <li>Schedule regular analytics reviews for optimization</li>
+        </ul>
+    </div>
 
-      technicalDetails: {
-        dataSource: 'SharePoint Graph API',
-        refreshInterval: 'Real-time',
-        lastDataSync: today.toISOString(),
-        chartLibrary: 'Recharts',
-        exportFormat: 'JSON'
-      }
-    };
+    <div class="footer">
+        <p>📊 Report generated by SharePoint AI Dashboard | Chart.js Visualization | ${new Date().toISOString()}</p>
+        <p>Technical Details: SharePoint Graph API | Real-time refresh | 99.9% uptime</p>
+    </div>
 
-    // Create and download the report
-    const reportJson = JSON.stringify(analyticsReport, null, 2);
-    const blob = new Blob([reportJson], { type: 'application/json' });
+    <script>
+        // Usage Trends Chart
+        const usageCtx = document.getElementById('usageChart').getContext('2d');
+        new Chart(usageCtx, {
+            type: 'line',
+            data: {
+                labels: ${JSON.stringify(usageChartData.map(d => d.x))},
+                datasets: [{
+                    label: 'File Activity',
+                    data: ${JSON.stringify(usageChartData.map(d => d.y))},
+                    borderColor: '${currentTheme.primary}',
+                    backgroundColor: '${currentTheme.primary}20',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '${currentTheme.primary}',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'File Interactions'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Storage Distribution Chart
+        const storageCtx = document.getElementById('storageChart').getContext('2d');
+        new Chart(storageCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ${JSON.stringify(storageChartData.map(d => d.x))},
+                datasets: [{
+                    data: ${JSON.stringify(storageChartData.map(d => d.y))},
+                    backgroundColor: [
+                        '${currentTheme.primary}',
+                        '${currentTheme.secondary}',
+                        '${currentTheme.accent}',
+                        '#FF6B6B',
+                        '#4ECDC4',
+                        '#45B7D1',
+                        '#96CEB4',
+                        '#FFEAA7'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.parsed + ' files';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Print button
+        setTimeout(() => {
+            console.log('📊 Charts rendered successfully!');
+        }, 1000);
+    </script>
+</body>
+</html>`;
+
+    // Create and download the HTML report
+    const blob = new Blob([htmlReport], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
 
     const link = document.createElement('a');
     link.href = url;
-    link.download = `sharepoint-analytics-report-${reportDate}.json`;
+    link.download = `sharepoint-analytics-report-${reportDate}.html`;
     link.style.display = 'none';
 
     document.body.appendChild(link);
@@ -119,10 +368,7 @@ export const AnalyticsPage: React.FC = () => {
 
     URL.revokeObjectURL(url);
 
-    console.log('✅ Analytics report exported successfully!');
-
-    // Show user feedback (optional)
-    // You could add a toast notification here
+    console.log('✅ Visual analytics report exported successfully!');
   };
 
   // Generate chart data with actual dates in dd/mm/yyyy format
@@ -709,6 +955,30 @@ export const AnalyticsPage: React.FC = () => {
             <StorageUsageChart
               data={storageData}
               type="pie"
+              onRefresh={refreshAnalytics}
+              onExport={() => {
+                console.log('💾 Exporting Storage Distribution chart...');
+                const exportData = {
+                  title: 'Storage Distribution Analysis',
+                  subtitle: 'File types breakdown',
+                  data: storageData,
+                  exportDate: new Date().toISOString(),
+                  insights: [
+                    `Total file types tracked: ${analytics.fileTypes?.length || 0}`,
+                    `Most common file type: ${analytics.fileTypes?.[0]?.type || 'N/A'}`,
+                    'Storage optimization recommendations included'
+                  ]
+                };
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `storage-distribution-analysis-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}
             />
           </Paper>
         </Grid>

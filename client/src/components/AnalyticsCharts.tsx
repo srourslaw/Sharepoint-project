@@ -612,15 +612,51 @@ export const PerformanceMetricsChart: React.FC<{
 export const StorageUsageChart: React.FC<{
   data: ChartSeries[];
   type?: 'pie' | 'treemap';
-}> = ({ data, type = 'treemap' }) => (
-  <AnalyticsChart
-    title="Storage Usage Breakdown"
-    subtitle="File types and sizes"
-    type={type}
-    data={data}
-    height={400}
-  />
-);
+  onExport?: () => void;
+  onRefresh?: () => void;
+}> = ({ data, type = 'treemap', onExport, onRefresh }) => {
+
+  const handleExport = () => {
+    if (onExport) {
+      onExport();
+    } else {
+      // Default export functionality for storage data
+      console.log('💾 Exporting Storage Usage Breakdown chart...');
+      const chartData = JSON.stringify(data, null, 2);
+      const blob = new Blob([chartData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `storage-usage-breakdown-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      // Default refresh functionality
+      console.log('🔄 Refreshing Storage Usage Breakdown chart...');
+      window.location.reload();
+    }
+  };
+
+  return (
+    <AnalyticsChart
+      title="Storage Usage Breakdown"
+      subtitle="File types and sizes"
+      type={type}
+      data={data}
+      height={400}
+      onExport={handleExport}
+      onRefresh={handleRefresh}
+    />
+  );
+};
 
 export const UserActivityChart: React.FC<{
   data: ChartSeries[];
