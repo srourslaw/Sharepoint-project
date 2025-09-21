@@ -851,7 +851,9 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       width: '100%',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      willChange: 'height',
+      transform: 'translateZ(0)' // Force GPU acceleration
     }}>
       {/* Header */}
       <Box
@@ -863,7 +865,8 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
           borderBottom: 1,
           borderColor: 'divider',
           backgroundColor: '#f8f9fa',
-          minHeight: 64
+          minHeight: 64,
+          flexShrink: 0
         }}
       >
         <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -931,7 +934,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       </Box>
 
       {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
         <Tabs
           value={activeTab}
           onChange={(_, newValue) => setActiveTab(newValue)}
@@ -999,6 +1002,8 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         backgroundColor: '#fff',
         display: 'flex',
         flexDirection: 'column',
+        minHeight: 0, // Allow flex item to shrink below content size
+        willChange: 'height'
       }}>
         {renderTabContent()}
       </Box>

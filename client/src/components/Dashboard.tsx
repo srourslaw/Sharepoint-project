@@ -176,13 +176,17 @@ export const Dashboard: React.FC = () => {
   const handleHorizontalMouseMove = useCallback((e: MouseEvent) => {
     if (!isHorizontalResizing) return;
 
+    e.preventDefault();
     const deltaY = horizontalResizeRef.current - e.clientY;
-    const newHeight = Math.max(200, Math.min(window.innerHeight - 300, layout.previewHeight + deltaY));
+    const newHeight = Math.max(200, Math.min(window.innerHeight - 200, layout.previewHeight + deltaY));
 
-    setLayout(prev => ({
-      ...prev,
-      previewHeight: newHeight
-    }));
+    // Use requestAnimationFrame for smoother resizing
+    requestAnimationFrame(() => {
+      setLayout(prev => ({
+        ...prev,
+        previewHeight: newHeight
+      }));
+    });
 
     horizontalResizeRef.current = e.clientY;
   }, [isHorizontalResizing, layout.previewHeight]);
@@ -365,6 +369,7 @@ export const Dashboard: React.FC = () => {
                     zIndex: 1200,
                     borderRadius: '0 0 4px 4px',
                     border: '1px solid #ddd',
+                    transition: 'all 0.1s ease-out',
                     '&::before': {
                       content: '""',
                       position: 'absolute',
@@ -374,22 +379,27 @@ export const Dashboard: React.FC = () => {
                       width: '60px',
                       height: '4px',
                       backgroundColor: currentTheme.primary,
-                      opacity: 1,
+                      opacity: 0.7,
                       borderRadius: '2px',
-                      transition: 'all 0.2s ease',
+                      transition: 'all 0.1s ease-out',
                     },
                     '&:hover': {
-                      backgroundColor: `${currentTheme.primary}20`,
+                      backgroundColor: `${currentTheme.primary}25`,
+                      transform: 'scaleY(1.2)',
                       '&::before': {
                         opacity: 1,
                         height: '6px',
+                        width: '80px',
                         backgroundColor: currentTheme.primary,
                       }
                     },
                     '&:active': {
+                      backgroundColor: `${currentTheme.primary}35`,
                       '&::before': {
                         backgroundColor: currentTheme.primary,
                         opacity: 1,
+                        height: '8px',
+                        width: '100px',
                       }
                     }
                   }}
@@ -402,7 +412,10 @@ export const Dashboard: React.FC = () => {
                       position: 'absolute',
                       right: '10px',
                       top: '50%',
-                      transform: 'translateY(-50%)'
+                      transform: 'translateY(-50%)',
+                      opacity: 0.8,
+                      fontWeight: 500,
+                      transition: 'opacity 0.1s ease'
                     }}
                   >
                     ↕ DRAG TO RESIZE
@@ -417,7 +430,9 @@ export const Dashboard: React.FC = () => {
                   borderTop: layout.previewOpen ? 0 : 1,
                   borderColor: 'divider',
                   overflow: 'hidden',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  willChange: 'height',
+                  transition: isHorizontalResizing ? 'none' : 'height 0.1s ease-out'
                 }}>
                   <FilePreview
                     selectedFiles={selectedFiles}
