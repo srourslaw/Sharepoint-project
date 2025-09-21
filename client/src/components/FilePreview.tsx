@@ -132,14 +132,35 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       if (content && content.startsWith('blob:')) {
         // For blob URLs, use direct embedding
         return (
-          <Box sx={{ width: '100%', height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{
+            width: '100%',
+            height: '100%',
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            '&::-webkit-scrollbar': {
+              width: '12px',
+              height: '12px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '6px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#c1c1c1',
+              borderRadius: '6px',
+              '&:hover': {
+                background: '#a8a8a8',
+              },
+            },
+          }}>
             <embed
               src={pdfUrl}
               type="application/pdf"
               width="100%"
-              height="100%"
+              height="calc(100vh - 200px)"
               style={{
-                minHeight: '600px',
+                minHeight: '800px',
                 border: 'none',
                 flex: 1
               }}
@@ -151,15 +172,34 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         const embedUrl = `${pdfUrl}#view=FitH&toolbar=1&navpanes=0&scrollbar=1&page=1&zoom=100`;
 
         return (
-          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          <Box sx={{
+            width: '100%',
+            height: '100%',
+            overflow: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '12px',
+              height: '12px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '6px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#c1c1c1',
+              borderRadius: '6px',
+              '&:hover': {
+                background: '#a8a8a8',
+              },
+            },
+          }}>
             <iframe
               src={embedUrl}
               width="100%"
-              height="100%"
+              height="calc(100vh - 200px)"
               style={{
                 border: 'none',
                 display: 'block',
-                minHeight: '600px'
+                minHeight: '800px'
               }}
               title={`PDF: ${String(file.name || file.displayName || 'Document')}`}
               onLoad={() => console.log('📕 PDF iframe loaded successfully')}
@@ -171,9 +211,9 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
                 embedElement.src = pdfUrl;
                 embedElement.type = 'application/pdf';
                 embedElement.width = '100%';
-                embedElement.height = '100%';
+                embedElement.height = 'calc(100vh - 200px)';
                 embedElement.style.border = 'none';
-                embedElement.style.minHeight = '600px';
+                embedElement.style.minHeight = '800px';
                 iframe.parentNode?.replaceChild(embedElement, iframe);
               }}
             />
@@ -255,15 +295,34 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       if (content && typeof content === 'string' && (content.startsWith('https://') || content.startsWith('http://'))) {
         console.log('📊 FilePreview: Using Microsoft Graph preview URL for Excel');
         return (
-          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          <Box sx={{
+            width: '100%',
+            height: '100%',
+            overflow: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '12px',
+              height: '12px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '6px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#c1c1c1',
+              borderRadius: '6px',
+              '&:hover': {
+                background: '#a8a8a8',
+              },
+            },
+          }}>
             <iframe
               src={content}
               width="100%"
-              height="100%"
+              height="calc(100vh - 200px)"
               style={{
                 border: 'none',
                 display: 'block',
-                minHeight: '600px'
+                minHeight: '800px'
               }}
               title={`Excel: ${String(file.name || file.displayName || 'Spreadsheet')}`}
               onLoad={() => console.log('📊 Excel Microsoft Graph preview loaded successfully')}
@@ -332,15 +391,34 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         null;
 
       return (
-        <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+        <Box sx={{
+          width: '100%',
+          height: '100%',
+          overflow: 'auto',
+          '&::-webkit-scrollbar': {
+            width: '12px',
+            height: '12px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+            borderRadius: '6px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#c1c1c1',
+            borderRadius: '6px',
+            '&:hover': {
+              background: '#a8a8a8',
+            },
+          },
+        }}>
           <iframe
             src={directUrl}
             width="100%"
-            height="100%"
+            height="calc(100vh - 200px)"
             style={{
               border: 'none',
               display: 'block',
-              minHeight: '600px'
+              minHeight: '800px'
             }}
             title={`Excel: ${String(file.name || file.displayName || 'Spreadsheet')}`}
             onLoad={() => console.log('📊 Excel iframe loaded successfully with direct API')}
@@ -377,15 +455,34 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       if (content && typeof content === 'string' && (content.startsWith('https://') || content.startsWith('http://'))) {
         console.log('📄 FilePreview: Using Microsoft Graph preview URL for Word');
         return (
-          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          <Box sx={{
+            width: '100%',
+            height: '100%',
+            overflow: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '12px',
+              height: '12px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '6px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#c1c1c1',
+              borderRadius: '6px',
+              '&:hover': {
+                background: '#a8a8a8',
+              },
+            },
+          }}>
             <iframe
               src={content}
               width="100%"
-              height="100%"
+              height="calc(100vh - 200px)"
               style={{
                 border: 'none',
                 display: 'block',
-                minHeight: '600px'
+                minHeight: '800px'
               }}
               title={`Word: ${String(file.name || file.displayName || 'Document')}`}
               onLoad={() => console.log('📄 Word Microsoft Graph preview loaded successfully')}
@@ -428,15 +525,34 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         const directUrl = `/api/sharepoint-advanced/files/${file.id}/content`;
 
         return (
-          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          <Box sx={{
+            width: '100%',
+            height: '100%',
+            overflow: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '12px',
+              height: '12px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '6px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#c1c1c1',
+              borderRadius: '6px',
+              '&:hover': {
+                background: '#a8a8a8',
+              },
+            },
+          }}>
             <iframe
               src={directUrl}
               width="100%"
-              height="100%"
+              height="calc(100vh - 200px)"
               style={{
                 border: 'none',
                 display: 'block',
-                minHeight: '600px'
+                minHeight: '800px'
               }}
               title={`Word: ${String(file.name || file.displayName || 'Document')}`}
               onLoad={() => console.log('📄 Word iframe loaded successfully')}
