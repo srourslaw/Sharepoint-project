@@ -24,6 +24,7 @@ import {
   Badge,
   CircularProgress,
   Alert,
+  alpha,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -156,174 +157,142 @@ export const PeoplePage: React.FC = () => {
   }
 
   return (
-    <Box sx={{
-      height: '100%',
-      overflow: 'auto',
-      padding: 3,
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {/* CSS Keyframes for animations */}
-      <style>
-        {`
-          @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-          }
-          @keyframes slideInUp {
-            from { transform: translateY(30px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-          }
-          @keyframes collaborationFlow {
-            0% { transform: translateX(-10px); opacity: 0.7; }
-            50% { transform: translateX(0px); opacity: 1; }
-            100% { transform: translateX(10px); opacity: 0.7; }
-          }
-          .collaboration-header {
-            animation: slideInUp 0.8s ease-out;
-          }
-          .collaboration-card {
-            animation: slideInUp 0.6s ease-out;
-            animation-fill-mode: both;
-          }
-          .collaboration-flow {
-            animation: collaborationFlow 3s ease-in-out infinite;
-          }
-        `}
-      </style>
-
-      {/* Stunning Collaboration Header */}
-      <Box className="collaboration-header" sx={{
-        mb: 4,
-        background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary}, ${currentTheme.accent})`,
-        borderRadius: 4,
+    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, bgcolor: 'background.default', minHeight: '100vh', maxHeight: '100vh', overflow: 'auto' }}>
+      {/* Beautiful People & Sharing Header */}
+      <Box sx={{
+        background: `linear-gradient(135deg, ${alpha(currentTheme.primary, 0.08)} 0%, ${alpha(currentTheme.secondary, 0.08)} 50%, ${alpha(currentTheme.accent, 0.08)} 100%)`,
+        borderRadius: 3,
         p: 4,
-        color: 'white',
+        mb: 3,
+        border: `1px solid ${alpha(currentTheme.primary, 0.15)}`,
         position: 'relative',
-        overflow: 'hidden'
-      }}>
-        {/* Background Pattern */}
-        <Box sx={{
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          bottom: 0,
-          background: `
-            radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
-            radial-gradient(circle at 60% 40%, rgba(255,255,255,0.05) 0%, transparent 50%)
-          `,
-          zIndex: 1
-        }} />
-
-        <Box sx={{ position: 'relative', zIndex: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Box sx={{
-              background: 'rgba(255,255,255,0.2)',
-              borderRadius: '50%',
-              p: 2,
-              mr: 3,
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.3)'
-            }}>
-              <ConnectWithoutContact sx={{ fontSize: 40, color: 'white' }} />
-            </Box>
-            <Box>
-              <Typography variant="h5" sx={{
-                fontWeight: 700,
-                background: `linear-gradient(45deg, #FFFFFF, #F1F5F9)`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                mb: 0.5,
-              }}>
-                People & Collaboration Hub
-              </Typography>
-              <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 500 }}>
-                Connect • Share • Collaborate • Grow Together
-              </Typography>
-            </Box>
+          height: '4px',
+          background: `linear-gradient(90deg, ${currentTheme.primary}, ${currentTheme.secondary}, ${currentTheme.accent})`,
+        }
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <Box sx={{
+            width: 64,
+            height: 64,
+            borderRadius: '16px',
+            background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: `0 8px 24px ${alpha(currentTheme.primary, 0.4)}`,
+          }}>
+            <PeopleIcon sx={{ color: 'white', fontSize: 32 }} />
           </Box>
+          <Box>
+            <Typography variant="h5" sx={{
+              fontWeight: 700,
+              color: currentTheme.text.primary,
+              mb: 0.5,
+              background: `linear-gradient(45deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              People & Collaboration Hub
+            </Typography>
+            <Typography variant="body1" sx={{
+              color: currentTheme.text.secondary,
+              fontSize: '1.1rem'
+            }}>
+              Connect, share, and collaborate across your organization
+            </Typography>
+          </Box>
+        </Box>
 
-          <Grid container spacing={2} sx={{ mt: 2 }}>
-            <Grid item xs={12} sm={4}>
-              <Box className="collaboration-flow" sx={{ display: 'flex', alignItems: 'center' }}>
-                <TrendingUp sx={{ mr: 1, fontSize: 20 }} />
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {peopleData.recentContacts.length + pendingInvitations.length} Active Collaborators
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Box className="collaboration-flow" sx={{ display: 'flex', alignItems: 'center', animationDelay: '0.5s' }}>
-                <ShareIcon sx={{ mr: 1, fontSize: 20 }} />
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {peopleData.totalSharedItems} Shared Resources
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Box className="collaboration-flow" sx={{ display: 'flex', alignItems: 'center', animationDelay: '1s' }}>
-                <SecurityIcon sx={{ mr: 1, fontSize: 20 }} />
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  Enterprise-Grade Security
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
+        {/* Quick Stats */}
+        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: currentTheme.primary,
+            }} />
+            <Typography variant="body2" sx={{ color: currentTheme.text.secondary }}>
+              {peopleData.recentContacts.length} Active Members
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: currentTheme.secondary,
+            }} />
+            <Typography variant="body2" sx={{ color: currentTheme.text.secondary }}>
+              {peopleData.totalSharedItems} Shared Resources
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: currentTheme.accent,
+            }} />
+            <Typography variant="body2" sx={{ color: currentTheme.text.secondary }}>
+              {pendingInvitations.length} Pending Invitations
+            </Typography>
+          </Box>
+        </Box>
 
-          <Box sx={{ display: 'flex', gap: 2, mt: 3, flexWrap: 'wrap' }}>
-            <Tooltip title="Refresh Collaboration Data">
-              <IconButton
-                onClick={refreshPeopleData}
-                sx={{
-                  background: 'rgba(255,255,255,0.2)',
-                  color: 'white',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  backdropFilter: 'blur(10px)',
-                  '&:hover': {
-                    background: 'rgba(255,255,255,0.3)',
-                    transform: 'scale(1.05)',
-                    transition: 'all 0.3s ease'
-                  }
-                }}
-              >
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
-            <Button
-              variant="contained"
-              startIcon={<PersonAddIcon />}
-              onClick={() => handleInvitePeople()}
+        {/* Action Buttons */}
+        <Box sx={{ display: 'flex', gap: 2, mt: 3, flexWrap: 'wrap' }}>
+          <Tooltip title="Refresh People Data">
+            <IconButton
+              onClick={refreshPeopleData}
               sx={{
-                background: 'rgba(255,255,255,0.9)',
                 color: currentTheme.primary,
-                fontWeight: 600,
-                px: 3,
-                py: 1,
-                borderRadius: 2,
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,255,0.3)',
+                bgcolor: `${currentTheme.primary}10`,
+                border: `1px solid ${currentTheme.primary}30`,
                 '&:hover': {
-                  background: 'rgba(255,255,255,1)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                  transition: 'all 0.3s ease'
+                  bgcolor: `${currentTheme.primary}20`,
+                  transform: 'translateY(-1px)',
                 }
               }}
             >
-              Invite Collaborators
-            </Button>
-          </Box>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+          <Button
+            variant="contained"
+            startIcon={<PersonAddIcon />}
+            onClick={handleInvitePeople}
+            sx={{
+              bgcolor: currentTheme.primary,
+              color: 'white',
+              fontWeight: 600,
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              '&:hover': {
+                bgcolor: currentTheme.secondary,
+                transform: 'translateY(-1px)',
+                boxShadow: `0 6px 20px ${currentTheme.primary}40`,
+              }
+            }}
+          >
+            Invite Collaborators
+          </Button>
         </Box>
       </Box>
 
       {/* Enhanced Collaboration Statistics */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card className="collaboration-card" sx={{
+          <Card  sx={{
             textAlign: 'center',
             p: 3,
             background: `linear-gradient(135deg, ${currentTheme.primary}1A, ${currentTheme.primary}0D)`,
@@ -363,7 +332,7 @@ export const PeoplePage: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card className="collaboration-card" sx={{
+          <Card  sx={{
             textAlign: 'center',
             p: 3,
             background: `linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05))`,
@@ -404,7 +373,7 @@ export const PeoplePage: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card className="collaboration-card" sx={{
+          <Card  sx={{
             textAlign: 'center',
             p: 3,
             background: `linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05))`,
@@ -445,7 +414,7 @@ export const PeoplePage: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card className="collaboration-card" sx={{
+          <Card  sx={{
             textAlign: 'center',
             p: 3,
             background: `linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05))`,
@@ -493,7 +462,7 @@ export const PeoplePage: React.FC = () => {
       </Grid>
 
       {/* Enhanced Collaboration Navigation */}
-      <Paper className="collaboration-card" sx={{
+      <Paper  sx={{
         mb: 4,
         background: `linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9))`,
         backdropFilter: 'blur(10px)',
@@ -536,7 +505,7 @@ export const PeoplePage: React.FC = () => {
       </Paper>
 
       {/* Enhanced Search Interface */}
-      <Box className="collaboration-card" sx={{ mb: 4, animationDelay: '0.5s' }}>
+      <Box  sx={{ mb: 4, animationDelay: '0.5s' }}>
         <TextField
           fullWidth
           placeholder="Search people, files, permissions, or collaboration activities..."
@@ -596,7 +565,7 @@ export const PeoplePage: React.FC = () => {
       {/* Enhanced Tab Panels with Proper Scrolling */}
       <Box sx={{ flexGrow: 1, overflow: 'visible' }}>
         <TabPanel value={tabValue} index={0}>
-          <Card className="collaboration-card" sx={{
+          <Card  sx={{
             background: `linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.95))`,
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(226, 232, 240, 0.8)',

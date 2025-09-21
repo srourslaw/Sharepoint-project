@@ -21,6 +21,8 @@ import {
   Tabs,
   Tab,
   Divider,
+  alpha,
+  Snackbar,
 } from '@mui/material';
 import { useDynamicTheme } from '../../contexts/DynamicThemeContext';
 import {
@@ -31,7 +33,8 @@ import {
   PictureAsPdf as PdfIcon,
   Image as ImageIcon,
   InsertDriveFile as FileIcon,
-  AccessTime as TimeIcon,
+  History as HistoryIcon,
+  Assessment as AssessmentIcon,
   GetApp as DownloadIcon,
   Share as ShareIcon,
   MoreVert as MoreIcon,
@@ -60,13 +63,19 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 }
 
 export const RecentFilesPage: React.FC = () => {
+  console.log('🔵 RecentFilesPage component mounted');
   const { recentFiles, loading, error, refreshRecentFiles } = useRecentFiles();
+  console.log('🔵 Recent Files hook data:', { count: recentFiles.length, loading, error });
   const { currentTheme } = useDynamicTheme();
   const [tabValue, setTabValue] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const getFileIcon = (extension: string) => {
-    switch (extension.toLowerCase()) {
+    // Add safety check for undefined/null extension
+    const safeExtension = extension || '';
+    switch (safeExtension.toLowerCase()) {
       case 'docx':
       case 'doc':
         return <DocIcon sx={{ color: '#2b579a' }} />;
@@ -110,6 +119,23 @@ export const RecentFilesPage: React.FC = () => {
 
   const filesToShow = getFilesToShow();
 
+  const handleShare = async (file: any) => {
+    try {
+      await navigator.clipboard.writeText(file.webUrl);
+      const fileName = file.displayName || file.name || 'Unknown file';
+      setSnackbarMessage(`File "${fileName}" link copied to clipboard!`);
+      setSnackbarOpen(true);
+    } catch (err) {
+      setSnackbarMessage('Failed to copy link to clipboard');
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleDownload = (file: any) => {
+    // Open the file in a new tab which allows for download or editing
+    window.open(file.webUrl, '_blank');
+  };
+
   if (loading) {
     return (
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -135,47 +161,48 @@ export const RecentFilesPage: React.FC = () => {
   }
 
   const renderGridView = () => (
-    <Grid container spacing={{ xs: 3, sm: 4, md: 4, lg: 5 }}>
+    <Grid container spacing={3}>
       {filesToShow.map((file) => (
-        <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={file.id}>
-          <Card
-            sx={{
-              cursor: 'pointer',
-              transition: 'all 0.3s ease-in-out',
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-              height: '100%',
+        <Grid item xs={12} sm={6} md={4} lg={3} key={file.id}>
+          <Card sx={{
+            borderRadius: 3,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            border: `1px solid ${alpha(currentTheme.primary, 0.15)}`,
+            transition: 'all 0.3s ease',
+            minHeight: 240,
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: 'background.paper',
+            '&:hover': {
+              transform: 'translateY(-4px)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            }
+          }}>
+            <CardContent sx={{
+              pb: '16px !important',
+              flexGrow: 1,
               display: 'flex',
               flexDirection: 'column',
-              minHeight: { xs: 200, sm: 220 },
-              boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-              '&:hover': {
-                boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                transform: 'translateY(-6px)',
-                borderColor: 'primary.light',
-              },
-            }}
-          >
-            <CardContent sx={{ pb: '16px !important', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+              bgcolor: 'background.paper'
+            }}>
               {/* File Header with Icon and Type */}
               <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
                 <Box sx={{
                   width: 48,
                   height: 48,
                   borderRadius: 2,
-                  background: `linear-gradient(135deg, ${currentTheme.primary}15, ${currentTheme.secondary}15)`,
+                  background: `linear-gradient(135deg, ${alpha(currentTheme.primary, 0.15)}, ${alpha(currentTheme.secondary, 0.15)})`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   mr: 2,
-                  border: `1px solid ${currentTheme.primary}20`
+                  border: `1px solid ${alpha(currentTheme.primary, 0.2)}`
                 }}>
                   {getFileIcon(file.extension)}
                 </Box>
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                   <Chip
-                    label={file.extension.toUpperCase()}
+                    label={(file.extension || '').toUpperCase()}
                     size="small"
                     sx={{
                       height: 20,
@@ -212,7 +239,7 @@ export const RecentFilesPage: React.FC = () => {
                   border: `1px solid rgba(0,0,0,0.05)`
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <TimeIcon sx={{ fontSize: 16, color: 'text.secondary', mr: 1 }} />
+                    <HistoryIcon sx={{ fontSize: 16, color: 'text.secondary', mr: 1 }} />
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                       {formatDate(file.lastModifiedDateTime)}
                     </Typography>
@@ -225,8 +252,8 @@ export const RecentFilesPage: React.FC = () => {
                   </Typography>
                 </Box>
 
-                {/* Action Buttons */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {/* Action Buttons - Analytics Style */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto' }}>
                   <Typography variant="caption" sx={{
                     color: currentTheme.primary,
                     fontWeight: 600,
@@ -234,18 +261,23 @@ export const RecentFilesPage: React.FC = () => {
                     textTransform: 'uppercase',
                     letterSpacing: '0.02em'
                   }}>
-                    Recent Activity
+                    Recent
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <Tooltip title="Download File">
                       <IconButton
                         size="small"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDownload(file);
+                        }}
                         sx={{
-                          bgcolor: 'background.paper',
-                          boxShadow: 1,
+                          color: currentTheme.primary,
+                          bgcolor: alpha(currentTheme.primary, 0.1),
                           '&:hover': {
-                            boxShadow: 2,
-                            bgcolor: currentTheme.primary + '08'
+                            bgcolor: alpha(currentTheme.primary, 0.2),
+                            transform: 'scale(1.1)',
                           }
                         }}
                       >
@@ -255,16 +287,43 @@ export const RecentFilesPage: React.FC = () => {
                     <Tooltip title="Share File">
                       <IconButton
                         size="small"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleShare(file);
+                        }}
                         sx={{
-                          bgcolor: 'background.paper',
-                          boxShadow: 1,
+                          color: currentTheme.secondary,
+                          bgcolor: alpha(currentTheme.secondary, 0.1),
                           '&:hover': {
-                            boxShadow: 2,
-                            bgcolor: currentTheme.secondary + '08'
+                            bgcolor: alpha(currentTheme.secondary, 0.2),
+                            transform: 'scale(1.1)',
                           }
                         }}
                       >
                         <ShareIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="More Options">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const fileName = file.displayName || file.name || 'Unknown file';
+                          console.log('More options for:', fileName);
+                          alert(`More options for: ${fileName}`);
+                        }}
+                        sx={{
+                          color: currentTheme.accent,
+                          bgcolor: alpha(currentTheme.accent, 0.1),
+                          '&:hover': {
+                            bgcolor: alpha(currentTheme.accent, 0.2),
+                            transform: 'scale(1.1)',
+                          }
+                        }}
+                      >
+                        <MoreIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                   </Box>
@@ -288,17 +347,20 @@ export const RecentFilesPage: React.FC = () => {
               mb: 1,
               border: '1px solid transparent',
               transition: 'all 0.2s ease',
+              backgroundColor: '#ffffff !important',
+              background: '#ffffff !important',
               '&:hover': {
-                backgroundColor: `${currentTheme.primary}08`,
-                borderColor: `${currentTheme.primary}20`,
+                backgroundColor: '#f5f5f5 !important',
+                background: '#f5f5f5 !important',
+                borderColor: alpha(currentTheme.primary, 0.2),
                 transform: 'translateX(4px)',
               },
             }}
           >
             <ListItemAvatar>
               <Avatar sx={{
-                bgcolor: `${currentTheme.primary}10`,
-                border: `2px solid ${currentTheme.primary}20`,
+                bgcolor: alpha(currentTheme.primary, 0.1),
+                border: `2px solid ${alpha(currentTheme.primary, 0.2)}`,
                 width: 48,
                 height: 48
               }}>
@@ -313,7 +375,7 @@ export const RecentFilesPage: React.FC = () => {
                     {file.displayName}
                   </Typography>
                   <Chip
-                    label={file.extension.toUpperCase()}
+                    label={(file.extension || '').toUpperCase()}
                     size="small"
                     sx={{
                       height: 22,
@@ -328,7 +390,7 @@ export const RecentFilesPage: React.FC = () => {
               secondary={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <TimeIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                    <HistoryIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                       {formatDate(file.lastModifiedDateTime)}
                     </Typography>
@@ -339,21 +401,6 @@ export const RecentFilesPage: React.FC = () => {
                   <Typography variant="body2" color="text.secondary">
                     {formatFileSize(file.size)}
                   </Typography>
-                  <Box sx={{
-                    px: 1,
-                    py: 0.25,
-                    borderRadius: 1,
-                    bgcolor: `${currentTheme.accent}15`,
-                    border: `1px solid ${currentTheme.accent}25`
-                  }}>
-                    <Typography variant="caption" sx={{
-                      color: currentTheme.accent,
-                      fontWeight: 600,
-                      fontSize: '0.65rem'
-                    }}>
-                      RECENT
-                    </Typography>
-                  </Box>
                 </Box>
               }
             />
@@ -363,46 +410,77 @@ export const RecentFilesPage: React.FC = () => {
                 <Tooltip title="Download File">
                   <IconButton
                     size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(file);
+                    }}
                     sx={{
                       bgcolor: 'background.paper',
                       boxShadow: 1,
+                      color: `${currentTheme.primary} !important`,
+                      zIndex: 10,
+                      position: 'relative',
                       '&:hover': {
                         boxShadow: 2,
-                        bgcolor: currentTheme.primary + '08'
+                        bgcolor: alpha(currentTheme.primary, 0.08),
+                        transform: 'translateY(-1px)',
+                        color: `${currentTheme.primary} !important`,
                       }
                     }}
                   >
-                    <DownloadIcon fontSize="small" />
+                    <DownloadIcon fontSize="small" sx={{ color: 'inherit' }} />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Share File">
                   <IconButton
                     size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShare(file);
+                    }}
                     sx={{
                       bgcolor: 'background.paper',
                       boxShadow: 1,
+                      color: `${currentTheme.secondary} !important`,
+                      zIndex: 10,
+                      position: 'relative',
                       '&:hover': {
                         boxShadow: 2,
-                        bgcolor: currentTheme.secondary + '08'
+                        bgcolor: alpha(currentTheme.secondary, 0.08),
+                        transform: 'translateY(-1px)',
+                        color: `${currentTheme.secondary} !important`,
                       }
                     }}
                   >
-                    <ShareIcon fontSize="small" />
+                    <ShareIcon fontSize="small" sx={{ color: 'inherit' }} />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="More Options">
                   <IconButton
                     size="small"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const fileName = file.displayName || file.name || 'Unknown file';
+                      console.log('More options for:', fileName);
+                      // Add visual feedback
+                      alert(`More options for: ${fileName}`);
+                    }}
                     sx={{
                       bgcolor: 'background.paper',
                       boxShadow: 1,
+                      color: `${currentTheme.accent} !important`,
+                      zIndex: 10,
+                      position: 'relative',
                       '&:hover': {
                         boxShadow: 2,
-                        bgcolor: currentTheme.accent + '08'
+                        bgcolor: alpha(currentTheme.accent, 0.08),
+                        transform: 'translateY(-1px)',
+                        color: `${currentTheme.accent} !important`,
                       }
                     }}
                   >
-                    <MoreIcon fontSize="small" />
+                    <MoreIcon fontSize="small" sx={{ color: 'inherit' }} />
                   </IconButton>
                 </Tooltip>
               </Box>
@@ -415,7 +493,8 @@ export const RecentFilesPage: React.FC = () => {
   );
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, bgcolor: 'background.default', minHeight: '100vh' }}>
+    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, bgcolor: 'background.default', minHeight: '100vh', maxHeight: '100vh', overflow: 'auto' }}>
+
       {/* Beautiful Recent Files Header */}
       <Box sx={{
         background: `linear-gradient(135deg, ${currentTheme.primary}08 0%, ${currentTheme.secondary}08 50%, ${currentTheme.accent}08 100%)`,
@@ -435,19 +514,32 @@ export const RecentFilesPage: React.FC = () => {
           background: `linear-gradient(90deg, ${currentTheme.primary}, ${currentTheme.secondary}, ${currentTheme.accent})`,
         },
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
           <Box sx={{
-            width: 48,
-            height: 48,
-            borderRadius: '12px',
+            width: 56,
+            height: 56,
+            borderRadius: '14px',
             background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             mr: 3,
-            boxShadow: `0 4px 12px ${currentTheme.primary}25`
+            boxShadow: `0 6px 16px rgba(0, 200, 83, 0.3)`,
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              top: -2,
+              left: -2,
+              right: -2,
+              bottom: -2,
+              background: `linear-gradient(45deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
+              borderRadius: '16px',
+              zIndex: -1,
+              opacity: 0.3
+            }
           }}>
-            <TimeIcon sx={{ color: 'white', fontSize: 28 }} />
+            <Typography sx={{ color: 'white', fontSize: 32, fontWeight: 'bold' }}>📊</Typography>
           </Box>
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h5" sx={{
@@ -559,7 +651,7 @@ export const RecentFilesPage: React.FC = () => {
         mb: 4,
         borderRadius: 3,
         boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-        border: `1px solid ${currentTheme.primary}10`,
+        border: `1px solid ${alpha(currentTheme.primary, 0.1)}`,
         overflow: 'hidden'
       }}>
         <Tabs
@@ -574,11 +666,11 @@ export const RecentFilesPage: React.FC = () => {
               fontSize: '0.9rem',
               transition: 'all 0.3s ease',
               '&.Mui-selected': {
-                background: `linear-gradient(135deg, ${currentTheme.primary}15, ${currentTheme.secondary}15)`,
+                background: `linear-gradient(135deg, ${alpha(currentTheme.primary, 0.15)}, ${alpha(currentTheme.secondary, 0.15)})`,
                 borderBottom: `3px solid ${currentTheme.primary}`,
               },
               '&:hover': {
-                backgroundColor: `${currentTheme.primary}08`,
+                backgroundColor: alpha(currentTheme.primary, 0.08),
               }
             },
             '& .MuiTabs-indicator': {
@@ -601,7 +693,7 @@ export const RecentFilesPage: React.FC = () => {
                     height: 20,
                     fontSize: '0.7rem',
                     mt: 0.5,
-                    bgcolor: currentTheme.primary + '20',
+                    bgcolor: alpha(currentTheme.primary, 0.2),
                     color: currentTheme.primary,
                     fontWeight: 600
                   }}
@@ -623,7 +715,7 @@ export const RecentFilesPage: React.FC = () => {
                     height: 20,
                     fontSize: '0.7rem',
                     mt: 0.5,
-                    bgcolor: currentTheme.secondary + '20',
+                    bgcolor: alpha(currentTheme.secondary, 0.2),
                     color: currentTheme.secondary,
                     fontWeight: 600
                   }}
@@ -645,7 +737,7 @@ export const RecentFilesPage: React.FC = () => {
                     height: 20,
                     fontSize: '0.7rem',
                     mt: 0.5,
-                    bgcolor: currentTheme.accent + '20',
+                    bgcolor: alpha(currentTheme.accent, 0.2),
                     color: currentTheme.accent,
                     fontWeight: 600
                   }}
@@ -667,7 +759,7 @@ export const RecentFilesPage: React.FC = () => {
                     height: 20,
                     fontSize: '0.7rem',
                     mt: 0.5,
-                    bgcolor: currentTheme.primary + '20',
+                    bgcolor: alpha(currentTheme.primary, 0.2),
                     color: currentTheme.primary,
                     fontWeight: 600
                   }}
@@ -685,7 +777,7 @@ export const RecentFilesPage: React.FC = () => {
             p: { xs: 2, sm: 3 },
             borderRadius: 3,
             boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            border: `1px solid ${currentTheme.primary}05`,
+            border: `1px solid ${alpha(currentTheme.primary, 0.05)}`,
             bgcolor: 'background.paper'
           }}>
             {viewMode === 'grid' ? renderGridView() : renderListView()}
@@ -696,22 +788,22 @@ export const RecentFilesPage: React.FC = () => {
             textAlign: 'center',
             borderRadius: 3,
             boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            border: `1px solid ${currentTheme.primary}10`,
-            background: `linear-gradient(135deg, ${currentTheme.primary}03 0%, ${currentTheme.secondary}03 100%)`
+            border: `1px solid ${alpha(currentTheme.primary, 0.1)}`,
+            bgcolor: 'background.paper'
           }}>
             <Box sx={{
               width: 120,
               height: 120,
               borderRadius: '50%',
-              background: `linear-gradient(135deg, ${currentTheme.primary}15, ${currentTheme.secondary}15)`,
+              background: `linear-gradient(135deg, ${alpha(currentTheme.primary, 0.15)}, ${alpha(currentTheme.secondary, 0.15)})`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               mx: 'auto',
               mb: 3,
-              border: `2px solid ${currentTheme.primary}20`
+              border: `2px solid ${alpha(currentTheme.primary, 0.2)}`
             }}>
-              <TimeIcon sx={{ fontSize: 60, color: currentTheme.primary, opacity: 0.7 }} />
+              <HistoryIcon sx={{ fontSize: 60, color: currentTheme.primary, opacity: 0.7 }} />
             </Box>
             <Typography variant="h5" sx={{
               fontWeight: 700,
@@ -736,9 +828,9 @@ export const RecentFilesPage: React.FC = () => {
                 startIcon={<RefreshIcon />}
                 sx={{
                   background: `linear-gradient(45deg, ${currentTheme.primary}, ${currentTheme.secondary})`,
-                  boxShadow: `0 4px 12px ${currentTheme.primary}25`,
+                  boxShadow: `0 4px 12px ${alpha(currentTheme.primary, 0.25)}`,
                   '&:hover': {
-                    boxShadow: `0 6px 16px ${currentTheme.primary}35`,
+                    boxShadow: `0 6px 16px ${alpha(currentTheme.primary, 0.35)}`,
                   }
                 }}
               >
@@ -752,7 +844,7 @@ export const RecentFilesPage: React.FC = () => {
                   color: currentTheme.primary,
                   '&:hover': {
                     borderColor: currentTheme.secondary,
-                    backgroundColor: `${currentTheme.primary}08`,
+                    backgroundColor: alpha(currentTheme.primary, 0.08),
                   }
                 }}
               >
@@ -762,6 +854,32 @@ export const RecentFilesPage: React.FC = () => {
           </Paper>
         )}
       </TabPanel>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          '& .MuiSnackbarContent-root': {
+            backgroundColor: '#2e7d32 !important',
+            background: '#2e7d32 !important',
+            color: '#ffffff !important',
+            fontWeight: 600,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+            border: '2px solid #4caf50',
+            borderRadius: '8px',
+            minWidth: '300px'
+          },
+          '& .MuiSnackbarContent-message': {
+            color: '#ffffff !important',
+            fontWeight: 600,
+            fontSize: '0.95rem'
+          }
+        }}
+      />
     </Box>
   );
 };

@@ -27,7 +27,7 @@ export class OpenAIService extends EventEmitter {
   constructor(config: OpenAIConfig) {
     super();
     this.config = {
-      model: 'gpt-5-nano', // Using GPT-5-nano as requested
+      model: 'gpt-5-nano', // Using gpt-5-nano as requested
       maxTokens: 2048,
       temperature: 0.7,
       timeout: 30000,

@@ -195,20 +195,32 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
           width: '100%',
           height: '100%',
           overflow: 'auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
           backgroundColor: '#f5f5f5',
           position: 'relative',
-          p: 2
+          p: 2,
+          '&::-webkit-scrollbar': {
+            width: '8px',
+            height: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#c1c1c1',
+            borderRadius: '4px',
+            '&:hover': {
+              background: '#a8a8a8',
+            },
+          },
         }}>
           <img
             src={imageUrl}
             alt={String(file.name || file.displayName || 'Image preview')}
             style={{
-              maxWidth: '95%',
-              maxHeight: '95%',
-              objectFit: 'contain',
+              width: 'auto',
+              height: 'auto',
+              minWidth: '100%',
               display: 'block',
               borderRadius: '8px',
               boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
@@ -501,11 +513,35 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       if (content && typeof content === 'string' && (content.startsWith('https://') || content.startsWith('http://'))) {
         console.log('📽️ PowerPoint: Using Microsoft Graph preview URL');
         return (
-          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          <Box sx={{
+            width: '100%',
+            height: '100%',
+            overflow: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '8px',
+              height: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#c1c1c1',
+              borderRadius: '4px',
+              '&:hover': {
+                background: '#a8a8a8',
+              },
+            },
+          }}>
             <iframe
               src={content}
               width="100%"
               height="100%"
+              style={{
+                border: 'none',
+                display: 'block',
+                minHeight: '800px'
+              }}
               title={`PowerPoint: ${String(file.name || file.displayName || 'Presentation')}`}
               onLoad={() => console.log('📽️ PowerPoint Microsoft Graph preview loaded successfully')}
             />
@@ -523,7 +559,26 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
 
       if (officeOnlineUrl) {
         return (
-          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          <Box sx={{
+            width: '100%',
+            height: '100%',
+            overflow: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '8px',
+              height: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#c1c1c1',
+              borderRadius: '4px',
+              '&:hover': {
+                background: '#a8a8a8',
+              },
+            },
+          }}>
             <iframe
               src={officeOnlineUrl}
               width="100%"
@@ -531,7 +586,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
               style={{
                 border: 'none',
                 display: 'block',
-                minHeight: '600px'
+                minHeight: '800px'
               }}
               title={`PowerPoint: ${String(file.name || file.displayName || 'Presentation')}`}
               onLoad={() => console.log('📽️ PowerPoint Office Online loaded successfully')}
@@ -920,10 +975,25 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       {/* Content Area - Takes up remaining space */}
       <Box sx={{
         flex: 1,
-        overflow: 'hidden',
+        overflow: 'auto',
         backgroundColor: '#fff',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        '&::-webkit-scrollbar': {
+          width: '12px',
+          height: '12px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: '#f1f1f1',
+          borderRadius: '6px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: '#c1c1c1',
+          borderRadius: '6px',
+          '&:hover': {
+            background: '#a8a8a8',
+          },
+        },
       }}>
         {renderTabContent()}
       </Box>

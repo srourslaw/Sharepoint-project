@@ -23,7 +23,7 @@ interface SendMessageRequest {
 interface UseEnhancedAIChatReturn {
   session: ChatSession | null;
   messages: ChatMessage[];
-  sendMessage: (request: SendMessageRequest) => Promise<void>;
+  sendMessage: (request: SendMessageRequest) => Promise<string>;
   uploadFile: (file: File) => Promise<ChatAttachment>;
   exportChat: (options: ChatExportOptions) => Promise<void>;
   clearChat: () => Promise<void>;
@@ -117,13 +117,13 @@ export const useEnhancedAIChat = (initialSessionId?: string): UseEnhancedAIChatR
     }
   };
 
-  const sendMessage = useCallback(async (request: SendMessageRequest): Promise<void> => {
+  const sendMessage = useCallback(async (request: SendMessageRequest): Promise<string> => {
     // Defensive check for undefined content
     const content = request.content || '';
     if (!content.trim() && (!request.attachments || request.attachments.length === 0)) {
-      return;
+      return 'Please provide a message or attachment.';
     }
-    
+
     // Update the request object with safe content
     const safeRequest = { ...request, content: content.trim() };
 
@@ -131,70 +131,45 @@ export const useEnhancedAIChat = (initialSessionId?: string): UseEnhancedAIChatR
     setLoading(true);
     lastMessageRef.current = safeRequest;
 
-    // Add user message immediately
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: safeRequest.content,
-      timestamp: new Date().toISOString(),
-      attachments: safeRequest.attachments,
-      messageType: 'text',
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-
     try {
+      startTypingIndicator();
+
       // Check if we have documents to analyze
       const hasDocuments = safeRequest.documentIds && safeRequest.documentIds.length > 0;
-      
-      if (hasDocuments) {
-        // Initialize session for document-based chat
-        let sessionId = session?.id;
-        if (!sessionId) {
-          const initResponse = await api.post<ApiResponse<{ sessionId: string; session: ChatSession }>>('/api/ai/chat/start', {
-            documentIds: safeRequest.documentIds,
-            title: safeRequest.content.substring(0, 100) || 'Chat Session',
-          });
 
-          if (initResponse.data.success && initResponse.data.data) {
-            sessionId = initResponse.data.data.sessionId;
-            setSession(initResponse.data.data.session);
-          } else {
-            throw new Error('Failed to initialize chat session');
-          }
+      if (hasDocuments) {
+        console.log('🤖 Sending document-based chat request to AI with documents:', safeRequest.documentIds);
+
+        // First create a chat session with the documents
+        const sessionResponse = await api.post('/api/ai/chat/start', {
+          documentIds: safeRequest.documentIds,
+          title: 'AI Chat Session'
+        });
+
+        if (!sessionResponse.data.success) {
+          throw new Error(sessionResponse.data.error?.message || 'Failed to create chat session');
         }
 
-        startTypingIndicator();
+        const sessionId = sessionResponse.data.data.sessionId;
+        console.log('🤖 Created chat session:', sessionId);
 
-        // Send message to AI for document-based chat
-        const messageResponse = await api.post<ApiResponse<{
-          message: ChatMessage;
-          sessionUpdated: ChatSession;
-        }>>('/api/ai/chat/message', {
-          sessionId,
-          message: safeRequest.content,
-          documentIds: safeRequest.documentIds,
-          attachments: safeRequest.attachments?.map(att => att.id),
-          actionType: safeRequest.actionType,
-          parameters: safeRequest.parameters,
-          includeContext: safeRequest.includeContext ?? true,
-          streamResponse: safeRequest.streamResponse ?? false,
+        // Now send the message to the session
+        const chatResponse = await api.post('/api/ai/chat/message', {
+          sessionId: sessionId,
+          message: safeRequest.content
         });
 
         stopTypingIndicator();
 
-        if (messageResponse.data.success && messageResponse.data.data) {
-          const { message: aiMessage, sessionUpdated } = messageResponse.data.data;
-          
-          setMessages(prev => [...prev, aiMessage]);
-          setSession(sessionUpdated);
+        if (chatResponse.data.success) {
+          return chatResponse.data.data?.message?.content || 'I received your message but couldn\'t generate a response.';
         } else {
-          throw new Error(messageResponse.data.error?.message || 'Failed to get AI response');
+          throw new Error(chatResponse.data.error?.message || 'Failed to get AI response');
         }
       } else {
+        console.log('🤖 Sending general chat request to Gemini');
+
         // General chat without documents - use gemini endpoint
-        startTypingIndicator();
-        
         const geminiResponse = await api.post('/api/gemini/chat', {
           message: safeRequest.content,
           options: {
@@ -206,16 +181,12 @@ export const useEnhancedAIChat = (initialSessionId?: string): UseEnhancedAIChatR
         stopTypingIndicator();
 
         if (geminiResponse.data.success) {
-          const aiMessage: ChatMessage = {
-            id: `ai-${Date.now()}`,
-            role: 'assistant',
-            content: geminiResponse.data.data.text || geminiResponse.data.data,
-            timestamp: new Date().toISOString(),
-            messageType: 'text',
-            confidence: 0.9
-          };
-          
-          setMessages(prev => [...prev, aiMessage]);
+          const responseContent = geminiResponse.data.data?.response?.text ||
+                                 geminiResponse.data.data?.text ||
+                                 geminiResponse.data.data ||
+                                 'I received your message but couldn\'t generate a response.';
+
+          return responseContent;
         } else {
           throw new Error('Failed to get AI response for general chat');
         }
@@ -223,22 +194,13 @@ export const useEnhancedAIChat = (initialSessionId?: string): UseEnhancedAIChatR
     } catch (err: any) {
       console.error('Error sending message:', err);
       stopTypingIndicator();
-      
-      // Show error message instead of fallback
-      const errorMessage: ChatMessage = {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: "I'm experiencing some technical difficulties. Please try again in a moment.",
-        timestamp: new Date().toISOString(),
-        messageType: 'text',
-        confidence: 0.5
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
+      setError(err.message || 'Failed to send message');
+
+      return 'I\'m experiencing some technical difficulties. Please try again in a moment.';
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [session, aiService]);
 
   const uploadFile = useCallback(async (file: File): Promise<ChatAttachment> => {
     try {

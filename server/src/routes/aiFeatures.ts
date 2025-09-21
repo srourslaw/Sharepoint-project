@@ -46,22 +46,25 @@ export function createAIFeaturesRoutes(
 ): Router {
   const router = Router();
 
-  // Initialize AI service - prefer OpenAI if available, fallback to GEMINI
+  // Initialize AI services - create both OpenAI and Gemini instances
   let aiService: GeminiService | OpenAIService;
-  
+  let openaiService: OpenAIService | null = null;
+  let geminiService: GeminiService | null = null;
+
+  // Initialize both services if API keys are available
   if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '') {
-    console.log('🤖 Using OpenAI service');
-    aiService = new OpenAIService({
+    openaiService = new OpenAIService({
       apiKey: process.env.OPENAI_API_KEY,
-      model: process.env.OPENAI_MODEL || 'gpt-4',
-      maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || '2048'),
+      model: process.env.OPENAI_MODEL || 'gpt-5-nano',
+      maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || '8192'),
       temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '0.7'),
       timeout: parseInt(process.env.AI_TIMEOUT || '30000')
     });
-  } else {
-    console.log('🤖 Using GEMINI service');
-    aiService = new GeminiService({
-      apiKey: process.env.GEMINI_API_KEY!,
+  }
+
+  if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== '') {
+    geminiService = new GeminiService({
+      apiKey: process.env.GEMINI_API_KEY,
       model: process.env.GEMINI_MODEL || 'gemini-pro',
       defaultOptions: {},
       rateLimiting: {
@@ -79,6 +82,33 @@ export function createAIFeaturesRoutes(
       streamingEnabled: true
     });
   }
+
+  // Set default service - prefer OpenAI if available
+  if (openaiService) {
+    console.log('🤖 Using OpenAI service as default');
+    aiService = openaiService;
+  } else if (geminiService) {
+    console.log('🤖 Using GEMINI service as default');
+    aiService = geminiService;
+  } else {
+    throw new Error('No AI service available - please configure OpenAI or Gemini API keys');
+  }
+
+  // Function to get AI service by type
+  const getAIService = (modelType: string = 'default'): GeminiService | OpenAIService => {
+    switch (modelType) {
+      case 'openai':
+        if (!openaiService) throw new Error('OpenAI service not available');
+        return openaiService;
+      case 'gemini':
+        if (!geminiService) throw new Error('Gemini service not available');
+        return geminiService;
+      case 'claude':
+        throw new Error('Claude AI not implemented yet');
+      default:
+        return aiService;
+    }
+  };
 
   const analysisService = new DocumentAnalysisService(aiService as any);
   const summarizationService = new DocumentSummarizationService(aiService as any, analysisService);
@@ -131,7 +161,10 @@ export function createAIFeaturesRoutes(
   // Document Summarization Endpoints
   router.post('/summarize', async (req: Request, res: Response) => {
     try {
-      const { text, documentIds, summaryType, length, ...options }: EnhancedSummarizationRequest & { documentIds?: string[] } = req.body;
+      const { text, documentIds, summaryType, length, aiModel, ...options }: EnhancedSummarizationRequest & { documentIds?: string[]; aiModel?: string } = req.body;
+
+      // Get the appropriate AI service based on the request
+      const selectedAIService = aiModel ? getAIService(aiModel) : aiService;
 
       let textContent = text;
 
@@ -215,8 +248,13 @@ export function createAIFeaturesRoutes(
         });
       }
 
-      console.log('🤖 AI Summarize: Sending to GEMINI for summarization...');
-      const result = await summarizationService.summarizeDocument({
+      console.log(`🤖 AI Summarize: Sending to ${aiModel || 'default'} for summarization...`);
+
+      // Create a temporary summarization service with the selected AI model
+      const tempAnalysisService = new DocumentAnalysisService(selectedAIService as any);
+      const tempSummarizationService = new DocumentSummarizationService(selectedAIService as any, tempAnalysisService);
+
+      const result = await tempSummarizationService.summarizeDocument({
         text: sanitizedResult.sanitizedValue,
         summaryType: summaryType || 'abstractive',
         length: length || 'medium',
@@ -1250,6 +1288,59 @@ I don't have any document content available to analyze. Please provide documents
         error: {
           code: 'QUICK_ACTIONS_ERROR',
           message: 'Failed to retrieve quick actions',
+          details: error.message
+        }
+      });
+    }
+  });
+
+  /**
+   * GET /api/ai/models
+   * Get available AI models and their status
+   */
+  router.get('/models', async (req: Request, res: Response) => {
+    try {
+      const models = [
+        {
+          id: 'openai',
+          name: 'OpenAI (GPT-5-nano)',
+          provider: 'OpenAI',
+          description: 'Advanced AI model for comprehensive document analysis',
+          available: !!openaiService,
+          default: !!openaiService,
+          color: '#00A67E'
+        },
+        {
+          id: 'gemini',
+          name: 'Gemini AI',
+          provider: 'Google',
+          description: 'Google\'s advanced AI model for document processing',
+          available: !!geminiService,
+          default: !openaiService && !!geminiService,
+          color: '#4285F4'
+        },
+        {
+          id: 'claude',
+          name: 'Claude AI',
+          provider: 'Anthropic',
+          description: 'Anthropic\'s Claude AI for intelligent analysis',
+          available: false,
+          default: false,
+          color: '#FF6B35'
+        }
+      ];
+
+      res.json({
+        success: true,
+        data: models,
+        message: 'Available AI models retrieved successfully'
+      });
+
+    } catch (error: any) {
+      res.status(500).json({
+        error: {
+          code: 'MODELS_ERROR',
+          message: 'Failed to retrieve AI models',
           details: error.message
         }
       });

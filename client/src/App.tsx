@@ -10,6 +10,7 @@ import { SharePointTest } from './components/SharePointTest';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { MSALAuthProvider } from './contexts/MSALAuthContext';
 import { DynamicThemeProvider } from './contexts/DynamicThemeContext';
+import { AIModelProvider } from './contexts/AIModelContext';
 import { AuthLoadingSpinner } from './components/auth/AuthLoadingSpinner';
 import { AuthError } from './components/auth/AuthError';
 import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
@@ -97,13 +98,15 @@ function App() {
   return (
     <GlobalErrorBoundary>
       <DynamicThemeProvider>
-        <MSALAuthProvider>
-          <AuthProvider>
-            <Router>
-              <AppRoutes />
-            </Router>
-          </AuthProvider>
-        </MSALAuthProvider>
+        <AIModelProvider>
+          <MSALAuthProvider>
+            <AuthProvider>
+              <Router>
+                <AppRoutes />
+              </Router>
+            </AuthProvider>
+          </MSALAuthProvider>
+        </AIModelProvider>
       </DynamicThemeProvider>
     </GlobalErrorBoundary>
   );

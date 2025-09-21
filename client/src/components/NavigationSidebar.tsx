@@ -16,6 +16,10 @@ import {
   InputAdornment,
   Chip,
   alpha,
+  FormControl,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
 } from '@mui/material';
 import {
   ExpandLess,
@@ -35,10 +39,10 @@ import {
   Dashboard as DashboardIcon,
 } from '@mui/icons-material';
 
-import { SharePointSite, SharePointLibrary, NavigationItem } from '../types';
-import { useSharePointData } from '../hooks/useSharePointData';
+import { NavigationItem } from '../types';
 import { useRecentFiles } from '../hooks/useRecentFiles';
 import { useDynamicTheme } from '../contexts/DynamicThemeContext';
+import { useAIModel, AI_MODELS } from '../contexts/AIModelContext';
 
 interface NavigationSidebarProps {
   onNavigate: (path: string) => void;
@@ -53,13 +57,13 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['sites', 'main-navigation']));
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['main-navigation']));
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { sites, libraries, loading, error, refreshData } = useSharePointData();
   const { recentCount, loading: recentLoading } = useRecentFiles();
   const { currentTheme, isDarkMode } = useDynamicTheme();
+  const { selectedModel, setSelectedModel, modelConfig } = useAIModel();
 
   // Handle sidebar resize
   useEffect(() => {
@@ -78,6 +82,11 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     } else {
       setSidebarWidth(60);
     }
+  };
+
+  const handleAIModelChange = (event: SelectChangeEvent) => {
+    const newModel = event.target.value as 'gemini' | 'openai' | 'claude';
+    setSelectedModel(newModel);
   };
 
   const handleItemClick = (item: NavigationItem) => {
@@ -149,39 +158,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         path: '/people',
       }
     );
-
-    if (sites.length > 0) {
-      const sitesNode: NavigationItem = {
-        id: 'sites',
-        label: 'SharePoint Sites',
-        icon: 'site',
-        children: [],
-      };
-
-      sites.forEach((site: SharePointSite) => {
-        const siteLibraries = libraries.filter(
-          (lib: SharePointLibrary) => lib.parentSite?.id === site.id
-        );
-
-        const siteNode: NavigationItem = {
-          id: `site-${site.id}`,
-          label: site.displayName,
-          icon: 'site',
-          path: `/sites/${site.id}`,
-          children: siteLibraries.map((library: SharePointLibrary) => ({
-            id: `library-${library.id}`,
-            label: library.displayName,
-            icon: 'library',
-            path: `/sites/${site.id}/libraries/${library.id}`,
-            badge: library.itemCount > 0 ? library.itemCount.toString() : undefined,
-          })),
-        };
-
-        sitesNode.children!.push(siteNode);
-      });
-
-      tree.push(sitesNode);
-    }
 
     // Add another separator and settings at the bottom
     tree.push({
@@ -303,6 +279,9 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   height: 20,
                   fontSize: '0.7rem',
                   ml: 1,
+                  borderColor: isActive ? 'white' : currentTheme.primary,
+                  color: isActive ? 'white' : currentTheme.primary,
+                  backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
                 }}
               />
             )}
@@ -413,15 +392,84 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         )}
       </Box>
 
+      {/* AI Model Selector */}
+      {!isCollapsed && (
+        <Box sx={{ px: 1.5, pb: 1 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: isDarkMode ? 'rgba(148, 163, 184, 0.8)' : 'rgba(0, 0, 0, 0.6)',
+              mb: 0.5,
+              display: 'block',
+              fontSize: '0.75rem',
+              fontWeight: 500
+            }}
+          >
+            AI Model
+          </Typography>
+          <FormControl fullWidth size="small">
+            <Select
+              value={selectedModel}
+              onChange={handleAIModelChange}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.8)' : 'white',
+                  color: isDarkMode ? '#f8fafc' : 'inherit',
+                  fontSize: '0.875rem',
+                  '& fieldset': {
+                    borderColor: isDarkMode ? 'rgba(148, 163, 184, 0.3)' : 'rgba(0, 0, 0, 0.23)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: currentTheme.primary,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: currentTheme.primary,
+                  },
+                },
+                '& .MuiSelect-select': {
+                  color: isDarkMode ? '#f8fafc' : 'inherit',
+                  py: 1,
+                },
+                '& .MuiSelect-icon': {
+                  color: isDarkMode ? 'rgba(148, 163, 184, 0.7)' : 'rgba(0, 0, 0, 0.54)',
+                },
+              }}
+            >
+              {Object.entries(AI_MODELS).map(([key, model]) => (
+                <MenuItem
+                  key={key}
+                  value={key}
+                  disabled={!model.available}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, opacity: model.available ? 1 : 0.5 }}>
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: model.color,
+                      }}
+                    />
+                    <Box>
+                      <Typography variant="body2">{model.displayName}</Typography>
+                      {!model.available && (
+                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                          Coming Soon
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      )}
+
       {/* Navigation Tree */}
       <Box sx={{ flexGrow: 1, overflow: 'auto', px: isCollapsed ? 0.5 : 0 }}>
-        {error && !isCollapsed && (
-          <Alert severity="error" sx={{ m: 1.5, borderRadius: '8px' }}>
-            Failed to load SharePoint data
-          </Alert>
-        )}
-
-        {loading ? (
+        {recentLoading ? (
           <Box sx={{ p: isCollapsed ? 0.5 : 1.5 }}>
             {[...Array(6)].map((_, index) => (
               <Skeleton

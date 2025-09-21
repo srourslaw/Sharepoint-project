@@ -731,6 +731,7 @@ export class ContentExtractionService {
 
   private parseExtractionResponse(responseText: string, extractionType: string): ExtractionItem[] {
     try {
+      // First try to parse as JSON
       return JSON.parse(responseText).map((item: any) => ({
         text: item.text,
         type: item.type || extractionType,
@@ -745,6 +746,46 @@ export class ContentExtractionService {
       }));
     } catch (error: any) {
       console.error('Error parsing extraction response:', error);
+      console.log('Response text was:', responseText.substring(0, 200) + '...');
+
+      // If JSON parsing fails, try to extract meaningful content from the text response
+      if (responseText && responseText.length > 0) {
+        // Try to find JSON-like content in the response
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          try {
+            return JSON.parse(jsonMatch[0]).map((item: any) => ({
+              text: item.text,
+              type: item.type || extractionType,
+              confidence: item.confidence || 85,
+              startIndex: item.startIndex,
+              endIndex: item.endIndex,
+              context: item.context,
+              metadata: item.metadata || {},
+              category: item.category,
+              importance: item.importance || item.confidence,
+              frequency: item.frequency || 1
+            }));
+          } catch (jsonError) {
+            console.warn('Could not parse extracted JSON:', jsonError);
+          }
+        }
+
+        // As a last resort, create a basic extraction from the text response
+        return [{
+          text: responseText.substring(0, 100).trim() + '...',
+          type: extractionType,
+          confidence: 70,
+          startIndex: 0,
+          endIndex: 100,
+          context: responseText.substring(0, 200),
+          metadata: { source: 'ai_text_response' },
+          category: 'ai_generated',
+          importance: 70,
+          frequency: 1
+        }];
+      }
+
       return [];
     }
   }

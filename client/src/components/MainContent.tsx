@@ -25,6 +25,7 @@ import {
   Alert,
   TextField,
   InputAdornment,
+  alpha,
 } from '@mui/material';
 import {
   ViewModule as GridViewIcon,
@@ -55,6 +56,7 @@ import { formatFileSize, formatDate, getFileIcon } from '../utils/formatters';
 // Use the safe version that doesn't make problematic API calls
 import { useSharePointFiles } from '../hooks/useSharePointFiles';
 import { AIFeaturesPanel } from './AIFeaturesPanel';
+import { useDynamicTheme } from '../contexts/DynamicThemeContext';
 
 interface MainContentProps {
   currentPath: string;
@@ -72,6 +74,8 @@ export const MainContent: React.FC<MainContentProps> = ({
   onPreviewToggle,
 }) => {
   console.log('MainContent.step5 rendering...', JSON.stringify({ currentPath, selectedFiles: selectedFiles.length }, null, 2));
+
+  const { currentTheme } = useDynamicTheme();
 
   const [viewMode, setViewMode] = useState<ViewMode>({
     type: 'grid',
@@ -100,10 +104,20 @@ export const MainContent: React.FC<MainContentProps> = ({
     viewMode,
   });
 
-  // Filter files based on search query
-  const filteredFiles = files.filter(file =>
-    (file.displayName || file.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter files based on search query and sort alphabetically
+  const filteredFiles = files
+    .filter(file =>
+      (file.displayName || file.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      // Sort folders first, then files, both alphabetically
+      if (a.isFolder && !b.isFolder) return -1;
+      if (!a.isFolder && b.isFolder) return 1;
+
+      const nameA = (a.displayName || a.name || '').toLowerCase();
+      const nameB = (b.displayName || b.name || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
 
   const handleFileSelect = (fileId: string, isSelected: boolean) => {
     if (isSelected) {
@@ -297,13 +311,13 @@ export const MainContent: React.FC<MainContentProps> = ({
                   sx={{
                     p: { xs: 1, sm: 1.5 },
                     borderRadius: 2,
-                    backgroundColor: 'rgba(25, 118, 210, 0.04)',
-                    border: '1px solid rgba(25, 118, 210, 0.08)',
+                    backgroundColor: alpha(currentTheme.primary, 0.04),
+                    border: `1px solid ${alpha(currentTheme.primary, 0.08)}`,
                     transition: 'all 0.2s ease',
                     '& > *': {
                       fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
-                      color: 'primary.main',
-                      filter: 'drop-shadow(0 2px 4px rgba(25, 118, 210, 0.1))'
+                      color: currentTheme.primary,
+                      filter: `drop-shadow(0 2px 4px ${alpha(currentTheme.primary, 0.1)})`
                     }
                   }}
                 >

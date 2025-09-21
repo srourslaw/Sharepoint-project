@@ -324,10 +324,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => clearTimeout(timer);
   }, [handleOAuthCallback]);
 
-  // Periodic token refresh
+  // Periodic token refresh - DISABLED to prevent auto-page refreshes
   useEffect(() => {
     if (!state.isAuthenticated) return;
 
+    // COMMENTED OUT: This was causing page refreshes every 5 minutes
+    // Keeping auth checks but only on user interaction instead
+
+    /*
     const refreshInterval = setInterval(async () => {
       try {
         if (AuthStorage.shouldRevalidate()) {
@@ -339,6 +343,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, 5 * 60 * 1000); // Check every 5 minutes
 
     return () => clearInterval(refreshInterval);
+    */
+
+    console.log('🔧 Periodic auth refresh disabled to prevent auto-page refreshes');
+
+    // Alternative: Check auth only on user activity (page focus, clicks)
+    const handleUserActivity = async () => {
+      try {
+        if (AuthStorage.shouldRevalidate()) {
+          console.log('👤 User activity detected, checking auth status...');
+          await checkAuthStatus();
+        }
+      } catch (error) {
+        console.error('User activity auth check failed:', error);
+      }
+    };
+
+    // Check auth when user focuses the window (switches back to tab)
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        handleUserActivity();
+      }
+    };
+
+    // Add event listeners for user activity
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
   }, [state.isAuthenticated, checkAuthStatus]);
 
   // Context value
