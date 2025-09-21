@@ -267,10 +267,13 @@ export const useRecentFiles = (): UseRecentFilesReturn => {
     console.log('🟡 useEffect triggered in useRecentFiles');
     refreshRecentFiles();
 
-    // Refresh recent files every 5 minutes
-    const interval = setInterval(refreshRecentFiles, 5 * 60 * 1000);
+    // DISABLED: Auto-refresh was causing page refreshes every 5 minutes
+    // Only refresh on user activity instead
+    // const interval = setInterval(refreshRecentFiles, 5 * 60 * 1000);
+    // return () => clearInterval(interval);
 
-    return () => clearInterval(interval);
+    console.log('🔧 useRecentFiles: Auto-refresh disabled to prevent page refreshes');
+    return () => {}; // Empty cleanup
   }, [refreshRecentFiles]);
 
   return {

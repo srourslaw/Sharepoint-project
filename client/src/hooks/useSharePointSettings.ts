@@ -223,10 +223,13 @@ export const useSharePointSettings = (): UseSharePointSettingsReturn => {
   useEffect(() => {
     fetchSettings();
     
-    // Refresh every 30 minutes
-    const interval = setInterval(fetchSettings, 30 * 60 * 1000);
-    
-    return () => clearInterval(interval);
+    // DISABLED: Auto-refresh was causing page refreshes every 30 minutes
+    // Settings will refresh only on user navigation or manual refresh
+    // const interval = setInterval(fetchSettings, 30 * 60 * 1000);
+    // return () => clearInterval(interval);
+
+    console.log('🔧 useSharePointSettings: Auto-refresh disabled to prevent page refreshes');
+    return () => {}; // Empty cleanup
   }, []);
 
   // Track changes to settings

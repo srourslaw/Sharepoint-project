@@ -216,11 +216,14 @@ export const useSharePointPeople = (): UseSharePointPeopleReturn => {
 
   useEffect(() => {
     fetchPeopleData();
-    
-    // Refresh every 10 minutes
-    const interval = setInterval(fetchPeopleData, 10 * 60 * 1000);
-    
-    return () => clearInterval(interval);
+
+    // DISABLED: Auto-refresh was causing page refreshes every 10 minutes
+    // People data will refresh only on user navigation or manual refresh
+    // const interval = setInterval(fetchPeopleData, 10 * 60 * 1000);
+    // return () => clearInterval(interval);
+
+    console.log('🔧 useSharePointPeople: Auto-refresh disabled to prevent page refreshes');
+    return () => {}; // Empty cleanup
   }, []);
 
   return {

@@ -218,10 +218,13 @@ export const useSharePointAnalytics = (): UseSharePointAnalyticsReturn => {
   useEffect(() => {
     fetchAnalytics();
     
-    // Refresh analytics every 5 minutes
-    const interval = setInterval(fetchAnalytics, 5 * 60 * 1000);
-    
-    return () => clearInterval(interval);
+    // DISABLED: Auto-refresh was causing page refreshes every 5 minutes
+    // Analytics will refresh only on user navigation or manual refresh
+    // const interval = setInterval(fetchAnalytics, 5 * 60 * 1000);
+    // return () => clearInterval(interval);
+
+    console.log('🔧 useSharePointAnalytics: Auto-refresh disabled to prevent page refreshes');
+    return () => {}; // Empty cleanup
   }, []);
 
   return {
