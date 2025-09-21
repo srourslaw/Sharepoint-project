@@ -32,22 +32,29 @@ export const AnalyticsPage: React.FC = () => {
   const { currentTheme } = useDynamicTheme();
   const { analytics, loading, error, refreshAnalytics } = useSharePointAnalytics();
 
-  // Generate chart data with numeric x-axis and custom labels
+  // Generate chart data with actual dates in dd/mm/yyyy format
   const usageTrendsData = useMemo((): ChartSeries[] => {
-    // Use numeric indices with custom tick formatter for proper day labels
-    const chartData = [
-      { x: 1, y: 1 },
-      { x: 2, y: 0 },
-      { x: 3, y: 0 },
-      { x: 4, y: 6 },
-      { x: 5, y: 4 },
-      { x: 6, y: 5 },
-      { x: 7, y: 1 }
-    ];
+    // Generate last 7 days with actual dates
+    const today = new Date();
+    const last7Days = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+
+      // Sample data - in real app this would come from analytics API
+      const sampleValues = [1, 0, 0, 6, 4, 5, 1];
+
+      last7Days.push({
+        x: formattedDate,
+        y: sampleValues[6 - i]
+      });
+    }
 
     return [{
       name: 'File Activity',
-      data: chartData,
+      data: last7Days,
       color: currentTheme.primary,
       type: 'line' as const
     }];
@@ -543,6 +550,25 @@ export const AnalyticsPage: React.FC = () => {
             <DocumentUsageChart
               data={usageTrendsData}
               timeframe="Last 7 days"
+              onRefresh={refreshAnalytics}
+              onExport={() => {
+                console.log('📊 Exporting Usage Trends Analysis...');
+                const exportData = {
+                  title: 'Usage Trends Analysis',
+                  timeframe: 'Last 7 days',
+                  data: usageTrendsData,
+                  exportDate: new Date().toISOString()
+                };
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `usage-trends-analysis-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}
             />
           </Paper>
         </Grid>

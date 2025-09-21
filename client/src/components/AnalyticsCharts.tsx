@@ -538,15 +538,51 @@ export const AnalyticsChart: React.FC<AnalyticsChartProps> = ({
 export const DocumentUsageChart: React.FC<{
   data: ChartSeries[];
   timeframe?: string;
-}> = ({ data, timeframe = 'Last 30 days' }) => (
-  <AnalyticsChart
-    title="Document Usage Trends"
-    subtitle={timeframe}
-    type="line"
-    data={data}
-    height={400}
-  />
-);
+  onExport?: () => void;
+  onRefresh?: () => void;
+}> = ({ data, timeframe = 'Last 30 days', onExport, onRefresh }) => {
+
+  const handleExport = () => {
+    if (onExport) {
+      onExport();
+    } else {
+      // Default export functionality
+      console.log('📊 Exporting Document Usage Trends chart...');
+      const chartData = JSON.stringify(data, null, 2);
+      const blob = new Blob([chartData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `document-usage-trends-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      // Default refresh functionality
+      console.log('🔄 Refreshing Document Usage Trends chart...');
+      window.location.reload();
+    }
+  };
+
+  return (
+    <AnalyticsChart
+      title="Document Usage Trends"
+      subtitle={timeframe}
+      type="line"
+      data={data}
+      height={400}
+      onExport={handleExport}
+      onRefresh={handleRefresh}
+    />
+  );
+};
 
 export const AIInteractionChart: React.FC<{
   data: ChartSeries[];
