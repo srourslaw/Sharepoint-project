@@ -555,7 +555,7 @@ export const Dashboard: React.FC = () => {
         )}
         
         {/* Dynamic Content Based on Route */}
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', paddingBottom: '60px', height: 'calc(100vh - 120px)' }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
           {renderMainContent()}
         </Box>
       </Box>

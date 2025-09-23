@@ -307,7 +307,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
               <Typography variant="h6" gutterBottom sx={{ color: '#1976d2', mb: 2 }}>
                 📊 {String(file.name || file.displayName || 'Spreadsheet')}
               </Typography>
-              <Box sx={{ height: 'calc(100% - 60px)', width: '100%' }}>
+              <Box sx={{ height: '100%', width: '100%' }}>
                 <DataGrid
                   rows={gridData.rows}
                   columns={gridData.columns}
@@ -998,12 +998,23 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       {/* Content Area - Takes up remaining space */}
       <Box sx={{
         flex: 1,
-        overflow: 'hidden',
+        overflow: 'auto',
         backgroundColor: '#fff',
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0, // Allow flex item to shrink below content size
-        willChange: 'height'
+        willChange: 'height',
+        paddingBottom: '20px', // Add padding to ensure bottom content is visible
+        '&::-webkit-scrollbar': {
+          width: '8px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: '#f1f1f1',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: '#c1c1c1',
+          borderRadius: '4px',
+        },
       }}>
         {renderTabContent()}
       </Box>
