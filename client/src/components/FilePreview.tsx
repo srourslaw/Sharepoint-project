@@ -344,9 +344,6 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       // Fallback to iframe approach if parsing fails or no content
       console.log('📊 FilePreview: Using iframe fallback for Excel');
       const directUrl = `/api/sharepoint-advanced/files/${file.id}/content`;
-      const officeOnlineUrl = file.webUrl ?
-        `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file.webUrl)}` :
-        null;
 
       return (
         <Box sx={{
@@ -365,22 +362,16 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
             title={`Excel: ${String(file.name || file.displayName || 'Spreadsheet')}`}
             onLoad={() => console.log('📊 Excel iframe loaded successfully with direct API')}
             onError={(e) => {
-              console.error('📊 Excel direct API failed, trying Office Online fallback:', e);
+              console.error('📊 Excel direct API failed, showing download option:', e);
               const iframe = e.target as HTMLIFrameElement;
-              if (officeOnlineUrl && iframe.src !== officeOnlineUrl) {
-                console.log('📊 Switching to Office Online URL:', officeOnlineUrl);
-                iframe.src = officeOnlineUrl;
-              } else {
-                console.error('📊 No valid Office Online URL available');
-                const errorHtml = `
-                  <html><body style="padding:20px;font-family:Arial;">
-                    <h3>Spreadsheet Preview Unavailable</h3>
-                    <p>Unable to preview this Excel file. Please download it to view the content.</p>
-                    <p><a href="${directUrl}" download>Download File</a></p>
-                  </body></html>
-                `;
-                iframe.src = 'data:text/html,' + encodeURIComponent(errorHtml);
-              }
+              const errorHtml = `
+                <html><body style="padding:20px;font-family:Arial;">
+                  <h3>Spreadsheet Preview Unavailable</h3>
+                  <p>Unable to preview this Excel file. Please download it to view the content.</p>
+                  <p><a href="${directUrl}" download>Download File</a></p>
+                </body></html>
+              `;
+              iframe.src = 'data:text/html,' + encodeURIComponent(errorHtml);
             }}
           />
         </Box>
@@ -578,50 +569,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       console.log('📽️ FilePreview: Rendering PowerPoint with fallback strategies');
       console.log('📽️ FilePreview: file.webUrl:', file.webUrl);
 
-      // Fallback to Office Online preview
-      const officeOnlineUrl = file.webUrl ?
-        `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file.webUrl)}` :
-        null;
-
-      if (officeOnlineUrl) {
-        return (
-          <Box sx={{
-            width: '100%',
-            height: '100%',
-            overflow: 'auto',
-            '&::-webkit-scrollbar': {
-              width: '8px',
-              height: '8px',
-            },
-            '&::-webkit-scrollbar-track': {
-              background: '#f1f1f1',
-              borderRadius: '4px',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              background: '#c1c1c1',
-              borderRadius: '4px',
-              '&:hover': {
-                background: '#a8a8a8',
-              },
-            },
-          }}>
-            <iframe
-              src={officeOnlineUrl}
-              width="100%"
-              height="100%"
-              style={{
-                border: 'none',
-                display: 'block',
-                minHeight: '800px'
-              }}
-              title={`PowerPoint: ${String(file.name || file.displayName || 'Presentation')}`}
-              onLoad={() => console.log('📽️ PowerPoint Office Online loaded successfully')}
-            />
-          </Box>
-        );
-      }
-
-      // Final fallback - show download message
+      // Show download message when preview not available
       return (
         <Box sx={{ padding: 4, textAlign: 'center' }}>
           <Typography variant="h6" gutterBottom>
