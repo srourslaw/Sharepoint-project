@@ -824,7 +824,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         }}
       >
         <Typography variant="h6" sx={{ fontWeight: 600 }}>
-{String(file?.displayName || file?.name || 'File Preview')}
+          🚫 ONEDRIVE BANNER REMOVED: {String(file?.displayName || file?.name || 'File Preview')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <IconButton
