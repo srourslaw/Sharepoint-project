@@ -206,6 +206,9 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
           backgroundColor: '#f5f5f5',
           position: 'relative',
           p: 2,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
           '&::-webkit-scrollbar': {
             width: '8px',
             height: '8px',
@@ -226,13 +229,16 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
             src={imageUrl}
             alt={String(file.name || file.displayName || 'Image preview')}
             style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
               width: 'auto',
               height: 'auto',
-              minWidth: '100%',
               display: 'block',
               borderRadius: '8px',
               boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-              cursor: 'zoom-in'
+              cursor: 'zoom-in',
+              objectFit: 'contain',
+              margin: '20px auto'
             }}
             onLoad={() => console.log('🖼️ Image loaded successfully:', imageUrl)}
             onError={(e) => {
@@ -1004,7 +1010,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         flexDirection: 'column',
         minHeight: 0, // Allow flex item to shrink below content size
         willChange: 'height',
-        paddingBottom: '20px', // Add padding to ensure bottom content is visible
+        paddingBottom: '40px', // Add padding to ensure bottom content is visible
         '&::-webkit-scrollbar': {
           width: '8px',
         },
