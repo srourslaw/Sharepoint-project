@@ -1010,7 +1010,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         flexDirection: 'column',
         minHeight: 0, // Allow flex item to shrink below content size
         willChange: 'height',
-        paddingBottom: '40px', // Add padding to ensure bottom content is visible
+        paddingBottom: '100px', // Add padding to ensure bottom content is visible
         '&::-webkit-scrollbar': {
           width: '8px',
         },
