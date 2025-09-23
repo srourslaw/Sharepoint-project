@@ -12,12 +12,12 @@ export const BrandWatermark: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         gap: 0.5,
-        opacity: 0.6,
+        opacity: 0.2,
         zIndex: 1000,
         pointerEvents: 'none',
         transition: 'opacity 0.3s ease',
         '&:hover': {
-          opacity: 0.8,
+          opacity: 0.3,
         }
       }}
     >
@@ -26,17 +26,18 @@ export const BrandWatermark: React.FC = () => {
         src="https://www.thakralone.com/wp-content/uploads/2020/08/Thakral-One-Logo.png"
         alt="Thakral One"
         sx={{
-          height: 16,
-          filter: 'grayscale(1) opacity(0.7)',
+          height: 12,
+          filter: 'grayscale(1) opacity(0.4)',
         }}
       />
       <Typography
         variant="caption"
         sx={{
-          fontSize: '0.65rem',
+          fontSize: '0.5rem',
           color: 'text.secondary',
-          fontWeight: 500,
-          letterSpacing: '0.02em'
+          fontWeight: 400,
+          letterSpacing: '0.02em',
+          opacity: 0.6
         }}
       >
         Thakral One AI
