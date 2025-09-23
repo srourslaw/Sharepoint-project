@@ -57,7 +57,7 @@ export function createAIFeaturesRoutes(
       apiKey: process.env.OPENAI_API_KEY,
       model: process.env.OPENAI_MODEL || 'gpt-5-nano',
       maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || '8192'),
-      temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '0.7'),
+      temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '1.0'), // gpt-5-nano only supports 1.0
       timeout: parseInt(process.env.AI_TIMEOUT || '30000')
     });
   }
@@ -568,7 +568,7 @@ I don't have any document content available to analyze. Please provide documents
       const aiResponse = await aiService.generateText({
         prompt,
         maxTokens: 500,
-        temperature: 0.7
+        temperature: 1.0 // gpt-5-nano only supports 1.0
       });
 
       console.log('✅ AI Chat: Received response from AI, length:', aiResponse.text.length);

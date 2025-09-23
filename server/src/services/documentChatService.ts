@@ -152,7 +152,7 @@ export class DocumentChatService extends EventEmitter {
       const geminiResponse = await this.geminiService.generateText({
         prompt,
         maxTokens: this.calculateMaxTokens(request.answerFormat || 'conversational'),
-        temperature: 0.7,
+        temperature: 1.0, // gpt-5-nano only supports temperature 1.0
         sessionId: session.sessionId
       });
 
@@ -245,7 +245,7 @@ export class DocumentChatService extends EventEmitter {
         prompt,
         context: session.context,
         options: {
-          temperature: 0.7,
+          temperature: 1.0, // gpt-5-nano only supports temperature 1.0
           maxTokens: this.calculateMaxTokens(request.answerFormat || 'conversational')
         },
         sessionId: session.sessionId

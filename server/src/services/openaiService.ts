@@ -29,7 +29,7 @@ export class OpenAIService extends EventEmitter {
     this.config = {
       model: 'gpt-5-nano', // Using gpt-5-nano as requested
       maxTokens: 2048,
-      temperature: 0.7,
+      temperature: 1.0, // gpt-5-nano only supports default temperature of 1.0
       timeout: 30000,
       ...config
     };
@@ -63,7 +63,7 @@ export class OpenAIService extends EventEmitter {
             content: request.prompt
           }
         ],
-        max_tokens: request.maxTokens || this.config.maxTokens,
+        max_completion_tokens: request.maxTokens || this.config.maxTokens,
         temperature: request.temperature || this.config.temperature,
         stream: false
       });
@@ -142,7 +142,7 @@ export class OpenAIService extends EventEmitter {
             content: request.prompt
           }
         ],
-        max_tokens: request.maxTokens || this.config.maxTokens,
+        max_completion_tokens: request.maxTokens || this.config.maxTokens,
         temperature: request.temperature || this.config.temperature,
         stream: true
       });

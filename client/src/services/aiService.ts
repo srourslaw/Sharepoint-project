@@ -13,156 +13,204 @@ export interface AIResponse {
 }
 
 class AIService {
-  private openaiKey: string;
-  private geminiKey: string;
-
-  // Mock file database has been removed - this service now relies on real SharePoint files
-
-  // Mock file content has been removed - this service now relies on real SharePoint file content
+  private baseUrl: string;
 
   constructor() {
-    // Get API keys from environment variables (configured via backend)
-    this.openaiKey = process.env.REACT_APP_OPENAI_API_KEY || '';
-    this.geminiKey = process.env.REACT_APP_GEMINI_API_KEY || '';
+    // Use backend API instead of direct OpenAI/Gemini calls
+    this.baseUrl = process.env.NODE_ENV === 'production'
+      ? window.location.origin
+      : 'http://localhost:3001';
   }
 
-  private getDocumentContent(fileId: string): string | null {
-    // Mock data has been removed - this should now fetch real content from SharePoint
-    return null;
-  }
-
-  private getDocumentFileName(fileId: string): string | null {
-    // Mock data has been removed - this should now fetch real file names from SharePoint
-    return null;
-  }
-
-  async sendMessageToOpenAI(message: string, documentContext?: string, selectedFileName = 'Selected Document'): Promise<AIResponse> {
+  /**
+   * Start a chat session with document analysis
+   */
+  async startChatSession(documentIds: string[], title?: string) {
     try {
-      const systemPrompt = documentContext 
-        ? `You are an AI assistant helping analyze SharePoint documents. Here is the document context:\n\n${documentContext}\n\nPlease provide helpful insights based on this context and the user's question.`
-        : 'You are an AI assistant helping with SharePoint document management and analysis.';
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(`${this.baseUrl}/api/ai/chat/start`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.openaiKey}`,
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
-          model: 'gpt-4',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: message }
-          ],
-          max_tokens: 500,
-          temperature: 0.7,
+          documentIds,
+          title: title || 'Document Chat'
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to start chat session:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a message to an existing chat session
+   */
+  async sendChatMessage(sessionId: string, message: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/ai/chat/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          sessionId,
+          message
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      const content = data.choices[0]?.message?.content || 'I apologize, but I could not generate a response.';
 
+      // Convert backend response to AIResponse format
       return {
-        content,
+        content: data.data?.message?.content || 'No response received',
         confidence: 0.9,
-        sourceReferences: documentContext ? [{
-          fileId: 'document-1',
-          fileName: selectedFileName,
-          snippet: documentContext.substring(0, 150) + '...',
-          confidence: 0.85,
-          relevanceScore: 0.9
-        }] : undefined
+        sourceReferences: [] // Could be enhanced with actual source references
       };
     } catch (error) {
-      console.error('OpenAI API error:', error);
-      throw error;
-    }
-  }
+      console.error('Failed to send chat message:', error);
 
-  async sendMessageToGemini(message: string, documentContext?: string, selectedFileName = 'Selected Document'): Promise<AIResponse> {
-    try {
-      const prompt = documentContext 
-        ? `Context from SharePoint documents:\n\n${documentContext}\n\nUser question: ${message}\n\nPlease provide a helpful response based on the document context.`
-        : message;
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${this.geminiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 500,
-          }
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      const content = data.candidates[0]?.content?.parts[0]?.text || 'I apologize, but I could not generate a response.';
-
+      // Return user-friendly error message
       return {
-        content,
-        confidence: 0.88,
-        sourceReferences: documentContext ? [{
-          fileId: 'document-1',
-          fileName: selectedFileName,
-          snippet: documentContext.substring(0, 150) + '...',
-          confidence: 0.8,
-          relevanceScore: 0.85
-        }] : undefined
-      };
-    } catch (error) {
-      console.error('Gemini API error:', error);
-      throw error;
-    }
-  }
-
-  async sendMessage(message: string, documentIds?: string[], useOpenAI = true): Promise<AIResponse> {
-    // Create real document context by fetching actual content
-    let documentContext: string | undefined;
-    let selectedFileName = 'Selected Documents';
-    
-    if (documentIds?.length) {
-      const documentContents = documentIds.map(id => {
-        const content = this.getDocumentContent(id);
-        const fileName = this.getDocumentFileName(id);
-        return content ? `=== ${fileName} ===\n${content}\n` : null;
-      }).filter(Boolean);
-      
-      if (documentContents.length > 0) {
-        documentContext = `ACTUAL DOCUMENT CONTENT:\n\n${documentContents.join('\n')}`;
-        selectedFileName = this.getDocumentFileName(documentIds[0]) || 'Selected Document';
-      }
-    }
-
-    try {
-      if (useOpenAI) {
-        return await this.sendMessageToOpenAI(message, documentContext, selectedFileName);
-      } else {
-        return await this.sendMessageToGemini(message, documentContext, selectedFileName);
-      }
-    } catch (error) {
-      // Fallback to local analysis if API fails
-      console.warn('AI API failed, using fallback analysis:', error);
-      
-      // Return error message when AI API fails - no mock content
-      return {
-        content: "AI service is currently unavailable. Please try again in a moment.",
+        content: "I'm experiencing some technical difficulties. Please try again in a moment.",
         confidence: 0.0,
         sourceReferences: undefined
       };
+    }
+  }
+
+  /**
+   * Send message with document analysis (simplified interface)
+   */
+  async sendMessage(message: string, documentIds?: string[], useOpenAI = true): Promise<AIResponse> {
+    try {
+      if (!documentIds || documentIds.length === 0) {
+        // Simple message without documents
+        return {
+          content: "Please select a document to analyze before asking questions.",
+          confidence: 0.0,
+          sourceReferences: undefined
+        };
+      }
+
+      // Start a chat session with the documents
+      const sessionData = await this.startChatSession(documentIds, 'Quick Analysis');
+      const sessionId = sessionData.data?.sessionId;
+
+      if (!sessionId) {
+        throw new Error('Failed to create chat session');
+      }
+
+      // Send the message to the session
+      return await this.sendChatMessage(sessionId, message);
+
+    } catch (error) {
+      console.error('AI service error:', error);
+
+      return {
+        content: "I'm experiencing some technical difficulties. Please try again in a moment.",
+        confidence: 0.0,
+        sourceReferences: undefined
+      };
+    }
+  }
+
+  /**
+   * Legacy methods for backward compatibility
+   */
+  async sendMessageToOpenAI(message: string, documentContext?: string, selectedFileName = 'Selected Document'): Promise<AIResponse> {
+    // Use the unified sendMessage method
+    return this.sendMessage(message, documentContext ? ['document-context'] : []);
+  }
+
+  async sendMessageToGemini(message: string, documentContext?: string, selectedFileName = 'Selected Document'): Promise<AIResponse> {
+    // Use the unified sendMessage method
+    return this.sendMessage(message, documentContext ? ['document-context'] : []);
+  }
+
+  /**
+   * Summarize documents using backend API
+   */
+  async summarizeDocuments(documentIds: string[], summaryType = 'abstractive', length = 'medium') {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/ai/summarize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          documentIds,
+          summaryType,
+          length
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to summarize documents:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get available AI models
+   */
+  async getAvailableModels() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/ai/models`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to get AI models:', error);
+      return { data: [] };
+    }
+  }
+
+  /**
+   * Health check for AI services
+   */
+  async healthCheck() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/ai/health`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('AI health check failed:', error);
+      return { status: 'unhealthy', error: error.message };
     }
   }
 }
