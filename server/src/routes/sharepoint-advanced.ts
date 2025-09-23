@@ -3370,37 +3370,30 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
                                officeMimeTypes.includes(mimeType);
 
           if (isOfficeFile) {
-            try {
-              // Get Microsoft Graph preview URL
-              console.log('🎯 Getting Microsoft Graph preview for Office file...');
-              const previewResponse = await graphClient.api(`/drives/${driveContext.id}/items/${fileId}/preview`).post({});
+            // SKIP Microsoft Graph preview API to avoid OneDrive banner
+            // Instead use direct content URL for cleaner preview experience
+            console.log('🚫 Skipping Microsoft Graph preview API to avoid OneDrive banner');
+            console.log('🎯 Using direct content URL for Office file preview');
 
-              if (previewResponse.getUrl) {
-                console.log('✅ Microsoft Graph preview URL obtained');
-                res.json({
-                  success: true,
-                  data: {
-                    fileId,
-                    fileName,
-                    mimeType,
-                    previewType: 'microsoft-office',
-                    previewUrl: previewResponse.getUrl,
-                    embedUrl: previewResponse.getUrl,
-                    downloadUrl: fileMetadata.webUrl,
-                    directPreview: true,
-                    metadata: {
-                      size: fileMetadata.size,
-                      lastModified: fileMetadata.lastModifiedDateTime,
-                      extension: fileExtension
-                    }
-                  }
-                });
-                return;
+            const contentUrl = `${req.protocol}://${req.get('host')}/api/sharepoint-advanced/files/${fileId}/content`;
+            res.json({
+              success: true,
+              data: {
+                fileId,
+                fileName,
+                mimeType,
+                previewType: 'office-direct',
+                contentUrl,
+                downloadUrl: fileMetadata.webUrl,
+                directPreview: false,
+                metadata: {
+                  size: fileMetadata.size,
+                  lastModified: fileMetadata.lastModifiedDateTime,
+                  extension: fileExtension
+                }
               }
-            } catch (previewError: any) {
-              console.error('❌ Microsoft Graph preview failed:', previewError.message);
-              // Fall back to alternative preview methods
-            }
+            });
+            return;
           }
 
           // Alternative preview methods for different file types
