@@ -6,7 +6,7 @@ export const BrandWatermark: React.FC = () => {
     <Box
       sx={{
         position: 'fixed',
-        bottom: 16,
+        bottom: 100,
         left: '50%',
         transform: 'translateX(-50%)',
         display: 'flex',
