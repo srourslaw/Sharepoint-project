@@ -8,7 +8,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Dashboard } from './components/Dashboard';
 import { SharePointTest } from './components/SharePointTest';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { MSALAuthProvider } from './contexts/MSALAuthContext';
+import { StatePersistenceProvider } from './contexts/StatePersistenceContext';
 import { DynamicThemeProvider } from './contexts/DynamicThemeContext';
 import { AIModelProvider } from './contexts/AIModelContext';
 import { AuthLoadingSpinner } from './components/auth/AuthLoadingSpinner';
@@ -97,17 +97,17 @@ const AppRoutes: React.FC = () => {
 function App() {
   return (
     <GlobalErrorBoundary>
-      <DynamicThemeProvider>
-        <AIModelProvider>
-          <MSALAuthProvider>
+      <StatePersistenceProvider>
+        <DynamicThemeProvider>
+          <AIModelProvider>
             <AuthProvider>
               <Router>
                 <AppRoutes />
               </Router>
             </AuthProvider>
-          </MSALAuthProvider>
-        </AIModelProvider>
-      </DynamicThemeProvider>
+          </AIModelProvider>
+        </DynamicThemeProvider>
+      </StatePersistenceProvider>
     </GlobalErrorBoundary>
   );
 }

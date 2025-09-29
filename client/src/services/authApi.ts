@@ -8,7 +8,18 @@ import type {
 } from '../types/auth';
 import { AuthStorage } from '../utils/authStorage';
 
-const API_BASE_URL = (window as any).__RUNTIME_CONFIG__?.REACT_APP_API_BASE_URL || 'http://localhost:3001';
+// Dynamic API base URL detection
+const getApiBaseUrl = (): string => {
+  // For development with proxy, use relative URLs
+  if (import.meta.env.DEV) {
+    return '';  // Vite proxy will handle /auth and /api requests
+  }
+
+  // For production or if runtime config is available
+  return (window as any).__RUNTIME_CONFIG__?.REACT_APP_API_BASE_URL || 'http://localhost:3001';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Authentication API service

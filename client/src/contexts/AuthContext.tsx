@@ -159,21 +159,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  // Get dynamic API base URL based on current environment
+  const getApiBaseUrl = useCallback((): string => {
+    // For development with proxy, use relative URLs
+    if (import.meta.env.DEV) {
+      return '';  // Vite proxy will handle /auth and /api requests
+    }
+
+    // For production or if runtime config is available
+    return window.__RUNTIME_CONFIG__?.REACT_APP_API_BASE_URL || 'http://localhost:3001';
+  }, []);
+
   // Login function - redirects to Microsoft OAuth
   const login = useCallback(async (): Promise<void> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
 
-      // Redirect to the OAuth login endpoint
-      const apiBaseUrl = window.__RUNTIME_CONFIG__?.REACT_APP_API_BASE_URL || 'http://localhost:3001';
-      window.location.href = `${apiBaseUrl}/auth/login`;
-      
+      // Use dynamic API base URL
+      const apiBaseUrl = getApiBaseUrl();
+      const loginUrl = `${apiBaseUrl}/auth/login`;
+
+      console.log('🔐 Redirecting to login:', loginUrl);
+      window.location.href = loginUrl;
+
     } catch (error) {
       console.error('Login failed:', error);
       dispatch({ type: 'SET_ERROR', payload: error as AuthError });
     }
-  }, []);
+  }, [getApiBaseUrl]);
 
   // Logout function
   const logout = useCallback(async (): Promise<void> => {
@@ -296,25 +310,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const searchString = window?.location?.search;
         if (searchString && (searchString.includes('sessionId=') || searchString.includes('code='))) {
-          console.log('OAuth callback detected, processing...');
+          console.log('🔄 OAuth callback detected, processing...');
+          dispatch({ type: 'SET_LOADING', payload: true });
           await handleOAuthCallback();
           return; // Don't run normal initialization if handling callback
         }
-        
+
         // Normal initialization if no callback parameters
+        console.log('🔍 Checking authentication status...');
         dispatch({ type: 'SET_LOADING', payload: true });
-        
-        // Use AuthApi.getAuthStatus() which includes session ID headers
-        const result = await AuthApi.getAuthStatus();
-        
-        if (result && result.authenticated && result.user) {
-          dispatch({ type: 'SET_USER', payload: result.user });
+
+        // Check if we have a valid session in storage first
+        if (AuthStorage.isSessionValid()) {
+          console.log('✅ Valid session found in storage');
+
+          // Use AuthApi.getAuthStatus() which includes session ID headers
+          const result = await AuthApi.getAuthStatus();
+
+          if (result && result.authenticated && result.user) {
+            console.log('✅ User authenticated:', result.user.displayName);
+            dispatch({ type: 'SET_USER', payload: result.user });
+          } else {
+            console.log('❌ Session invalid, clearing auth');
+            AuthStorage.clearSession();
+            dispatch({ type: 'CLEAR_AUTH' });
+          }
         } else {
+          console.log('❌ No valid session found');
           dispatch({ type: 'CLEAR_AUTH' });
         }
-        
+
       } catch (error: any) {
-        console.error('Auth initialization failed:', error);
+        console.error('❌ Auth initialization failed:', error);
+
+        // Don't clear session on network errors, only on auth errors
+        if (error?.statusCode === 401 || error?.statusCode === 403) {
+          AuthStorage.clearSession();
+        }
+
         dispatch({ type: 'CLEAR_AUTH' });
       }
     };
