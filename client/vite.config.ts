@@ -16,7 +16,7 @@ export default defineConfig({
 
   // Development server configuration
   server: {
-    port: 8080, // Default port, will auto-increment if occupied
+    port: 8081, // Use 8081 since 8080 is occupied
     host: true, // Allow external connections
     open: false, // Don't auto-open browser
     strictPort: false, // Allow port auto-increment
