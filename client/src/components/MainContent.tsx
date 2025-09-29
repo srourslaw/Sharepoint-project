@@ -228,10 +228,10 @@ export const MainContent: React.FC<MainContentProps> = ({
   };
 
   const renderGridView = () => (
-    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, bgcolor: 'background.default', minHeight: '100vh' }}>
-      <Grid container spacing={{ xs: 3, sm: 4, md: 4, lg: 5 }} sx={{ mb: 4 }}>
+    <Box sx={{ p: { xs: 1.5, sm: 2, md: 2.5 }, bgcolor: 'background.default', minHeight: '100vh' }}>
+      <Grid container spacing={{ xs: 2, sm: 2.5, md: 3, lg: 3 }} sx={{ mb: 3 }}>
         {filteredFiles.map((file) => (
-        <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={file.id}>
+        <Grid item xs={6} sm={4} md={3} lg={2.4} xl={2} key={file.id}>
           <Card
             sx={{
               cursor: 'pointer',
@@ -242,8 +242,8 @@ export const MainContent: React.FC<MainContentProps> = ({
               display: 'flex',
               flexDirection: 'column',
               height: 'auto',
-              minHeight: { xs: 180, sm: 200 },
-              maxHeight: { xs: 220, sm: 240 },
+              minHeight: { xs: 140, sm: 150 },
+              maxHeight: { xs: 160, sm: 170 },
               width: '100%',
               borderRadius: 2,
               boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
@@ -269,14 +269,18 @@ export const MainContent: React.FC<MainContentProps> = ({
             }}
           >
             <CardContent sx={{
-              pb: 1,
+              p: { xs: 0.5, sm: 0.75 },
+              pb: { xs: 0.5, sm: 0.75 },
               flexGrow: 1,
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
-              minHeight: 0
+              minHeight: 0,
+              '&:last-child': {
+                pb: { xs: 0.5, sm: 0.75 }
+              }
             }}>
-              <Box display="flex" alignItems="center" mb={2}>
+              <Box display="flex" alignItems="center" mb={{ xs: 0.5, sm: 1 }}>
                 <Checkbox
                   checked={selectedFiles.includes(file.id)}
                   onChange={(e) => {
@@ -284,6 +288,7 @@ export const MainContent: React.FC<MainContentProps> = ({
                     handleFileSelect(file.id, e.target.checked);
                   }}
                   size="small"
+                  sx={{ p: 0.25 }}
                 />
                 <Box flexGrow={1} />
                 <IconButton
@@ -293,11 +298,12 @@ export const MainContent: React.FC<MainContentProps> = ({
                     setAnchorEl(e.currentTarget);
                     setSelectedFileForMenu(file);
                   }}
+                  sx={{ p: 0.25 }}
                 >
                   <MoreIcon fontSize="small" />
                 </IconButton>
               </Box>
-              
+
               <Box
                 display="flex"
                 flexDirection="column"
@@ -307,17 +313,17 @@ export const MainContent: React.FC<MainContentProps> = ({
                 flexGrow={1}
               >
                 <Box
-                  mb={{ xs: 1.5, sm: 2 }}
+                  mb={{ xs: 0.5, sm: 1 }}
                   sx={{
-                    p: { xs: 1, sm: 1.5 },
-                    borderRadius: 2,
+                    p: { xs: 0.5, sm: 0.75 },
+                    borderRadius: 1.5,
                     backgroundColor: alpha(currentTheme.primary, 0.04),
                     border: `1px solid ${alpha(currentTheme.primary, 0.08)}`,
                     transition: 'all 0.2s ease',
                     '& > *': {
-                      fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
+                      fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' },
                       color: currentTheme.primary,
-                      filter: `drop-shadow(0 2px 4px ${alpha(currentTheme.primary, 0.1)})`
+                      filter: `drop-shadow(0 1px 2px ${alpha(currentTheme.primary, 0.1)})`
                     }
                   }}
                 >
@@ -329,15 +335,15 @@ export const MainContent: React.FC<MainContentProps> = ({
                   sx={{
                     width: '100%',
                     fontWeight: 600,
-                    fontSize: { xs: '0.75rem', sm: '0.85rem', md: '0.9rem' },
-                    lineHeight: 1.3,
+                    fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
+                    lineHeight: 1.2,
                     wordBreak: 'break-word',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
-                    mb: 0.5,
+                    mb: { xs: 0.25, sm: 0.5 },
                     color: 'text.primary'
                   }}
                 >
@@ -348,25 +354,15 @@ export const MainContent: React.FC<MainContentProps> = ({
                   variant="caption"
                   color="text.secondary"
                   sx={{
-                    fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
+                    fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
                     fontWeight: 500,
                     textTransform: 'uppercase',
                     letterSpacing: '0.02em',
-                    opacity: 0.8
+                    opacity: 0.8,
+                    display: { xs: 'block', md: 'block' }
                   }}
                 >
                   {file.isFolder ? 'Folder' : formatFileSize(file.size)}
-                </Typography>
-
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{
-                    fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
-                    display: { xs: 'none', md: 'block' }
-                  }}
-                >
-                  {formatDate(file.lastModifiedDateTime)}
                 </Typography>
               </Box>
             </CardContent>
