@@ -43,38 +43,41 @@ export const createAuthRoutes = (authService: AuthService, authMiddleware: AuthM
    */
   router.get('/callback', async (req: Request, res: Response): Promise<void> => {
     console.log('🔄 OAuth callback received:', req.query);
+
+    // Get frontend URL for redirects
+    const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:8081';
+    const frontendUrl = corsOrigin.split(',')[0].trim();
+
     try {
       const { code, state, error, error_description } = req.query;
 
-      // Handle OAuth errors
+      // Handle OAuth errors - redirect to frontend with error
       if (error) {
-        res.status(400).json({
-          error: {
-            code: 'OAUTH_ERROR',
-            message: error_description || 'OAuth authentication failed',
-            details: { error, error_description, state }
-          }
-        });
+        console.error('❌ OAuth error:', { error, error_description });
+        const errorUrl = `${frontendUrl}/?error=${encodeURIComponent(error as string)}&error_description=${encodeURIComponent((error_description as string) || 'OAuth authentication failed')}`;
+        res.redirect(errorUrl);
         return;
       }
 
       if (!code) {
-        res.status(400).json({
-          error: {
-            code: 'MISSING_AUTH_CODE',
-            message: 'Authorization code not provided'
-          }
-        });
+        console.error('❌ Missing authorization code');
+        const errorUrl = `${frontendUrl}/?error=missing_code&error_description=${encodeURIComponent('Authorization code not provided')}`;
+        res.redirect(errorUrl);
         return;
       }
 
+      console.log('🔑 Exchanging authorization code for tokens...');
+
       // Exchange code for tokens
       const tokenResponse = await authService.exchangeCodeForTokens(code as string);
-      
+      console.log('✅ Tokens received successfully');
+
       // Create session
+      console.log('📝 Creating authentication session...');
       const sessionId = await authService.createSession(tokenResponse);
-      
-      // Set session cookie (secure in production)
+      console.log('✅ Session created:', sessionId);
+
+      // Set session cookie - optimized for Safari private mode
       const isProduction = process.env.NODE_ENV === 'production';
       const redirectUri = process.env.AZURE_REDIRECT_URI || '';
       const isNgrok = redirectUri.includes('ngrok-free.app');
@@ -82,27 +85,30 @@ export const createAuthRoutes = (authService: AuthService, authMiddleware: AuthM
       res.cookie('session-id', sessionId, {
         httpOnly: true,
         secure: isNgrok, // Use secure cookies for HTTPS ngrok
-        sameSite: 'lax', // Fixed: Use 'lax' for both localhost and ngrok to fix auth loops
+        sameSite: 'lax', // Essential for Safari private mode
         path: '/',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        // Remove domain restriction to allow cookies to work across localhost and ngrok
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        // Remove domain for better compatibility
       });
 
-      // Redirect back to frontend after successful authentication with session ID
+      // Redirect back to frontend after successful authentication
       console.log('🎉 OAuth callback successful, redirecting to frontend');
-      const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:8080';
-      const frontendUrl = corsOrigin.split(',')[0].trim(); // Use first CORS origin as frontend URL
-      console.log('🔄 Redirecting to:', frontendUrl);
-      res.redirect(`${frontendUrl}/?sessionId=${sessionId}&auth=success`);
+      console.log('🔄 Frontend URL:', frontendUrl);
+
+      const successUrl = `${frontendUrl}/?sessionId=${sessionId}&auth=success`;
+      console.log('🔄 Full redirect URL:', successUrl);
+
+      res.redirect(successUrl);
+
     } catch (error: any) {
       console.error('❌ OAuth callback error:', error);
-      res.status(400).json({
-        error: {
-          code: 'CALLBACK_ERROR',
-          message: 'Failed to process OAuth callback',
-          details: error.message
-        }
-      });
+
+      // Instead of returning JSON error (which Safari private doesn't handle well),
+      // redirect to frontend with error parameters
+      const errorUrl = `${frontendUrl}/?error=callback_failed&error_description=${encodeURIComponent('Authentication session creation failed')}`;
+
+      console.log('🔄 Redirecting to error URL:', errorUrl);
+      res.redirect(errorUrl);
     }
   });
 
