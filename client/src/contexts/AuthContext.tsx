@@ -376,58 +376,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => clearTimeout(timer);
   }, [handleOAuthCallback]);
 
-  // Periodic token refresh - DISABLED to prevent auto-page refreshes
+  // NO AUTOMATIC REFRESH - User experience priority
   useEffect(() => {
     if (!state.isAuthenticated) return;
 
-    // COMMENTED OUT: This was causing page refreshes every 5 minutes
-    // Keeping auth checks but only on user interaction instead
+    console.log('🔧 Authentication auto-refresh COMPLETELY DISABLED');
+    console.log('🎯 User experience priority: No interruptions to AI conversations');
 
-    /*
-    const refreshInterval = setInterval(async () => {
-      try {
-        if (AuthStorage.shouldRevalidate()) {
-          await checkAuthStatus();
-        }
-      } catch (error) {
-        console.error('Periodic auth check failed:', error);
-      }
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    // NO periodic auth checks
+    // NO automatic token refresh
+    // NO background revalidation
+    // Session will naturally expire after 24 hours without interruption
 
-    return () => clearInterval(refreshInterval);
-    */
+    // Only check auth on explicit user navigation or manual refresh
+    // This preserves AI conversations and prevents unwanted interruptions
 
-    console.log('🔧 Periodic auth refresh disabled to prevent auto-page refreshes');
-
-    // Alternative: Check auth only on user activity (page focus, clicks)
-    const handleUserActivity = async () => {
-      try {
-        if (AuthStorage.shouldRevalidate()) {
-          console.log('👤 User activity detected, checking auth status...');
-          await checkAuthStatus();
-        }
-      } catch (error) {
-        console.error('User activity auth check failed:', error);
-      }
-    };
-
-    // Check auth when user focuses the window (switches back to tab)
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        handleUserActivity();
-      }
-    };
-
-    // Add event listeners for user activity
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    // Cleanup
     return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
+      // No cleanup needed - no intervals or listeners
     };
-  }, [state.isAuthenticated, checkAuthStatus]);
+  }, [state.isAuthenticated]);
 
   // Context value
   const contextValue: AuthContextType = {

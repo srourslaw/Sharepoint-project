@@ -23,18 +23,13 @@ import {
 
 import { useEnhancedAIChat } from '../hooks/useEnhancedAIChat';
 import { useDynamicTheme } from '../contexts/DynamicThemeContext';
+import { useStatePersistenceContext } from '../contexts/StatePersistenceContext';
+import { ChatMessage } from '../utils/statePersistence';
 
 interface SimplifiedAIChatProps {
   selectedFiles: string[];
   onClose?: () => void;
   height?: number | string;
-}
-
-interface SimpleMessage {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: Date;
 }
 
 export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
@@ -43,15 +38,25 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
   height = '100%',
 }) => {
   const [inputValue, setInputValue] = useState('');
-  const [messages, setMessages] = useState<SimpleMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const { currentTheme, isDarkMode } = useDynamicTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { sendMessage, clearChat } = useEnhancedAIChat();
+  const { getChatHistory, addChatMessage, clearChatHistory } = useStatePersistenceContext();
+
+  // Restore chat history on mount
+  useEffect(() => {
+    const savedMessages = getChatHistory();
+    if (savedMessages.length > 0) {
+      setMessages(savedMessages);
+      console.log('💬 Restored', savedMessages.length, 'messages from persistent storage');
+    }
+  }, [getChatHistory]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -66,11 +71,20 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
   const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim() || isLoading) return;
 
-    const userMessage: SimpleMessage = {
+    // Add user message to persistent storage
+    addChatMessage({
+      role: 'user',
+      content: inputValue.trim(),
+      fileContext: selectedFiles.length > 0 ? selectedFiles : undefined,
+    });
+
+    // Update local state
+    const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
       content: inputValue.trim(),
       timestamp: new Date(),
+      fileContext: selectedFiles.length > 0 ? selectedFiles : undefined,
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -85,32 +99,46 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
         includeContext: true,
       });
 
-      // Add AI response
-      const aiMessage: SimpleMessage = {
+      // Add AI response to persistent storage
+      addChatMessage({
+        role: 'assistant',
+        content: response || 'I received your message but couldn\'t generate a response.',
+        fileContext: selectedFiles.length > 0 ? selectedFiles : undefined,
+      });
+
+      // Add AI response to local state
+      const aiMessage: ChatMessage = {
         id: `ai-${Date.now()}`,
         role: 'assistant',
         content: response || 'I received your message but couldn\'t generate a response.',
         timestamp: new Date(),
+        fileContext: selectedFiles.length > 0 ? selectedFiles : undefined,
       };
 
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       console.error('Failed to send message:', error);
       setError('Failed to send message. Please try again.');
-      
-      // Add error message
-      const errorMessage: SimpleMessage = {
+
+      // Add error message to persistent storage
+      addChatMessage({
+        role: 'assistant',
+        content: 'I\'m experiencing some technical difficulties. Please try again in a moment.',
+      });
+
+      // Add error message to local state
+      const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,
-        role: 'system',
+        role: 'assistant',
         content: 'I\'m experiencing some technical difficulties. Please try again in a moment.',
         timestamp: new Date(),
       };
-      
+
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, [inputValue, selectedFiles, sendMessage, isLoading]);
+  }, [inputValue, selectedFiles, sendMessage, isLoading, addChatMessage]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -122,14 +150,16 @@ export const SimplifiedAIChat: React.FC<SimplifiedAIChatProps> = ({
   const handleClearChat = () => {
     setMessages([]);
     setError(null);
-    clearChat();
+    clearChatHistory(); // Clear persistent storage
+    clearChat(); // Clear any other state if needed
+    console.log('🗑️ Chat history cleared from both local and persistent storage');
   };
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const renderMessage = (message: SimpleMessage) => {
+  const renderMessage = (message: ChatMessage) => {
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
 
