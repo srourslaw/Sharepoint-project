@@ -28,7 +28,7 @@ export class OpenAIService extends EventEmitter {
     super();
     this.config = {
       model: 'gpt-5-nano', // Using gpt-5-nano as requested
-      maxTokens: 2048,
+      maxTokens: 128000, // Maximum output tokens for gpt-5-nano
       temperature: 1.0, // gpt-5-nano only supports default temperature of 1.0
       timeout: 30000,
       ...config

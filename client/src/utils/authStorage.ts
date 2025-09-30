@@ -6,9 +6,28 @@ const STORAGE_KEYS = {
   LAST_CHECK: 'last_auth_check',
 } as const;
 
+const COOKIE_KEYS = {
+  SESSION_ID: 'sp_session_id',
+  LAST_CHECK: 'sp_last_check',
+} as const;
+
+/**
+ * Check if we're in incognito mode or storage is unavailable
+ */
+const isStorageAvailable = (): boolean => {
+  try {
+    const test = '__storage_test__';
+    localStorage.setItem(test, test);
+    localStorage.removeItem(test);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Secure storage utility for authentication data
- * Uses sessionStorage for temporary data and localStorage for persistent data
+ * Uses cookies for incognito mode compatibility
  */
 export class AuthStorage {
   /**
@@ -18,19 +37,34 @@ export class AuthStorage {
     try {
       const sessionData = {
         ...session,
-        expiresAt: session.expiresAt.toISOString(),
+        expiresAt: session.expiresAt ? session.expiresAt.toISOString() : undefined,
       };
-      
-      // Store session in sessionStorage (cleared when browser tab closes)
-      sessionStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(sessionData));
-      
-      // Store session ID in localStorage for persistence across tabs
-      localStorage.setItem(STORAGE_KEYS.SESSION_ID, session.sessionId);
-      
-      // Update last check timestamp
-      localStorage.setItem(STORAGE_KEYS.LAST_CHECK, new Date().toISOString());
+
+      if (isStorageAvailable()) {
+        // Store session in sessionStorage (cleared when browser tab closes)
+        sessionStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(sessionData));
+
+        // Store session ID in localStorage for persistence across tabs
+        localStorage.setItem(STORAGE_KEYS.SESSION_ID, session.sessionId);
+
+        // Update last check timestamp
+        localStorage.setItem(STORAGE_KEYS.LAST_CHECK, new Date().toISOString());
+      } else {
+        // Fallback to cookies for incognito mode
+        this.setCookie(COOKIE_KEYS.SESSION_ID, session.sessionId, 1);
+        this.setCookie(COOKIE_KEYS.LAST_CHECK, new Date().toISOString(), 1);
+      }
+
+      console.log('💾 Session stored:', session.sessionId);
     } catch (error) {
       console.error('Failed to store authentication session:', error);
+      // Fallback to cookies even if localStorage fails
+      try {
+        this.setCookie(COOKIE_KEYS.SESSION_ID, session.sessionId, 1);
+        this.setCookie(COOKIE_KEYS.LAST_CHECK, new Date().toISOString(), 1);
+      } catch (cookieError) {
+        console.error('Cookie fallback failed:', cookieError);
+      }
     }
   }
 
@@ -39,25 +73,33 @@ export class AuthStorage {
    */
   static getSession(): AuthSession | null {
     try {
-      const sessionData = sessionStorage.getItem(STORAGE_KEYS.SESSION);
-      
-      if (!sessionData) {
-        // Try to get session ID from localStorage
-        const sessionId = this.getSessionId();
+      if (isStorageAvailable()) {
+        const sessionData = sessionStorage.getItem(STORAGE_KEYS.SESSION);
+
+        if (!sessionData) {
+          // Try to get session ID from localStorage
+          const sessionId = this.getSessionId();
+          return sessionId ? { sessionId } as AuthSession : null;
+        }
+
+        const parsed = JSON.parse(sessionData);
+
+        // Convert expiresAt back to Date object
+        if (parsed.expiresAt) {
+          parsed.expiresAt = new Date(parsed.expiresAt);
+        }
+
+        return parsed;
+      } else {
+        // Fallback to cookies for incognito mode
+        const sessionId = this.getCookie(COOKIE_KEYS.SESSION_ID);
         return sessionId ? { sessionId } as AuthSession : null;
       }
-
-      const parsed = JSON.parse(sessionData);
-      
-      // Convert expiresAt back to Date object
-      if (parsed.expiresAt) {
-        parsed.expiresAt = new Date(parsed.expiresAt);
-      }
-      
-      return parsed;
     } catch (error) {
       console.error('Failed to retrieve authentication session:', error);
-      return null;
+      // Try cookie fallback
+      const sessionId = this.getCookie(COOKIE_KEYS.SESSION_ID);
+      return sessionId ? { sessionId } as AuthSession : null;
     }
   }
 
@@ -66,18 +108,24 @@ export class AuthStorage {
    */
   static getSessionId(): string | null {
     try {
-      // First try sessionStorage
-      const session = sessionStorage.getItem(STORAGE_KEYS.SESSION);
-      if (session) {
-        const parsed = JSON.parse(session);
-        return parsed.sessionId || null;
+      if (isStorageAvailable()) {
+        // First try sessionStorage
+        const session = sessionStorage.getItem(STORAGE_KEYS.SESSION);
+        if (session) {
+          const parsed = JSON.parse(session);
+          return parsed.sessionId || null;
+        }
+
+        // Fallback to localStorage
+        return localStorage.getItem(STORAGE_KEYS.SESSION_ID);
+      } else {
+        // Use cookies for incognito mode
+        return this.getCookie(COOKIE_KEYS.SESSION_ID);
       }
-      
-      // Fallback to localStorage
-      return localStorage.getItem(STORAGE_KEYS.SESSION_ID);
     } catch (error) {
       console.error('Failed to retrieve session ID:', error);
-      return null;
+      // Try cookie fallback
+      return this.getCookie(COOKIE_KEYS.SESSION_ID);
     }
   }
 
@@ -101,11 +149,76 @@ export class AuthStorage {
    */
   static clearSession(): void {
     try {
-      sessionStorage.removeItem(STORAGE_KEYS.SESSION);
-      localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
-      localStorage.removeItem(STORAGE_KEYS.LAST_CHECK);
+      if (isStorageAvailable()) {
+        sessionStorage.removeItem(STORAGE_KEYS.SESSION);
+        localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
+        localStorage.removeItem(STORAGE_KEYS.LAST_CHECK);
+      }
+
+      // Always clear cookies as well
+      this.deleteCookie(COOKIE_KEYS.SESSION_ID);
+      this.deleteCookie(COOKIE_KEYS.LAST_CHECK);
+
+      console.log('🗑️ Session cleared');
     } catch (error) {
       console.error('Failed to clear authentication session:', error);
+    }
+  }
+
+  /**
+   * Cookie utility methods for incognito mode
+   */
+  static setCookie(name: string, value: string, days: number = 1): void {
+    try {
+      const expires = new Date();
+      expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+      document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+    } catch (error) {
+      console.error('Failed to set cookie:', error);
+    }
+  }
+
+  static getCookie(name: string): string | null {
+    try {
+      if (!name || typeof name !== 'string') return null;
+
+      const nameEQ = name + '=';
+      const cookieString = document?.cookie;
+
+      if (!cookieString || typeof cookieString !== 'string') return null;
+
+      const ca = cookieString.split(';');
+      if (!Array.isArray(ca)) return null;
+
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        if (!c || typeof c !== 'string' || c.length === 0) continue;
+
+        // Safely trim leading spaces
+        while (c.length > 0 && c.charAt(0) === ' ') {
+          c = c.substring(1);
+        }
+
+        if (c.length === 0) continue;
+
+        if (c.indexOf(nameEQ) === 0) {
+          const value = c.substring(nameEQ.length);
+          return value || null;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Failed to get cookie:', error);
+      return null;
+    }
+  }
+
+  static deleteCookie(name: string): void {
+    try {
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/`;
+    } catch (error) {
+      console.error('Failed to delete cookie:', error);
     }
   }
 

@@ -220,10 +220,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Safe access to window.location with fallbacks
       const location = window?.location;
       if (!location) return;
-      
+
       const searchString = (location.search || '').toString();
       if (!searchString) return;
-      
+
       const urlParams = new URLSearchParams(searchString);
       const code = urlParams.get('code');
       const sessionId = urlParams.get('sessionId');
@@ -231,17 +231,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const error = urlParams.get('error');
       const errorDescription = urlParams.get('error_description');
 
-      // Clear URL parameters to clean up the URL
-      if (window?.history?.replaceState && location?.pathname) {
-        try {
-          window.history.replaceState({}, document.title, location.pathname);
-        } catch (historyError) {
-          console.warn('Failed to clean URL:', historyError);
-        }
-      }
+      console.log('🔄 Processing OAuth callback:', {
+        hasCode: !!code,
+        hasSessionId: !!sessionId,
+        authSuccess,
+        hasError: !!error
+      });
 
       // Handle OAuth errors
       if (error) {
+        console.error('❌ OAuth error:', error, errorDescription);
         dispatch({ type: 'SET_ERROR', payload: {
           code: error,
           message: errorDescription || 'OAuth authentication failed'
@@ -252,38 +251,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Handle direct session ID from backend (new flow)
       if (sessionId && authSuccess === 'success') {
         try {
+          console.log('✅ Received sessionId from backend:', sessionId);
           dispatch({ type: 'SET_LOADING', payload: true });
-          
-          // Store the session ID in multiple places for compatibility
-          localStorage.setItem('session_id', sessionId);
-          sessionStorage.setItem('session_id', sessionId);
+
+          // Store the session using our AuthStorage utility (works in incognito)
+          AuthStorage.setSession({
+            sessionId,
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+          });
 
           // Also notify the API service about the new session
           const { api } = await import('../services/api');
           api.setSession(sessionId);
 
-          // Add small delay to ensure session is available
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Clear URL parameters IMMEDIATELY to prevent loops
+          if (window?.history?.replaceState) {
+            window.history.replaceState({}, document.title, location.pathname);
+          }
 
-          // Check auth status with the new session
-          await checkAuthStatus();
-          
-          dispatch({ type: 'SET_LOADING', payload: false });
+          // Get user info with the new session
+          console.log('🔍 Checking auth status with new session...');
+          const result = await AuthApi.getAuthStatus();
+
+          if (result && result.authenticated && result.user) {
+            console.log('✅ Authentication successful:', result.user.displayName);
+            dispatch({ type: 'SET_USER', payload: result.user });
+          } else {
+            console.log('❌ Auth status check failed after callback');
+            throw new Error('Authentication verification failed');
+          }
+
           return;
         } catch (error) {
-          console.error('Session ID authentication failed:', error);
+          console.error('❌ Session ID authentication failed:', error);
+          AuthStorage.clearSession();
           dispatch({ type: 'SET_ERROR', payload: error as AuthError });
-          dispatch({ type: 'SET_LOADING', payload: false });
           return;
         }
       }
 
       // If we have a code, the backend has already processed it and redirected us here
-      // Just check our auth status to see if we're now authenticated
       if (code) {
         try {
+          console.log('🔍 Processing OAuth code callback...');
           dispatch({ type: 'SET_LOADING', payload: true });
+
+          // Clear URL parameters to prevent loops
+          if (window?.history?.replaceState) {
+            window.history.replaceState({}, document.title, location.pathname);
+          }
+
           await checkAuthStatus();
+
           // Clean up any OAuth state
           try {
             sessionStorage.removeItem('oauth_state');
@@ -291,12 +310,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.warn('Failed to clean OAuth state:', storageError);
           }
         } catch (error) {
-          console.error('OAuth callback handling failed:', error);
+          console.error('❌ OAuth callback handling failed:', error);
           dispatch({ type: 'SET_ERROR', payload: error as AuthError });
         }
       }
     } catch (error) {
-      console.error('OAuth callback handling failed:', error);
+      console.error('❌ OAuth callback handling failed:', error);
       dispatch({ type: 'SET_ERROR', payload: {
         code: 'OAUTH_CALLBACK_FAILED',
         message: 'Failed to handle OAuth callback'

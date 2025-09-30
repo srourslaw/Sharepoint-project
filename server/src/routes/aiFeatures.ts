@@ -56,7 +56,7 @@ export function createAIFeaturesRoutes(
     openaiService = new OpenAIService({
       apiKey: process.env.OPENAI_API_KEY,
       model: process.env.OPENAI_MODEL || 'gpt-5-nano',
-      maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || '8192'),
+      maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || '128000'), // Maximum for gpt-5-nano
       temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '1.0'), // gpt-5-nano only supports 1.0
       timeout: parseInt(process.env.AI_TIMEOUT || '30000')
     });
@@ -567,7 +567,7 @@ I don't have any document content available to analyze. Please provide documents
       // Send to AI service
       const aiResponse = await aiService.generateText({
         prompt,
-        maxTokens: 500,
+        maxTokens: 128000, // Maximum output tokens for gpt-5-nano to handle multi-page documents
         temperature: 1.0 // gpt-5-nano only supports 1.0
       });
 

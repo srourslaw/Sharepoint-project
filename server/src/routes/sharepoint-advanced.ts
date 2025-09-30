@@ -2777,6 +2777,8 @@ export const createAdvancedSharePointRoutes = (authService: AuthService, authMid
       const { fileId } = req.params;
       const { extractText = 'false', format = 'binary', driveId } = req.query;
       console.log('🔍 Getting file content for preview:', fileId, 'extractText:', extractText, 'format:', format, 'driveId:', driveId);
+      console.log('🔍 DEBUG PARAMS: extractText type:', typeof extractText, 'value:', JSON.stringify(extractText));
+      console.log('🔍 DEBUG QUERY:', JSON.stringify(req.query));
 
       if (isRealSharePointEnabled) {
         try {

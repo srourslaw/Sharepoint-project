@@ -4,13 +4,12 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react({
-    // Enable Fast Refresh
+    // Enable Fast Refresh for instant updates
     fastRefresh: true,
-    // Better error overlay
+    include: "**/*.{jsx,tsx}",
+    // Better error overlay and development experience
     babel: {
-      plugins: [
-        ['@babel/plugin-transform-react-jsx-development', { runtime: 'automatic' }]
-      ]
+      plugins: []
     }
   })],
 
@@ -70,8 +69,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          mui: ['@mui/material', '@mui/icons-material'],
-          msal: ['@azure/msal-browser', '@azure/msal-react']
+          mui: ['@mui/material', '@mui/icons-material']
         }
       }
     }
@@ -83,9 +81,7 @@ export default defineConfig({
       'react',
       'react-dom',
       '@mui/material',
-      '@mui/icons-material',
-      '@azure/msal-browser',
-      '@azure/msal-react'
+      '@mui/icons-material'
     ],
     // Force re-optimization on dependency changes
     force: false
