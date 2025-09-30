@@ -27,6 +27,7 @@ import {
 import { SummarizationRequest, SummarizationResult } from '../types';
 import { useAIFeatures } from '../hooks/useAIFeatures';
 import { SimplifiedAIChat } from './SimplifiedAIChat';
+import { StunningAIChat } from './StunningAIChat';
 
 interface AIPanelProps {
   selectedFiles: string[];
@@ -71,7 +72,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ selectedFiles, onFileSelect, c
   };
 
   const renderChatInterface = () => (
-    <SimplifiedAIChat
+    <StunningAIChat
       selectedFiles={selectedFiles}
       height="100%"
       onClose={onClose}
