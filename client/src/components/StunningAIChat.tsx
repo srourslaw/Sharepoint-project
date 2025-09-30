@@ -66,7 +66,7 @@ interface ConversationThread {
   emoji: string;
 }
 
-const SIDEBAR_WIDTH = 280;
+const SIDEBAR_WIDTH = 320;
 
 export const StunningAIChat: React.FC<StunningAIChatProps> = ({
   selectedFiles,
@@ -77,6 +77,8 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [showHistory, setShowHistory] = useState(true);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { currentTheme, isDarkMode } = useDynamicTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +128,26 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
 
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  // Responsive sidebar behavior
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.offsetWidth;
+        setContainerWidth(width);
+        // Auto-hide sidebar on smaller widths
+        if (width < 800) {
+          setShowHistory(false);
+        } else if (width > 1000) {
+          setShowHistory(true);
+        }
+      }
+    };
+
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
   const updateCurrentThread = useCallback((newMessages: ChatMessage[]) => {
@@ -658,7 +680,7 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
   );
 
   return (
-    <Box sx={{ height, display: 'flex', flexDirection: 'row', position: 'relative' }}>
+    <Box ref={containerRef} sx={{ height, display: 'flex', flexDirection: 'row', position: 'relative' }}>
       {/* History Sidebar */}
       <Collapse in={showHistory} orientation="horizontal">
         {renderHistorySidebar()}

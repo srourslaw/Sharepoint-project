@@ -40,14 +40,14 @@ const getDrawerWidth = (theme: any, isMobile: boolean) => {
 };
 
 const getAIPanelWidth = (theme: any, isMobile: boolean) => {
-  if (isMobile) return 320;
-  return theme.breakpoints.up('lg') ? 380 : 350;
+  if (isMobile) return 400;
+  return theme.breakpoints.up('lg') ? 600 : 500;
 };
 
-// AI Panel width constraints
-const AI_PANEL_MIN_WIDTH = 300;
-const AI_PANEL_MAX_WIDTH = 600;
-const AI_PANEL_DEFAULT_WIDTH = 380;
+// AI Panel width constraints - Enhanced for better chat experience
+const AI_PANEL_MIN_WIDTH = 400;
+const AI_PANEL_MAX_WIDTH = 1200;
+const AI_PANEL_DEFAULT_WIDTH = 600;
 
 // Get saved AI panel width from localStorage
 const getSavedAIPanelWidth = (): number => {
@@ -583,15 +583,15 @@ export const Dashboard: React.FC = () => {
             }),
           }}
         >
-          {/* Enhanced Resize Handle */}
+          {/* Enhanced Resize Handle - More Prominent */}
           <Box
             ref={resizeRef}
             onMouseDown={handleResizeStart}
             sx={{
               position: 'absolute',
-              left: '-6px',
+              left: '-8px',
               top: 0,
-              width: '12px',
+              width: '16px',
               height: '100%',
               cursor: 'col-resize',
               backgroundColor: 'transparent',
@@ -599,40 +599,45 @@ export const Dashboard: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: '4px 0 0 4px',
+              borderRadius: '8px 0 0 8px',
               '&::before': {
                 content: '""',
                 position: 'absolute',
-                left: '4px',
+                left: '6px',
                 top: '50%',
                 transform: 'translateY(-50%)',
                 width: '4px',
-                height: '40px',
+                height: '60px',
                 backgroundColor: currentTheme.primary,
-                opacity: 0.7,
+                opacity: 0.8,
                 borderRadius: '2px',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.3s ease',
               },
               '&:hover': {
-                backgroundColor: `${currentTheme.primary}15`,
+                backgroundColor: `${currentTheme.primary}20`,
                 '&::before': {
-                  opacity: 0.9,
-                  height: '60px',
+                  opacity: 1,
+                  height: '100px',
+                  width: '6px',
                   backgroundColor: currentTheme.primary,
+                  boxShadow: `0 0 12px ${currentTheme.primary}`,
                 },
                 '& .resize-indicator': {
                   opacity: 1,
-                  transform: 'rotate(90deg) scale(1.1)',
+                  transform: 'rotate(90deg) scale(1.2)',
                 },
               },
               '&:active': {
-                backgroundColor: `${currentTheme.primary}25`,
+                backgroundColor: `${currentTheme.primary}30`,
                 '&::before': {
                   opacity: 1,
-                  height: '80px',
+                  height: '120px',
+                  width: '6px',
+                  backgroundColor: currentTheme.accent,
+                  boxShadow: `0 0 16px ${currentTheme.accent}`,
                 },
               },
-              transition: 'background-color 0.2s ease',
+              transition: 'all 0.3s ease',
             }}
           >
             <Box
