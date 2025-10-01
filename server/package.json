@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@azure/msal-node": "^2.9.0",
-    "@google/generative-ai": "^0.12.0",
+    "@google/generative-ai": "^0.24.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@pnp/core": "^4.16.0",
     "@pnp/graph": "^4.16.0",
