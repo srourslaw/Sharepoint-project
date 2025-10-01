@@ -44,6 +44,8 @@ import {
   KeyboardArrowLeft as LeftArrowIcon,
   KeyboardArrowRight as RightArrowIcon,
   Circle as CircleIcon,
+  ContentCopy as CopyIcon,
+  Check as CheckIcon,
 } from '@mui/icons-material';
 
 import { useEnhancedAIChat } from '../hooks/useEnhancedAIChat';
@@ -85,6 +87,7 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
   const [currentThread, setCurrentThread] = useState<string>('main');
   const [threads, setThreads] = useState<Record<string, ConversationThread>>({});
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -340,167 +343,164 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
     return date.toLocaleDateString();
   };
 
+  const handleCopyMessage = async (content: string, messageId: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 2000); // Reset after 2 seconds
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+    }
+  };
+
   const renderMessage = (message: ChatMessage, index: number) => {
     const isUser = message.role === 'user';
-    const delay = index * 100;
+    const isCopied = copiedMessageId === message.id;
 
     return (
-      <Zoom
+      <Fade
         in={true}
-        timeout={800}
-        style={{ transitionDelay: `${delay}ms` }}
+        timeout={400}
+        style={{ transitionDelay: `${index * 50}ms` }}
         key={message.id}
       >
         <Box
           sx={{
             display: 'flex',
-            justifyContent: isUser ? 'flex-end' : 'flex-start',
-            mb: 4,
-            px: 3,
+            alignItems: 'flex-start',
+            gap: 2,
+            mb: 3,
+            px: 2,
+            py: 1,
+            '&:hover .message-actions': {
+              opacity: 1,
+            }
           }}
         >
-          <Box
+          {/* Avatar */}
+          <Avatar
             sx={{
-              position: 'relative',
-              maxWidth: '75%',
-              animation: 'messageSlideIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-              animationDelay: `${delay}ms`,
-              animationFillMode: 'both',
+              width: 32,
+              height: 32,
+              backgroundColor: isUser ? currentTheme.primary : currentTheme.accent,
+              flexShrink: 0,
             }}
           >
-            {/* Floating Message Bubble */}
-            <Paper
-              elevation={0}
+            {isUser ?
+              <UserIcon sx={{ fontSize: '18px' }} /> :
+              <BotIcon sx={{ fontSize: '18px' }} />
+            }
+          </Avatar>
+
+          {/* Message Content */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {/* Header */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 600,
+                  color: currentTheme.text.primary,
+                  fontSize: '14px'
+                }}
+              >
+                {isUser ? 'You' : 'AI Assistant'}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: currentTheme.text.secondary,
+                  fontSize: '12px'
+                }}
+              >
+                {formatTime(message.timestamp)}
+              </Typography>
+            </Box>
+
+            {/* Message Body */}
+            <Box
               sx={{
                 position: 'relative',
-                background: isUser
-                  ? `linear-gradient(135deg, ${currentTheme.primary}15 0%, ${currentTheme.accent}20 100%)`
-                  : `linear-gradient(135deg, ${isDarkMode ? '#1a202c' : '#ffffff'} 0%, ${isDarkMode ? '#2d3748' : '#f7fafc'} 100%)`,
-                border: `2px solid ${isUser ? currentTheme.primary : currentTheme.accent}`,
-                borderRadius: '24px',
-                p: 3,
-                boxShadow: isUser
-                  ? `0 12px 40px -8px ${alpha(currentTheme.primary, 0.3)}`
-                  : `0 12px 40px -8px ${alpha(currentTheme.accent, 0.3)}`,
-                backdropFilter: 'blur(20px)',
+                p: 2,
+                backgroundColor: isUser
+                  ? alpha(currentTheme.primary, 0.08)
+                  : alpha(currentTheme.accent, 0.08),
+                borderRadius: '12px',
+                border: `1px solid ${alpha(isUser ? currentTheme.primary : currentTheme.accent, 0.2)}`,
                 '&:hover': {
-                  transform: 'translateY(-4px) scale(1.02)',
-                  boxShadow: isUser
-                    ? `0 20px 60px -8px ${alpha(currentTheme.primary, 0.4)}`
-                    : `0 20px 60px -8px ${alpha(currentTheme.accent, 0.4)}`,
-                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-                },
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: -2,
-                  left: -2,
-                  right: -2,
-                  bottom: -2,
-                  background: `linear-gradient(135deg, ${isUser ? currentTheme.primary : currentTheme.accent}, ${isUser ? currentTheme.accent : currentTheme.primary})`,
-                  borderRadius: '24px',
-                  zIndex: -1,
-                  opacity: 0.1,
-                },
-                '&::after': {
-                  content: '""',
-                  position: 'absolute',
-                  width: 20,
-                  height: 20,
-                  background: isUser
-                    ? `linear-gradient(135deg, ${currentTheme.primary}15 0%, ${currentTheme.accent}20 100%)`
-                    : `linear-gradient(135deg, ${isDarkMode ? '#1a202c' : '#ffffff'} 0%, ${isDarkMode ? '#2d3748' : '#f7fafc'} 100%)`,
-                  border: `2px solid ${isUser ? currentTheme.primary : currentTheme.accent}`,
-                  borderRadius: '6px',
-                  transform: isUser ? 'rotate(45deg)' : 'rotate(45deg)',
-                  [isUser ? 'right' : 'left']: -10,
-                  bottom: 20,
-                  zIndex: -1,
-                },
+                  backgroundColor: isUser
+                    ? alpha(currentTheme.primary, 0.12)
+                    : alpha(currentTheme.accent, 0.12),
+                  borderColor: alpha(isUser ? currentTheme.primary : currentTheme.accent, 0.3),
+                }
               }}
             >
-              {/* Message Content */}
               <Typography
-                variant="body1"
+                variant="body2"
                 sx={{
-                  color: isDarkMode ? '#f7fafc' : currentTheme.text.primary,
-                  fontWeight: isUser ? 500 : 400,
-                  lineHeight: 1.7,
+                  color: currentTheme.text.primary,
+                  lineHeight: 1.6,
                   whiteSpace: 'pre-wrap',
-                  fontSize: '16px',
-                  fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
-                  mb: 2,
+                  fontSize: '14px',
+                  fontFamily: '"Inter", system-ui, sans-serif',
+                  mb: message.fileContext?.length ? 1 : 0,
                 }}
               >
                 {message.content}
               </Typography>
 
-              {/* Message Footer */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography
-                  variant="caption"
+              {/* File Context */}
+              {message.fileContext && message.fileContext.length > 0 && (
+                <Chip
+                  label={`📎 ${message.fileContext.length} file${message.fileContext.length > 1 ? 's' : ''}`}
+                  size="small"
+                  variant="outlined"
                   sx={{
-                    color: isDarkMode ? 'rgba(148, 163, 184, 0.8)' : 'rgba(30,41,59,0.7)',
-                    fontSize: '12px',
-                    fontWeight: 600,
+                    height: 20,
+                    fontSize: '10px',
+                    mt: 1,
+                  }}
+                />
+              )}
+
+              {/* Action Icons */}
+              {!isUser && (
+                <Box
+                  className="message-actions"
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    opacity: 0,
+                    transition: 'opacity 0.2s ease',
                     display: 'flex',
-                    alignItems: 'center',
                     gap: 0.5,
                   }}
                 >
-                  <CircleIcon sx={{ fontSize: 6, color: currentTheme.primary }} />
-                  {formatTime(message.timestamp)}
-                </Typography>
-
-                {message.fileContext && message.fileContext.length > 0 && (
-                  <Chip
-                    label={`📎 ${message.fileContext.length} file${message.fileContext.length > 1 ? 's' : ''}`}
+                  <IconButton
                     size="small"
-                    variant="outlined"
+                    onClick={() => handleCopyMessage(message.content, message.id)}
                     sx={{
+                      width: 24,
                       height: 24,
-                      fontSize: '11px',
-                      borderColor: alpha(currentTheme.primary, 0.3),
-                      color: currentTheme.primary,
-                      backgroundColor: alpha(currentTheme.primary, 0.05),
+                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                      border: '1px solid rgba(0, 0, 0, 0.1)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 1)',
+                      }
                     }}
-                  />
-                )}
-              </Box>
-            </Paper>
-
-            {/* Floating Avatar */}
-            <Avatar
-              sx={{
-                position: 'absolute',
-                [isUser ? 'right' : 'left']: -25,
-                top: -8,
-                width: 48,
-                height: 48,
-                background: isUser
-                  ? `linear-gradient(135deg, ${currentTheme.success} 0%, #10b981 100%)`
-                  : `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`,
-                boxShadow: isUser
-                  ? '0 12px 30px rgba(16, 185, 129, 0.4)'
-                  : '0 12px 30px rgba(124, 58, 237, 0.4)',
-                border: `3px solid ${isDarkMode ? '#1a202c' : '#ffffff'}`,
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'scale(1.1) rotate(5deg)',
-                  boxShadow: isUser
-                    ? '0 16px 40px rgba(16, 185, 129, 0.6)'
-                    : '0 16px 40px rgba(124, 58, 237, 0.6)',
-                }
-              }}
-            >
-              {isUser ?
-                <UserIcon sx={{ color: '#ffffff', fontSize: '24px' }} /> :
-                <BotIcon sx={{ color: '#ffffff', fontSize: '24px' }} />
-              }
-            </Avatar>
+                  >
+                    {isCopied ?
+                      <CheckIcon sx={{ fontSize: '14px', color: 'green' }} /> :
+                      <CopyIcon sx={{ fontSize: '14px' }} />
+                    }
+                  </IconButton>
+                </Box>
+              )}
+            </Box>
           </Box>
         </Box>
-      </Zoom>
+      </Fade>
     );
   };
 
@@ -688,47 +688,35 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
 
       {/* Main Chat Area */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Enhanced Header */}
+        {/* Clean Header */}
         <Paper
           elevation={0}
           sx={{
-            p: 3,
-            background: `linear-gradient(135deg, ${isDarkMode ? '#0f172a' : '#ffffff'} 0%, ${isDarkMode ? '#1e293b' : '#f8fafc'} 100%)`,
-            borderBottom: `1px solid ${alpha(currentTheme.primary, 0.1)}`,
-            backdropFilter: 'blur(20px)',
+            p: 2,
+            backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
           }}
         >
           <Box display="flex" alignItems="center" justifyContent="space-between">
             <Box display="flex" alignItems="center" gap={2}>
               <IconButton
                 onClick={() => setShowHistory(!showHistory)}
+                size="small"
                 sx={{
-                  background: `linear-gradient(135deg, ${currentTheme.primary}15 0%, ${currentTheme.accent}15 100%)`,
-                  border: `2px solid ${alpha(currentTheme.primary, 0.2)}`,
+                  backgroundColor: alpha(currentTheme.primary, 0.1),
                   '&:hover': {
-                    background: `linear-gradient(135deg, ${currentTheme.primary}25 0%, ${currentTheme.accent}25 100%)`,
-                    transform: 'scale(1.05)',
+                    backgroundColor: alpha(currentTheme.primary, 0.2),
                   }
                 }}
               >
                 {showHistory ? <LeftArrowIcon /> : <RightArrowIcon />}
               </IconButton>
 
-              <Avatar sx={{
-                background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`,
-                width: 56,
-                height: 56,
-                boxShadow: '0 12px 30px rgba(124, 58, 237, 0.4)',
-                animation: 'avatarFloat 3s ease-in-out infinite'
-              }}>
-                <BotIcon sx={{ color: '#ffffff', fontSize: '28px' }} />
-              </Avatar>
-
               <Box>
-                <Typography variant="h5" sx={{ fontWeight: 800, color: currentTheme.text.primary, mb: 0.5 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: currentTheme.text.primary }}>
                   AI Assistant
                 </Typography>
-                <Typography variant="body2" sx={{ color: currentTheme.text.secondary, fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ color: currentTheme.text.secondary }}>
                   {messages.length} messages
                   {selectedFiles.length > 0 && (
                     <> • {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} selected</>
@@ -741,26 +729,13 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
               {selectedFiles.length > 0 && (
                 <Chip
                   label={`📎 ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}`}
+                  size="small"
                   variant="outlined"
-                  sx={{
-                    background: `linear-gradient(135deg, ${currentTheme.primary}10 0%, ${currentTheme.accent}10 100%)`,
-                    borderColor: currentTheme.primary,
-                    color: currentTheme.primary,
-                    fontWeight: 600,
-                  }}
                 />
               )}
 
               {onClose && (
-                <IconButton
-                  onClick={onClose}
-                  sx={{
-                    '&:hover': {
-                      backgroundColor: alpha('#ef4444', 0.1),
-                      color: '#ef4444'
-                    }
-                  }}
-                >
+                <IconButton size="small" onClick={onClose}>
                   <CloseIcon />
                 </IconButton>
               )}
@@ -788,26 +763,11 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
           sx={{
             flexGrow: 1,
             overflow: 'auto',
-            background: `linear-gradient(180deg, ${isDarkMode ? '#0a0e1a' : '#fafbfc'} 0%, ${isDarkMode ? '#1a202c' : '#f0f4f8'} 100%)`,
-            position: 'relative',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundImage: `
-                radial-gradient(circle at 20% 20%, ${alpha(currentTheme.primary, 0.05)} 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, ${alpha(currentTheme.accent, 0.05)} 0%, transparent 50%),
-                radial-gradient(circle at 40% 70%, ${alpha(currentTheme.secondary, 0.03)} 0%, transparent 50%)
-              `,
-              pointerEvents: 'none',
-            },
-            '&::-webkit-scrollbar': { width: 8 },
+            backgroundColor: isDarkMode ? '#0f172a' : '#fafbfc',
+            '&::-webkit-scrollbar': { width: 6 },
             '&::-webkit-scrollbar-thumb': {
               backgroundColor: alpha(currentTheme.primary, 0.3),
-              borderRadius: 4,
+              borderRadius: 3,
             },
           }}
         >
@@ -819,37 +779,26 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
               justifyContent="center"
               height="100%"
               textAlign="center"
-              gap={4}
-              sx={{ position: 'relative', zIndex: 1 }}
+              gap={3}
+              p={4}
             >
-              <Box sx={{ position: 'relative' }}>
-                <Avatar sx={{
-                  background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`,
-                  width: 120,
-                  height: 120,
-                  boxShadow: '0 20px 60px rgba(124, 58, 237, 0.4)',
-                  animation: 'pulse 2s ease-in-out infinite alternate'
-                }}>
-                  <BotIcon sx={{ color: '#ffffff', fontSize: '60px' }} />
-                </Avatar>
-                <SparkleIcon
-                  sx={{
-                    position: 'absolute',
-                    top: -10,
-                    right: -10,
-                    color: currentTheme.accent,
-                    fontSize: '36px',
-                    animation: 'sparkle 1.5s ease-in-out infinite'
-                  }}
-                />
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: currentTheme.text.primary, mb: 1 }}>
-                Welcome to AI Assistant
+              <Avatar
+                sx={{
+                  width: 64,
+                  height: 64,
+                  backgroundColor: currentTheme.primary,
+                  mb: 2
+                }}
+              >
+                <BotIcon sx={{ fontSize: '32px' }} />
+              </Avatar>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: currentTheme.text.primary }}>
+                AI Assistant
               </Typography>
-              <Typography variant="h6" sx={{ color: currentTheme.text.secondary, maxWidth: 500, lineHeight: 1.6 }}>
+              <Typography variant="body1" sx={{ color: currentTheme.text.secondary, maxWidth: 400 }}>
                 {selectedFiles.length > 0
-                  ? `Ask questions about your ${selectedFiles.length} selected document${selectedFiles.length > 1 ? 's' : ''} or start a general conversation`
-                  : 'Select documents or ask general questions to get started. Your conversations are automatically saved and organized.'}
+                  ? `Ask questions about your ${selectedFiles.length} selected document${selectedFiles.length > 1 ? 's' : ''}`
+                  : 'Start a conversation or select documents to analyze'}
               </Typography>
             </Box>
           ) : (
@@ -857,41 +806,57 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
               {messages.map((message, index) => renderMessage(message, index))}
               {isLoading && (
                 <Fade in={true}>
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 4, px: 3 }}>
-                    <Box sx={{ position: 'relative', maxWidth: '75%' }}>
-                      <Paper
-                        elevation={0}
-                        sx={{
-                          background: `linear-gradient(135deg, ${isDarkMode ? '#1a202c' : '#ffffff'} 0%, ${isDarkMode ? '#2d3748' : '#f7fafc'} 100%)`,
-                          border: `2px solid ${currentTheme.accent}`,
-                          borderRadius: '24px',
-                          p: 3,
-                          boxShadow: `0 12px 40px -8px ${alpha(currentTheme.accent, 0.3)}`,
-                          backdropFilter: 'blur(20px)',
-                        }}
-                      >
-                        <Box display="flex" alignItems="center" gap={2}>
-                          <CircularProgress size={24} sx={{ color: currentTheme.primary }} />
-                          <Typography variant="body1" sx={{ color: currentTheme.text.secondary, fontWeight: 500 }}>
-                            AI is thinking...
-                          </Typography>
-                        </Box>
-                      </Paper>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 2,
+                      mb: 3,
+                      px: 2,
+                      py: 1,
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        backgroundColor: currentTheme.accent,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <BotIcon sx={{ fontSize: '18px' }} />
+                    </Avatar>
 
-                      <Avatar
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{
+                            fontWeight: 600,
+                            color: currentTheme.text.primary,
+                            fontSize: '14px'
+                          }}
+                        >
+                          AI Assistant
+                        </Typography>
+                      </Box>
+
+                      <Box
                         sx={{
-                          position: 'absolute',
-                          left: -25,
-                          top: -8,
-                          width: 48,
-                          height: 48,
-                          background: `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`,
-                          boxShadow: '0 12px 30px rgba(124, 58, 237, 0.4)',
-                          border: `3px solid ${isDarkMode ? '#1a202c' : '#ffffff'}`,
+                          p: 2,
+                          backgroundColor: alpha(currentTheme.accent, 0.08),
+                          borderRadius: '12px',
+                          border: `1px solid ${alpha(currentTheme.accent, 0.2)}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
                         }}
                       >
-                        <BotIcon sx={{ color: '#ffffff', fontSize: '24px' }} />
-                      </Avatar>
+                        <CircularProgress size={16} sx={{ color: currentTheme.accent }} />
+                        <Typography variant="body2" sx={{ color: currentTheme.text.secondary, fontSize: '14px' }}>
+                          AI is thinking...
+                        </Typography>
+                      </Box>
                     </Box>
                   </Box>
                 </Fade>
@@ -901,14 +866,13 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
           )}
         </Box>
 
-        {/* Enhanced Input Area */}
+        {/* Input Area */}
         <Paper
-          elevation={8}
+          elevation={0}
           sx={{
-            p: 3,
-            background: `linear-gradient(135deg, ${isDarkMode ? '#0f172a' : '#ffffff'} 0%, ${isDarkMode ? '#1e293b' : '#f8fafc'} 100%)`,
-            borderTop: `1px solid ${alpha(currentTheme.primary, 0.1)}`,
-            backdropFilter: 'blur(20px)',
+            p: 2,
+            backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+            borderTop: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
           }}
         >
           <Box display="flex" alignItems="flex-end" gap={2}>
@@ -929,33 +893,21 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
               variant="outlined"
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  background: isDarkMode ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                  borderRadius: '20px',
-                  transition: 'all 0.3s ease',
+                  backgroundColor: isDarkMode ? '#374151' : '#f9fafb',
+                  borderRadius: '12px',
                   '& input, & textarea': {
-                    color: isDarkMode ? '#f8fafc' : currentTheme.text.primary,
-                    fontSize: '16px',
-                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
-                    padding: '16px 20px',
+                    color: currentTheme.text.primary,
+                    fontSize: '14px',
+                    padding: '12px 16px',
                   },
                   '& fieldset': {
-                    borderColor: alpha(currentTheme.primary, 0.3),
-                    borderWidth: '2px',
+                    borderColor: isDarkMode ? '#4b5563' : '#d1d5db',
                   },
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 12px 40px rgba(124, 58, 237, 0.15)',
-                    '& fieldset': {
-                      borderColor: currentTheme.primary,
-                    },
+                  '&:hover fieldset': {
+                    borderColor: currentTheme.primary,
                   },
-                  '&.Mui-focused': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 16px 50px rgba(124, 58, 237, 0.25)',
-                    '& fieldset': {
-                      borderColor: currentTheme.primary,
-                      borderWidth: '2px',
-                    },
+                  '&.Mui-focused fieldset': {
+                    borderColor: currentTheme.primary,
                   },
                 },
               }}
@@ -965,31 +917,19 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
               onClick={handleSendMessage}
               disabled={isLoading || !inputValue.trim()}
               sx={{
-                p: 2,
-                background: isLoading || !inputValue.trim()
-                  ? 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)'
-                  : `linear-gradient(135deg, ${currentTheme.primary} 0%, ${currentTheme.accent} 100%)`,
+                backgroundColor: currentTheme.primary,
                 color: 'white',
-                borderRadius: '16px',
-                boxShadow: isLoading || !inputValue.trim()
-                  ? 'none'
-                  : '0 12px 30px rgba(124, 58, 237, 0.4)',
+                borderRadius: '8px',
                 '&:hover': {
-                  background: isLoading || !inputValue.trim()
-                    ? 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)'
-                    : `linear-gradient(135deg, ${currentTheme.secondary} 0%, ${currentTheme.primary} 100%)`,
-                  transform: isLoading || !inputValue.trim() ? 'none' : 'translateY(-3px) scale(1.1)',
-                  boxShadow: isLoading || !inputValue.trim()
-                    ? 'none'
-                    : '0 16px 40px rgba(124, 58, 237, 0.5)',
+                  backgroundColor: currentTheme.secondary,
                 },
-                '&:active': {
-                  transform: isLoading || !inputValue.trim() ? 'none' : 'translateY(0px) scale(0.95)',
+                '&:disabled': {
+                  backgroundColor: '#e5e7eb',
+                  color: '#9ca3af',
                 },
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
-              {isLoading ? <CircularProgress size={28} color="inherit" /> : <SendIcon sx={{ fontSize: 28 }} />}
+              {isLoading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
             </IconButton>
           </Box>
 
@@ -1004,34 +944,6 @@ export const StunningAIChat: React.FC<StunningAIChatProps> = ({
         </Paper>
       </Box>
 
-      {/* Global Styles */}
-      <style jsx global>{`
-        @keyframes messageSlideIn {
-          0% {
-            opacity: 0;
-            transform: translateX(${Math.random() > 0.5 ? '30px' : '-30px'}) translateY(20px);
-          }
-          100% {
-            opacity: 1;
-            transform: translateX(0) translateY(0);
-          }
-        }
-
-        @keyframes pulse {
-          0% { transform: scale(1); }
-          100% { transform: scale(1.05); }
-        }
-
-        @keyframes sparkle {
-          0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
-          50% { opacity: 0.7; transform: scale(1.2) rotate(180deg); }
-        }
-
-        @keyframes avatarFloat {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-5px); }
-        }
-      `}</style>
     </Box>
   );
 };

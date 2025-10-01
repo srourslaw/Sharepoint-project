@@ -60,7 +60,14 @@ export const sharepointConfig = {
     'text/css',
     'application/json',
     'text/csv'
-  ]
+  ],
+  // Domain mapping configuration for SharePoint URLs
+  domainMapping: {
+    // Map technical SharePoint tenant domain to business-friendly domain
+    technicalDomain: process.env.SHAREPOINT_TECHNICAL_DOMAIN || 'netorgft18344752.sharepoint.com',
+    businessDomain: process.env.SHAREPOINT_BUSINESS_DOMAIN || 'bluewaveintelligence.sharepoint.com',
+    enabled: process.env.SHAREPOINT_DOMAIN_MAPPING_ENABLED !== 'false'
+  }
 };
 
 // Validation function to ensure all required config is present

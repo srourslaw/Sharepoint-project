@@ -97,6 +97,8 @@ export const Dashboard: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [actualSidebarWidth, setActualSidebarWidth] = useState<number>(drawerWidth);
+  const [createDocumentMode, setCreateDocumentMode] = useState<boolean>(false);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   // AI Panel resizing state
   const [isResizing, setIsResizing] = useState(false);
@@ -121,7 +123,30 @@ export const Dashboard: React.FC = () => {
       ...prev,
       previewOpen: !prev.previewOpen
     }));
+    // Reset create document mode when toggling preview
+    if (createDocumentMode) {
+      setCreateDocumentMode(false);
+    }
   };
+
+  const handleCreateDocument = () => {
+    setCreateDocumentMode(true);
+    setLayout(prev => ({
+      ...prev,
+      previewOpen: true
+    }));
+  };
+
+  const handleRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  // Reset create document mode when files are selected for preview
+  React.useEffect(() => {
+    if (selectedFiles.length > 0 && createDocumentMode) {
+      setCreateDocumentMode(false);
+    }
+  }, [selectedFiles.length, createDocumentMode]);
 
   const handleSidebarWidthChange = (width: number) => {
     setActualSidebarWidth(width);
@@ -351,11 +376,13 @@ export const Dashboard: React.FC = () => {
                   onFileSelect={setSelectedFiles}
                   onNavigate={setCurrentPath}
                   onPreviewToggle={handlePreviewToggle}
+                  onCreateDocument={handleCreateDocument}
+                  refreshTrigger={refreshTrigger}
                 />
               </Box>
 
               {/* Horizontal Resizer Bar */}
-              {layout.previewOpen && selectedFiles.length > 0 && (
+              {layout.previewOpen && (selectedFiles.length > 0 || createDocumentMode) && (
                 <Box
                   onMouseDown={handleHorizontalMouseDown}
                   sx={{
@@ -424,7 +451,7 @@ export const Dashboard: React.FC = () => {
               )}
 
               {/* File Preview Panel */}
-              {layout.previewOpen && selectedFiles.length > 0 && (
+              {layout.previewOpen && (selectedFiles.length > 0 || createDocumentMode) && (
                 <Box sx={{
                   height: `${layout.previewHeight}px`,
                   borderTop: layout.previewOpen ? 0 : 1,
@@ -438,6 +465,9 @@ export const Dashboard: React.FC = () => {
                     selectedFiles={selectedFiles}
                     height={layout.previewHeight}
                     onClose={handlePreviewToggle}
+                    createDocumentMode={createDocumentMode}
+                    currentPath={currentPath}
+                    onRefresh={handleRefresh}
                   />
                 </Box>
               )}

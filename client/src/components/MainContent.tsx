@@ -49,6 +49,8 @@ import {
   ArrowBack as ArrowBackIcon,
   Home as HomeIcon,
   AutoAwesome as AIIcon,
+  Add as AddIcon,
+  NoteAdd as CreateDocIcon,
 } from '@mui/icons-material';
 
 import { SharePointFile, ViewMode, SearchFilters } from '../types';
@@ -64,6 +66,8 @@ interface MainContentProps {
   onFileSelect: (fileIds: string[]) => void;
   onNavigate: (path: string) => void;
   onPreviewToggle: () => void;
+  onCreateDocument: () => void;
+  refreshTrigger?: number;
 }
 
 export const MainContent: React.FC<MainContentProps> = ({
@@ -72,6 +76,8 @@ export const MainContent: React.FC<MainContentProps> = ({
   onFileSelect,
   onNavigate,
   onPreviewToggle,
+  onCreateDocument,
+  refreshTrigger,
 }) => {
   console.log('MainContent.step5 rendering...', JSON.stringify({ currentPath, selectedFiles: selectedFiles.length }, null, 2));
 
@@ -103,6 +109,14 @@ export const MainContent: React.FC<MainContentProps> = ({
     filters: searchFilters,
     viewMode,
   });
+
+  // Refresh files when refreshTrigger changes
+  React.useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      console.log('Refreshing files due to trigger:', refreshTrigger);
+      refreshFiles();
+    }
+  }, [refreshTrigger, refreshFiles]);
 
   // Filter files based on search query and sort alphabetically
   const filteredFiles = files
@@ -552,15 +566,28 @@ export const MainContent: React.FC<MainContentProps> = ({
               >
                 <ListViewIcon fontSize="small" />
               </IconButton>
-              <Tooltip title="AI Features">
+              <Tooltip title="Create New Document">
                 <IconButton
                   size="small"
-                  color={showAIFeatures ? 'primary' : 'default'}
-                  onClick={() => setShowAIFeatures(!showAIFeatures)}
-                  disabled={selectedFiles.length === 0}
+                  color="primary"
+                  onClick={onCreateDocument}
+                  sx={{ mr: 0.5 }}
                 >
-                  <AIIcon fontSize="small" />
+                  <CreateDocIcon fontSize="small" />
                 </IconButton>
+              </Tooltip>
+
+              <Tooltip title={selectedFiles.length === 0 ? "Select files to use AI Features" : "AI Features"}>
+                <span>
+                  <IconButton
+                    size="small"
+                    color={showAIFeatures ? 'primary' : 'default'}
+                    onClick={() => setShowAIFeatures(!showAIFeatures)}
+                    disabled={selectedFiles.length === 0}
+                  >
+                    <AIIcon fontSize="small" />
+                  </IconButton>
+                </span>
               </Tooltip>
             </Box>
           </Box>

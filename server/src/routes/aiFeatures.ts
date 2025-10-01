@@ -427,6 +427,13 @@ export function createAIFeaturesRoutes(
         updatedAt: new Date().toISOString()
       };
 
+      // Log AI service being used for this session
+      const aiServiceName = aiService instanceof OpenAIService ? 'OpenAI' : 'Gemini';
+      const modelName = aiService instanceof OpenAIService
+        ? (process.env.OPENAI_MODEL || 'gpt-5-nano')
+        : (process.env.GEMINI_MODEL || 'gemini-pro');
+
+      console.log(`🤖 AI Chat: Session created with ${aiServiceName} (${modelName}) as AI service`);
       console.log('✅ AI Chat: Created session with', documentContents.length, 'documents, total content length:', session.documentContent.length);
 
       // Store the session
@@ -564,6 +571,15 @@ I don't have any document content available to analyze. Please provide documents
         hasDocumentContent: !!documentContext
       });
 
+      // Determine AI service details
+      const aiServiceName = aiService instanceof OpenAIService ? 'OpenAI' : 'Gemini';
+      const modelName = aiService instanceof OpenAIService
+        ? (process.env.OPENAI_MODEL || 'gpt-5-nano')
+        : (process.env.GEMINI_MODEL || 'gemini-pro');
+
+      console.log(`🤖 AI Chat: Using ${aiServiceName} (${modelName}) for chat response`);
+      console.log('📝 AI Chat: Prompt length:', prompt.length, 'characters');
+
       // Send to AI service
       const aiResponse = await aiService.generateText({
         prompt,
@@ -571,7 +587,10 @@ I don't have any document content available to analyze. Please provide documents
         temperature: 1.0 // gpt-5-nano only supports 1.0
       });
 
-      console.log('✅ AI Chat: Received response from AI, length:', aiResponse.text.length);
+      console.log(`✅ AI Chat: Received response from ${aiServiceName} (${modelName}), length:`, aiResponse.text.length, 'characters');
+      if ('usage' in aiResponse && aiResponse.usage) {
+        console.log('📊 AI Usage:', aiResponse.usage);
+      }
 
       // Create response message
       const responseMessage = {

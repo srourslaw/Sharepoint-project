@@ -11,32 +11,40 @@ import {
   Share as ShareIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  FileCopy as CopyIcon
+  FileCopy as CopyIcon,
+  NoteAdd as CreateDocIcon
 } from '@mui/icons-material';
 import { SharePointFile } from '../types';
 import { useFilePreview } from '../hooks/useFilePreview';
 import { formatFileSize, formatDate } from '../utils/formatters';
 import { FileEditor } from './FileEditor';
+import { DocumentCreatorPanel } from './DocumentCreatorPanel';
 import { useDynamicTheme } from '../contexts/DynamicThemeContext';
 
 interface FilePreviewProps {
   selectedFiles: string[];
   height: number | string;
   onClose: () => void;
+  createDocumentMode?: boolean;
+  currentPath?: string;
+  onRefresh?: () => void;
 }
 
-type PreviewTab = 'preview' | 'details' | 'versions';
+type PreviewTab = 'preview' | 'details' | 'versions' | 'create';
 
 export const FilePreview: React.FC<FilePreviewProps> = ({
   selectedFiles,
   height,
   onClose,
+  createDocumentMode = false,
+  currentPath = '',
+  onRefresh,
 }) => {
   const actualHeight = typeof height === 'string' && height === '100%' ? '100%' : height;
   console.log('🚀 FilePreview: Rendering WITHIN dashboard with files:', selectedFiles, 'height:', height);
 
   const { currentTheme } = useDynamicTheme();
-  const [activeTab, setActiveTab] = useState<PreviewTab>('preview');
+  const [activeTab, setActiveTab] = useState<PreviewTab>(createDocumentMode ? 'create' : 'preview');
 
   console.log('🎨 FilePreview currentTheme:', currentTheme);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -44,6 +52,98 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   const { file, content, loading, error } = useFilePreview(currentFileId);
 
   console.log('🚀 FilePreview: File data:', { file: file?.name, content: content?.substring(0, 50), hasFile: !!file, hasContent: !!content });
+
+  // Auto-switch to create tab when create document mode is activated
+  React.useEffect(() => {
+    if (createDocumentMode) {
+      setActiveTab('create');
+    }
+  }, [createDocumentMode]);
+
+  // Extract SharePoint context from path
+  const getSharePointContext = (path: string) => {
+    try {
+      console.log('🔍 FilePreview: Extracting SharePoint context from path:', path);
+      console.log('🔍 FilePreview: Current URL:', window.location.href);
+      console.log('🔍 FilePreview: Current path state:', path);
+
+      if (!path || path === '/') {
+        // Default to allcompany site if no specific path
+        console.log('🔍 FilePreview: Using default allcompany site context');
+        return {
+          siteId: null,
+          driveId: 'allcompany',  // Use allcompany instead of 'default'
+          parentId: 'root'
+        };
+      }
+
+      // Decode URL encoding (e.g., %20 -> space)
+      const decodedPath = decodeURIComponent(path);
+      const pathParts = decodedPath.split('/').filter(Boolean);
+      console.log('🔍 FilePreview: Decoded path:', decodedPath);
+      console.log('🔍 FilePreview: Path parts:', pathParts);
+
+      // Handle drives-based paths: /drives/allcompany/items/root/children
+      if (pathParts.length >= 2 && pathParts[0] === 'drives') {
+        const driveId = pathParts[1];
+        console.log('🔍 FilePreview: Found drive-based path, driveId:', driveId);
+        return {
+          siteId: null,
+          driveId: driveId,  // Use the actual drive name (e.g., "allcompany")
+          parentId: 'root'
+        };
+      }
+
+      // Handle sites-based paths: /sites/allcompany/libraries/documents
+      if (pathParts.length >= 2 && pathParts[0] === 'sites') {
+        const siteId = pathParts[1];
+        console.log('🔍 FilePreview: Found site-based path, siteId:', siteId);
+
+        if (pathParts.length >= 4 && pathParts[2] === 'libraries') {
+          const libraryId = pathParts[3];
+          return {
+            siteId,
+            driveId: libraryId,
+            parentId: pathParts.length > 4 ? pathParts.slice(4).join('/') : 'root'
+          };
+        }
+
+        return {
+          siteId,
+          driveId: siteId,  // Use site name as drive ID
+          parentId: 'root'
+        };
+      }
+
+      // Handle direct site paths: "Communication site", "All Company", etc.
+      if (pathParts.length >= 1) {
+        const siteName = pathParts[0];
+        console.log('🔍 FilePreview: Found direct site path, siteName:', siteName);
+        return {
+          siteId: siteName,
+          driveId: siteName,  // Use site name as drive ID
+          parentId: 'root'
+        };
+      }
+
+      console.log('🔍 FilePreview: Using fallback allcompany context');
+      return {
+        siteId: null,
+        driveId: 'allcompany',  // Use allcompany instead of 'default'
+        parentId: 'root'
+      };
+    } catch (error) {
+      console.error('Error parsing SharePoint context from path:', error);
+      return {
+        siteId: null,
+        driveId: 'allcompany',  // Use allcompany instead of 'default'
+        parentId: 'root'
+      };
+    }
+  };
+
+  const sharePointContext = getSharePointContext(currentPath);
+  console.log('🎯 FilePreview: Final SharePoint context for document creation:', sharePointContext);
 
   if (loading) {
     return (
@@ -794,6 +894,36 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         return renderFileDetails();
       case 'versions':
         return renderVersionHistory();
+      case 'create':
+        console.log('🚨 DOCUMENT CREATOR DEBUG: About to render DocumentCreatorPanel');
+        console.log('🚨 DEBUG: currentPath passed to FilePreview:', currentPath);
+        console.log('🚨 DEBUG: sharePointContext computed:', sharePointContext);
+        console.log('🚨 DEBUG: Props being passed to DocumentCreatorPanel:', {
+          selectedFiles,
+          currentPath,
+          siteId: sharePointContext.siteId,
+          driveId: sharePointContext.driveId,
+          parentId: sharePointContext.parentId
+        });
+        return (
+          <DocumentCreatorPanel
+            selectedFiles={selectedFiles}
+            currentPath={currentPath}
+            height="100%"
+            siteId={sharePointContext.siteId}
+            driveId={sharePointContext.driveId}
+            parentId={sharePointContext.parentId}
+            onDocumentCreated={(file) => {
+              console.log('Document created in preview:', file);
+              // Success! Document was created - no need to refresh dashboard since the document creator shows success feedback
+              // Note: The document was successfully saved to the current SharePoint site context
+              console.log('✅ Document successfully created in current location:', sharePointContext);
+              // Optional: Switch back to preview tab after successful creation
+              // setActiveTab('preview');
+            }}
+            onRefreshFolder={onRefresh}
+          />
+        );
       default:
         return renderContent();
     }
@@ -939,6 +1069,17 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
             label="Versions"
             value="versions"
             icon={<VersionsIcon fontSize="small" />}
+            iconPosition="start"
+            sx={{
+              minHeight: 48,
+              textTransform: 'none',
+              fontSize: '0.875rem'
+            }}
+          />
+          <Tab
+            label="Create Document"
+            value="create"
+            icon={<CreateDocIcon fontSize="small" />}
             iconPosition="start"
             sx={{
               minHeight: 48,
